@@ -6,708 +6,736 @@
   <title>مساحة الشفاء — ضحى للطاقة والشفاء الروحي</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
   <style>
-    /* ===================== RESET & BASE ===================== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
-    body {
-      font-family: 'Cairo', Arial, sans-serif;
-      background: #fff;
-      color: #1a0a2e;
-      direction: rtl;
-      line-height: 1.7;
-    }
+    body { font-family: 'Cairo', Arial, sans-serif; background: #fff; color: #1a0a2e; direction: rtl; line-height: 1.7; }
     a { text-decoration: none; color: inherit; }
     img { max-width: 100%; display: block; }
 
-    /* ===================== VARIABLES ===================== */
     :root {
-      --p900: #1a0a2e;
-      --p800: #2d1554;
-      --p700: #3d1f72;
-      --p600: #5a2d91;
-      --p500: #7b3fb5;
-      --p400: #9d5fd4;
-      --p300: #c49de8;
-      --p100: #f0e8ff;
-      --g600: #b8860b;
-      --g500: #d4a017;
-      --g400: #e8b923;
-      --g300: #f0cc55;
-      --g100: #fdf8e1;
-      --bg-light: #f9f5ff;
-      --bg-mid: #f0e8ff;
-      --text-mid: #4a3065;
-      --text-light: #8a6faa;
+      --p900:#1a0a2e; --p800:#2d1554; --p700:#3d1f72; --p600:#5a2d91; --p500:#7b3fb5; --p400:#9d5fd4; --p300:#c49de8; --p100:#f0e8ff;
+      --g600:#b8860b; --g500:#d4a017; --g400:#e8b923; --g300:#f0cc55; --g100:#fdf8e1;
+      --bg-light:#f9f5ff; --bg-mid:#f0e8ff; --text-mid:#4a3065; --text-light:#8a6faa;
     }
 
-    /* ===================== NAVBAR ===================== */
-    .navbar {
-      position: fixed; top: 0; right: 0; left: 0; z-index: 1000;
-      background: rgba(26,10,46,0.96);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(212,160,23,0.2);
-    }
-    .nav-container {      max-width: 1200px; margin: 0 auto; padding: 0 2rem;
-      height: 70px; display: flex; align-items: center; justify-content: space-between;
-    }
-    .nav-logo { display: flex; align-items: center; gap: 0.6rem; }
-    .logo-icon { color: var(--g400); font-size: 1.4rem; }
-    .logo-text { color: #fff; font-size: 1.2rem; font-weight: 700; }
-    .nav-links { display: flex; align-items: center; gap: 1.8rem; }
-    .nav-links a { color: rgba(255,255,255,0.8); font-size: 0.92rem; font-weight: 500; transition: color 0.2s; }
-    .nav-links a:hover { color: var(--g300); }
-    .nav-btn {
-      background: var(--g500) !important; color: var(--p900) !important;
-      padding: 0.5rem 1.4rem !important; border-radius: 50px !important;
-      font-weight: 700 !important; font-size: 0.88rem !important;
-      transition: background 0.2s, transform 0.15s !important;
-    }
-    .nav-btn:hover { background: var(--g300) !important; transform: translateY(-1px); }
-    .mobile-menu-btn {
-      display: none; flex-direction: column; gap: 5px;
-      background: none; border: none; cursor: pointer; padding: 4px;
-    }
-    .mobile-menu-btn span { display: block; width: 24px; height: 2px; background: #fff; border-radius: 2px; }
-    .mobile-menu {
-      display: none; flex-direction: column;
-      padding: 1rem 2rem 1.5rem; gap: 0.8rem;
-      background: rgba(26,10,46,0.98);
-      border-top: 1px solid rgba(212,160,23,0.15);
-    }
-    .mobile-menu.open { display: flex; }
-    .mobile-menu a { color: rgba(255,255,255,0.85); font-size: 1rem; padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    /* NAVBAR */
+    .navbar { position:fixed; top:0; right:0; left:0; z-index:1000; background:rgba(26,10,46,0.97); backdrop-filter:blur(12px); border-bottom:1px solid rgba(212,160,23,0.2); }
+    .nav-container { max-width:1280px; margin:0 auto; padding:0 1.5rem; height:68px; display:flex; align-items:center; justify-content:space-between; gap:0.8rem; }
+    .nav-logo { display:flex; align-items:center; gap:0.5rem; flex-shrink:0; }
+    .logo-icon { color:var(--g400); font-size:1.3rem; }
+    .logo-text { color:#fff; font-size:1.1rem; font-weight:700; white-space:nowrap; }
+    .nav-links { display:flex; align-items:center; gap:0.1rem; flex:1; justify-content:center; }
+    .nav-links a { color:rgba(255,255,255,0.8); font-size:0.83rem; font-weight:500; padding:0.4rem 0.65rem; border-radius:8px; transition:color 0.2s,background 0.2s; white-space:nowrap; }
+    .nav-links a:hover { color:var(--g300); background:rgba(255,255,255,0.06); }
+    .nav-actions { display:flex; align-items:center; gap:0.6rem; flex-shrink:0; }
 
-    /* ===================== HERO SLIDER ===================== */
-    .hero {
-      position: relative; height: 100vh; min-height: 600px;
-      overflow: hidden; display: flex; align-items: center;
-    }
-    .hero-slide {
-      position: absolute; inset: 0;
-      background-size: cover; background-position: center;
-      opacity: 0; transition: opacity 0.8s ease, transform 0.8s ease;
-      transform: scale(1.04);
-    }
-    .hero-slide.active { opacity: 1; transform: scale(1); }
-    .hero-overlay {
-      position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(26,10,46,0.82) 0%, rgba(45,21,84,0.6) 50%, rgba(26,10,46,0.75) 100%);
-      z-index: 1;
-    }
-    .hero-content {
-      position: relative; z-index: 2;
-      max-width: 1200px; margin: 0 auto;
-      padding: 0 2rem; padding-top: 70px;
-      opacity: 0; transform: translateY(20px);
-      transition: opacity 0.6s ease, transform 0.6s ease;
-    }
-    .hero-content.visible { opacity: 1; transform: translateY(0); }
-    .hero-badge {
-      display: inline-block;
-      background: rgba(212,160,23,0.2);
-      border: 1px solid var(--g500);
-      color: var(--g300);
-      font-size: 0.85rem; padding: 0.35rem 1.1rem;
-      border-radius: 50px; margin-bottom: 1.5rem;
-    }
-    .hero-title { font-size: clamp(2.2rem,5vw,3.8rem); font-weight: 900; color: #fff; line-height: 1.25; margin-bottom: 1.5rem; }
-    .hero-title-gold { color: var(--g300); }
-    .hero-subtitle { font-size: clamp(1rem,2vw,1.2rem); color: rgba(255,255,255,0.82); max-width: 600px; margin-bottom: 2.5rem; line-height: 1.8; }
-    .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
-    .btn-primary {
-      display: inline-block;
-      background: linear-gradient(135deg, var(--g500), var(--g400));
-      color: var(--p900); font-weight: 700; font-size: 1rem;
-      padding: 0.85rem 2rem; border-radius: 50px; border: none; cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      box-shadow: 0 4px 20px rgba(212,160,23,0.35);
-    }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(212,160,23,0.45); }
-    .btn-outline {
-      display: inline-block; background: transparent; color: #fff;
-      font-weight: 600; font-size: 1rem; padding: 0.85rem 2rem;
-      border-radius: 50px; border: 2px solid rgba(255,255,255,0.5); cursor: pointer;
-      transition: border-color 0.2s, color 0.2s, transform 0.2s;
-    }
-    .btn-outline:hover { border-color: var(--g300); color: var(--g300); transform: translateY(-2px); }
-    .slider-dots {
-      position: absolute; bottom: 2.5rem; left: 50%;
-      transform: translateX(-50%); display: flex; gap: 0.6rem; z-index: 3;
-    }
-    .dot {
-      width: 10px; height: 10px; border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.6); background: transparent;
-      cursor: pointer; transition: all 0.3s; padding: 0;
-    }
-    .dot.active { background: var(--g400); border-color: var(--g400); transform: scale(1.3); }
-    .slider-arrows { position: absolute; bottom: 2.2rem; left: 2rem; display: flex; gap: 0.5rem; z-index: 3; }
-    .arrow {
-      width: 40px; height: 40px; border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.08);
-      color: #fff; font-size: 1.4rem; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; transition: all 0.2s;
-    }
-    .arrow:hover { background: rgba(212,160,23,0.25); border-color: var(--g400); }
+    /* Currency */
+    .currency-wrap { position:relative; }
+    .currency-btn { display:flex; align-items:center; gap:0.35rem; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.85); font-family:'Cairo',Arial,sans-serif; font-size:0.8rem; font-weight:600; padding:0.4rem 0.8rem; border-radius:8px; cursor:pointer; white-space:nowrap; transition:background 0.2s,border-color 0.2s; }
+    .currency-btn:hover { background:rgba(255,255,255,0.14); border-color:var(--g500); }
+    .currency-btn .caret { font-size:0.6rem; opacity:0.7; transition:transform 0.2s; }
+    .currency-wrap.open .caret { transform:rotate(180deg); }
+    .currency-dropdown { display:none; position:absolute; top:calc(100% + 8px); right:0; background:#1e0e38; border:1px solid rgba(212,160,23,0.25); border-radius:12px; overflow:hidden; min-width:200px; box-shadow:0 12px 40px rgba(0,0,0,0.45); animation:dropIn 0.18s ease; }
+    .currency-wrap.open .currency-dropdown { display:block; }
+    .currency-option { display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1.1rem; cursor:pointer; transition:background 0.15s; border-bottom:1px solid rgba(255,255,255,0.05); }
+    .currency-option:last-child { border-bottom:none; }
+    .currency-option:hover { background:rgba(212,160,23,0.12); }
+    .currency-option.selected { background:rgba(212,160,23,0.18); }
+    .cur-name { color:rgba(255,255,255,0.9); font-size:0.88rem; font-weight:500; }
+    .cur-code { color:var(--g400); font-size:0.78rem; font-weight:700; }
+    .cur-check { color:var(--g400); font-size:0.9rem; opacity:0; }
+    .currency-option.selected .cur-check { opacity:1; }
 
-    /* ===================== STATS BAR ===================== */
-    .stats-bar {
-      background: linear-gradient(135deg, var(--p800), var(--p700));
-      display: flex; justify-content: center; align-items: center;
-      flex-wrap: wrap; padding: 2.5rem 2rem;
-    }
-    .stat { display: flex; flex-direction: column; align-items: center; padding: 0.5rem 3rem; }
-    .stat-number { font-size: 2rem; font-weight: 900; color: var(--g300); line-height: 1; }
-    .stat-label { color: rgba(255,255,255,0.75); font-size: 0.9rem; margin-top: 0.3rem; }
-    .stat-divider { width: 1px; height: 50px; background: rgba(212,160,23,0.25); }
+    /* Cart button */
+    .cart-wrap { position:relative; }
+    .cart-btn { display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:10px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.85); cursor:pointer; position:relative; transition:background 0.2s,border-color 0.2s; flex-shrink:0; }
+    .cart-btn:hover { background:rgba(212,160,23,0.2); border-color:var(--g500); }
+    .cart-btn svg { width:18px; height:18px; }
+    .cart-count { position:absolute; top:-6px; left:-6px; background:var(--g400); color:var(--p900); font-size:0.65rem; font-weight:900; line-height:1; min-width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; padding:2px; }
+    .cart-count.bump { animation:bump 0.3s ease; }
+    @keyframes bump { 0%,100%{transform:scale(1)} 50%{transform:scale(1.45)} }
 
-    /* ===================== SECTION HEADER ===================== */
-    .section-header { text-align: center; margin-bottom: 3.5rem; }
-    .section-label {
-      display: inline-block; color: var(--p500);
-      font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em;
-      margin-bottom: 0.8rem; position: relative; padding: 0 1rem;
-    }
-    .section-label::before, .section-label::after {
-      content: ''; position: absolute; top: 50%; width: 2.5rem; height: 1px; background: var(--g500);
-    }
-    .section-label::before { right: 100%; }
-    .section-label::after { left: 100%; }
-    .section-title { font-size: clamp(1.8rem,3.5vw,2.5rem); font-weight: 800; color: var(--p900); margin-bottom: 1rem; }
-    .section-desc { font-size: 1.05rem; color: var(--text-mid); max-width: 600px; margin: 0 auto; }
+    /* Cart panel */
+    .cart-panel { display:none; position:absolute; top:calc(100% + 10px); left:0; width:340px; background:#1e0e38; border:1px solid rgba(212,160,23,0.25); border-radius:16px; overflow:hidden; box-shadow:0 16px 50px rgba(0,0,0,0.5); animation:dropIn 0.2s ease; }
+    .cart-wrap.open .cart-panel { display:block; }
+    @keyframes dropIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+    .cart-header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.2rem; border-bottom:1px solid rgba(255,255,255,0.08); }
+    .cart-header h3 { color:#fff; font-size:1rem; font-weight:700; }
+    .cart-clear { color:rgba(255,255,255,0.45); font-size:0.78rem; cursor:pointer; transition:color 0.2s; }
+    .cart-clear:hover { color:#ff7878; }
+    .cart-items { max-height:280px; overflow-y:auto; }
+    .cart-items::-webkit-scrollbar { width:4px; }
+    .cart-items::-webkit-scrollbar-thumb { background:rgba(212,160,23,0.4); border-radius:4px; }
+    .cart-item { display:flex; align-items:flex-start; gap:0.9rem; padding:0.9rem 1.2rem; border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s; }
+    .cart-item:hover { background:rgba(255,255,255,0.04); }
+    .cart-item-icon { width:42px; height:42px; border-radius:10px; flex-shrink:0; background:linear-gradient(135deg,var(--p600),var(--p400)); display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
+    .cart-item-info { flex:1; min-width:0; }
+    .cart-item-name { color:rgba(255,255,255,0.9); font-size:0.88rem; font-weight:600; line-height:1.35; }
+    .cart-item-price { color:var(--g400); font-size:0.82rem; font-weight:700; margin-top:0.2rem; }
+    .cart-item-qty { display:flex; align-items:center; gap:0.4rem; margin-top:0.4rem; }
+    .qty-btn { width:22px; height:22px; border-radius:6px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); color:#fff; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s; }
+    .qty-btn:hover { background:rgba(212,160,23,0.3); }
+    .qty-val { color:#fff; font-size:0.82rem; font-weight:700; min-width:16px; text-align:center; }
+    .cart-item-remove { color:rgba(255,255,255,0.3); cursor:pointer; font-size:0.9rem; transition:color 0.15s; padding:2px; }
+    .cart-item-remove:hover { color:#ff7878; }
+    .cart-empty { padding:2.5rem 1.2rem; text-align:center; }
+    .cart-empty-icon { font-size:2.5rem; margin-bottom:0.5rem; }
+    .cart-empty p { color:rgba(255,255,255,0.4); font-size:0.9rem; }
+    .cart-footer { padding:1rem 1.2rem; border-top:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.2); }
+    .cart-total-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.9rem; }
+    .cart-total-label { color:rgba(255,255,255,0.6); font-size:0.88rem; }
+    .cart-total-amount { color:var(--g300); font-size:1.1rem; font-weight:900; }
+    .cart-checkout { width:100%; padding:0.75rem; border-radius:10px; background:linear-gradient(135deg,var(--g500),var(--g400)); color:var(--p900); font-family:'Cairo',Arial,sans-serif; font-size:0.95rem; font-weight:700; border:none; cursor:pointer; transition:opacity 0.2s,transform 0.2s; }
+    .cart-checkout:hover { opacity:0.9; transform:translateY(-1px); }
 
-    /* ===================== ABOUT ===================== */
-    .about { padding: 6rem 2rem; background: var(--bg-light); }
-    .about-container {
-      max-width: 1100px; margin: 0 auto;
-      display: grid; grid-template-columns: 1fr 1.6fr; gap: 4rem; align-items: center;
-    }
-    .about-image-wrap { position: relative; }
-    .about-img {
-      width: 100%; border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(90,45,145,0.25); object-fit: cover; aspect-ratio: 3/4;
-    }
-    .about-badge-float {
-      position: absolute; bottom: -1rem; left: 50%; transform: translateX(-50%);
-      background: linear-gradient(135deg, var(--g500), var(--g400));
-      color: var(--p900); font-weight: 700; font-size: 0.85rem;
-      padding: 0.6rem 1.5rem; border-radius: 50px; white-space: nowrap;
-      box-shadow: 0 4px 20px rgba(212,160,23,0.4);
-    }
-    .about-text { color: var(--text-mid); font-size: 1rem; margin-bottom: 1.2rem; line-height: 1.9; }
-    .certs {
-      background: var(--bg-mid); border-right: 3px solid var(--g500);
-      padding: 1.2rem 1.5rem; border-radius: 12px; margin: 1.5rem 0 2rem;
-    }
-    .certs-title { font-size: 0.95rem; font-weight: 700; color: var(--p800); margin-bottom: 0.8rem; }
-    .certs-list { list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
-    .certs-list li { color: var(--text-mid); font-size: 0.92rem; }
+    /* nav book btn */
+    .nav-btn { background:var(--g500) !important; color:var(--p900) !important; padding:0.45rem 1.1rem !important; border-radius:8px !important; font-weight:700 !important; font-size:0.82rem !important; transition:background 0.2s,transform 0.15s !important; white-space:nowrap; flex-shrink:0; }
+    .nav-btn:hover { background:var(--g300) !important; transform:translateY(-1px); }
 
-    /* ===================== SERVICES ===================== */
-    .services { padding: 6rem 2rem; background: #fff; }
-    .services-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(2,1fr); gap: 1.8rem; }
-    .service-card {
-      background: var(--bg-light); border: 1px solid rgba(90,45,145,0.1);
-      border-radius: 20px; padding: 2.2rem;
-      transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
-      position: relative; overflow: hidden;
-    }
-    .service-card::before {
-      content: ''; position: absolute; top: 0; right: 0; width: 100%; height: 3px;
-      background: linear-gradient(90deg, var(--p400), var(--g400)); opacity: 0; transition: opacity 0.25s;
-    }
-    .service-card:hover { transform: translateY(-6px); box-shadow: 0 20px 50px rgba(90,45,145,0.15); border-color: rgba(90,45,145,0.25); }
-    .service-card:hover::before { opacity: 1; }
-    .service-icon { font-size: 2rem; color: var(--g500); margin-bottom: 1rem; }
-    .service-title { font-size: 1.15rem; font-weight: 700; color: var(--p900); margin-bottom: 0.8rem; }
-    .service-desc { color: var(--text-mid); font-size: 0.95rem; line-height: 1.8; margin-bottom: 1.2rem; }
-    .service-link { color: var(--p500); font-weight: 600; font-size: 0.9rem; transition: color 0.2s; }
-    .service-link:hover { color: var(--g500); }
+    /* Mobile */
+    .mobile-menu-btn { display:none; flex-direction:column; gap:5px; background:none; border:none; cursor:pointer; padding:4px; }
+    .mobile-menu-btn span { display:block; width:24px; height:2px; background:#fff; border-radius:2px; }
+    .mobile-menu { display:none; flex-direction:column; padding:1rem 1.5rem 1.5rem; gap:0.6rem; background:rgba(26,10,46,0.99); border-top:1px solid rgba(212,160,23,0.15); }
+    .mobile-menu.open { display:flex; }
+    .mobile-menu a { color:rgba(255,255,255,0.85); font-size:0.95rem; padding:0.45rem 0; border-bottom:1px solid rgba(255,255,255,0.07); }
+    .mobile-currency-row { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; padding:0.5rem 0; border-bottom:1px solid rgba(255,255,255,0.07); }
+    .mobile-currency-row span { color:rgba(255,255,255,0.5); font-size:0.8rem; }
+    .mob-cur-btn { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.8); font-family:'Cairo',Arial,sans-serif; font-size:0.78rem; font-weight:600; padding:0.3rem 0.7rem; border-radius:6px; cursor:pointer; transition:all 0.15s; }
+    .mob-cur-btn.selected { background:rgba(212,160,23,0.25); border-color:var(--g500); color:var(--g300); }
 
-    /* ===================== TESTIMONIALS ===================== */
-    .testimonials {
-      padding: 6rem 2rem;
-      background: linear-gradient(180deg, var(--p900) 0%, var(--p800) 100%);
-    }
-    .testimonials .section-label { color: var(--g300); }
-    .testimonials .section-title { color: #fff; }
-    .testimonials-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(2,1fr); gap: 1.8rem; }
-    .testimonial-card {
-      background: rgba(255,255,255,0.06); border: 1px solid rgba(212,160,23,0.2);
-      border-radius: 20px; padding: 2rem; transition: all 0.25s;
-    }
-    .testimonial-card:hover { background: rgba(255,255,255,0.1); border-color: rgba(212,160,23,0.4); }
-    .quote-mark { font-size: 4rem; color: var(--g400); line-height: 0.7; margin-bottom: 1rem; font-family: serif; }
-    .testimonial-text { color: rgba(255,255,255,0.85); font-size: 0.97rem; line-height: 1.85; margin-bottom: 1.5rem; }
-    .testimonial-author { display: flex; align-items: center; gap: 0.9rem; }
-    .author-avatar {
-      width: 46px; height: 46px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--g500), var(--p400));
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-weight: 700; font-size: 1rem; flex-shrink: 0;
-    }
-    .author-info { display: flex; flex-direction: column; gap: 0.15rem; }
-    .author-info strong { color: #fff; font-size: 0.95rem; }
-    .author-info span { color: var(--g300); font-size: 0.82rem; }
+    /* HERO */
+    .hero { position:relative; height:100vh; min-height:600px; overflow:hidden; display:flex; align-items:center; }
+    .hero-slide { position:absolute; inset:0; background-size:cover; background-position:center; opacity:0; transition:opacity 0.8s ease,transform 0.8s ease; transform:scale(1.04); }
+    .hero-slide.active { opacity:1; transform:scale(1); }
+    .hero-overlay { position:absolute; inset:0; background:linear-gradient(135deg,rgba(26,10,46,0.82) 0%,rgba(45,21,84,0.6) 50%,rgba(26,10,46,0.75) 100%); z-index:1; }
+    .hero-content { position:relative; z-index:2; max-width:1200px; margin:0 auto; padding:0 2rem; padding-top:68px; opacity:0; transform:translateY(20px); transition:opacity 0.6s ease,transform 0.6s ease; }
+    .hero-content.visible { opacity:1; transform:translateY(0); }
+    .hero-badge { display:inline-block; background:rgba(212,160,23,0.2); border:1px solid var(--g500); color:var(--g300); font-size:0.85rem; padding:0.35rem 1.1rem; border-radius:50px; margin-bottom:1.5rem; }
+    .hero-title { font-size:clamp(2.2rem,5vw,3.8rem); font-weight:900; color:#fff; line-height:1.25; margin-bottom:1.5rem; }
+    .hero-title-gold { color:var(--g300); }
+    .hero-subtitle { font-size:clamp(1rem,2vw,1.2rem); color:rgba(255,255,255,0.82); max-width:600px; margin-bottom:2.5rem; line-height:1.8; }
+    .hero-actions { display:flex; gap:1rem; flex-wrap:wrap; }
+    .btn-primary { display:inline-block; background:linear-gradient(135deg,var(--g500),var(--g400)); color:var(--p900); font-weight:700; font-size:1rem; padding:0.85rem 2rem; border-radius:50px; border:none; cursor:pointer; transition:transform 0.2s,box-shadow 0.2s; box-shadow:0 4px 20px rgba(212,160,23,0.35); }
+    .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(212,160,23,0.45); }
+    .btn-outline { display:inline-block; background:transparent; color:#fff; font-weight:600; font-size:1rem; padding:0.85rem 2rem; border-radius:50px; border:2px solid rgba(255,255,255,0.5); cursor:pointer; transition:border-color 0.2s,color 0.2s,transform 0.2s; }
+    .btn-outline:hover { border-color:var(--g300); color:var(--g300); transform:translateY(-2px); }
+    .slider-dots { position:absolute; bottom:2.5rem; left:50%; transform:translateX(-50%); display:flex; gap:0.6rem; z-index:3; }
+    .dot { width:10px; height:10px; border-radius:50%; border:2px solid rgba(255,255,255,0.6); background:transparent; cursor:pointer; transition:all 0.3s; padding:0; }
+    .dot.active { background:var(--g400); border-color:var(--g400); transform:scale(1.3); }
+    .slider-arrows { position:absolute; bottom:2.2rem; left:2rem; display:flex; gap:0.5rem; z-index:3; }
+    .arrow { width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,0.35); background:rgba(255,255,255,0.08); color:#fff; font-size:1.4rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+    .arrow:hover { background:rgba(212,160,23,0.25); border-color:var(--g400); }
 
-    /* ===================== BLOG ===================== */
-    .blog { padding: 6rem 2rem; background: var(--bg-light); }
-    .blog-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(3,1fr); gap: 1.8rem; }
-    .blog-card { background: #fff; border-radius: 16px; padding: 1.8rem; border: 1px solid rgba(90,45,145,0.08); transition: transform 0.25s, box-shadow 0.25s; }
-    .blog-card:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(90,45,145,0.12); }
-    .blog-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .blog-cat { background: var(--bg-mid); color: var(--p600); font-size: 0.78rem; font-weight: 600; padding: 0.25rem 0.8rem; border-radius: 50px; }
-    .blog-date { color: var(--text-light); font-size: 0.78rem; }
-    .blog-title { font-size: 1.05rem; font-weight: 700; color: var(--p900); margin-bottom: 0.8rem; line-height: 1.5; }
-    .blog-desc { color: var(--text-mid); font-size: 0.9rem; line-height: 1.7; margin-bottom: 1.2rem; }
+    /* STATS */
+    .stats-bar { background:linear-gradient(135deg,var(--p800),var(--p700)); display:flex; justify-content:center; align-items:center; flex-wrap:wrap; padding:2.5rem 2rem; }
+    .stat { display:flex; flex-direction:column; align-items:center; padding:0.5rem 3rem; }
+    .stat-number { font-size:2rem; font-weight:900; color:var(--g300); line-height:1; }
+    .stat-label { color:rgba(255,255,255,0.75); font-size:0.9rem; margin-top:0.3rem; }
+    .stat-divider { width:1px; height:50px; background:rgba(212,160,23,0.25); }
 
-    /* ===================== FAQ ===================== */
-    .faq { padding: 6rem 2rem; background: #fff; }
-    .faq-list { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.8rem; }
-    .faq-item { border: 1px solid rgba(90,45,145,0.12); border-radius: 14px; overflow: hidden; transition: border-color 0.2s; }
-    .faq-item.open { border-color: var(--p400); }
-    .faq-question {
-      width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 1rem;
-      padding: 1.3rem 1.5rem; background: transparent; border: none; cursor: pointer;
-      text-align: right; font-family: 'Cairo', Arial, sans-serif; font-size: 1rem; font-weight: 600; color: var(--p900); transition: background 0.2s;
-    }
-    .faq-item.open .faq-question { background: var(--bg-mid); }
-    .faq-icon { font-size: 1.4rem; color: var(--g500); flex-shrink: 0; transition: transform 0.2s; }
-    .faq-answer {
-      padding: 1.2rem 1.5rem 1.4rem; color: var(--text-mid); font-size: 0.95rem; line-height: 1.85;
-      border-top: 1px solid rgba(90,45,145,0.08); display: none;
-    }
-    .faq-item.open .faq-answer { display: block; animation: fadeSlide 0.25s ease; }
-    @keyframes fadeSlide { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+    /* SECTION HEADER */
+    .section-header { text-align:center; margin-bottom:3.5rem; }
+    .section-label { display:inline-block; color:var(--p500); font-size:0.85rem; font-weight:700; letter-spacing:0.1em; margin-bottom:0.8rem; position:relative; padding:0 1rem; }
+    .section-label::before,.section-label::after { content:''; position:absolute; top:50%; width:2.5rem; height:1px; background:var(--g500); }
+    .section-label::before { right:100%; }
+    .section-label::after { left:100%; }
+    .section-title { font-size:clamp(1.8rem,3.5vw,2.5rem); font-weight:800; color:var(--p900); margin-bottom:1rem; }
+    .section-desc { font-size:1.05rem; color:var(--text-mid); max-width:600px; margin:0 auto; }
 
-    /* ===================== CTA ===================== */
-    .cta {
-      padding: 6rem 2rem; text-align: center;
-      background: linear-gradient(135deg, var(--p700) 0%, var(--p600) 50%, var(--p800) 100%);
-      position: relative; overflow: hidden;
-    }
-    .cta::before { content: '✦'; position: absolute; top: 2rem; right: 3rem; font-size: 4rem; color: rgba(212,160,23,0.15); }
-    .cta::after  { content: '✦'; position: absolute; bottom: 2rem; left: 3rem; font-size: 3rem; color: rgba(212,160,23,0.1); }
-    .cta-content { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; }
-    .cta-title { font-size: clamp(1.8rem,3.5vw,2.5rem); font-weight: 800; color: #fff; margin-bottom: 1.2rem; }
-    .cta-desc { color: rgba(255,255,255,0.82); font-size: 1.05rem; line-height: 1.8; margin-bottom: 2.5rem; }
-    .cta-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-    .btn-outline-light {
-      display: inline-block; background: transparent; color: #fff; font-weight: 600; font-size: 1rem;
-      padding: 0.85rem 2rem; border-radius: 50px; border: 2px solid rgba(255,255,255,0.5); cursor: pointer;
-      transition: border-color 0.2s, transform 0.2s;
-    }
-    .btn-outline-light:hover { border-color: #fff; transform: translateY(-2px); }
+    /* ABOUT */
+    .about { padding:6rem 2rem; background:var(--bg-light); }
+    .about-container { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1.6fr; gap:4rem; align-items:center; }
+    .about-image-wrap { position:relative; }
+    .about-img { width:100%; border-radius:20px; box-shadow:0 20px 60px rgba(90,45,145,0.25); object-fit:cover; aspect-ratio:3/4; }
+    .about-badge-float { position:absolute; bottom:-1rem; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,var(--g500),var(--g400)); color:var(--p900); font-weight:700; font-size:0.85rem; padding:0.6rem 1.5rem; border-radius:50px; white-space:nowrap; box-shadow:0 4px 20px rgba(212,160,23,0.4); }
+    .about-text { color:var(--text-mid); font-size:1rem; margin-bottom:1.2rem; line-height:1.9; }
+    .certs { background:var(--bg-mid); border-right:3px solid var(--g500); padding:1.2rem 1.5rem; border-radius:12px; margin:1.5rem 0 2rem; }
+    .certs-title { font-size:0.95rem; font-weight:700; color:var(--p800); margin-bottom:0.8rem; }
+    .certs-list { list-style:none; display:flex; flex-direction:column; gap:0.45rem; }
+    .certs-list li { color:var(--text-mid); font-size:0.92rem; }
 
-    /* ===================== FOOTER ===================== */
-    .footer { background: var(--p900); padding: 2.5rem 2rem; border-top: 1px solid rgba(212,160,23,0.15); }
-    .footer-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
-    .footer-logo { display: flex; align-items: center; gap: 0.6rem; }
-    .footer-copy { color: rgba(255,255,255,0.45); font-size: 0.85rem; }
+    /* SERVICE CARDS */
+    .services { padding:6rem 2rem; background:#fff; }
+    .services-grid { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:repeat(2,1fr); gap:1.8rem; }
+    .service-card { background:var(--bg-light); border:1px solid rgba(90,45,145,0.1); border-radius:20px; padding:2.2rem; transition:transform 0.25s,box-shadow 0.25s,border-color 0.25s; position:relative; overflow:hidden; }
+    .service-card::before { content:''; position:absolute; top:0; right:0; width:100%; height:3px; background:linear-gradient(90deg,var(--p400),var(--g400)); opacity:0; transition:opacity 0.25s; }
+    .service-card:hover { transform:translateY(-6px); box-shadow:0 20px 50px rgba(90,45,145,0.15); border-color:rgba(90,45,145,0.25); }
+    .service-card:hover::before { opacity:1; }
+    .service-icon { font-size:2rem; color:var(--g500); margin-bottom:1rem; }
+    .service-title { font-size:1.15rem; font-weight:700; color:var(--p900); margin-bottom:0.8rem; }
+    .service-desc { color:var(--text-mid); font-size:0.95rem; line-height:1.8; margin-bottom:1rem; }
+    .service-price { font-size:1.05rem; font-weight:700; color:var(--p600); margin-bottom:1rem; }
+    .service-link { color:var(--p500); font-weight:600; font-size:0.9rem; transition:color 0.2s; cursor:pointer; }
+    .service-link:hover { color:var(--g500); }
+    .add-to-cart-btn { display:inline-flex; align-items:center; gap:0.4rem; background:linear-gradient(135deg,var(--p600),var(--p500)); color:#fff; font-family:'Cairo',Arial,sans-serif; font-size:0.85rem; font-weight:600; padding:0.55rem 1.2rem; border-radius:8px; border:none; cursor:pointer; transition:opacity 0.2s,transform 0.2s; }
+    .add-to-cart-btn:hover { opacity:0.9; transform:translateY(-1px); }
+    .vip-card { border-color:rgba(212,160,23,0.3) !important; background:linear-gradient(135deg,#fdf8e1 0%,#f9f5ff 100%) !important; }
+    .vip-btn { background:linear-gradient(135deg,var(--g600),var(--g400)) !important; color:var(--p900) !important; }
 
-    /* ===================== RESPONSIVE ===================== */
-    @media (max-width: 900px) {
-      .nav-links { display: none; }
-      .mobile-menu-btn { display: flex; }
-      .about-container { grid-template-columns: 1fr; gap: 2rem; }
-      .about-img { max-height: 400px; width: 80%; margin: 0 auto; }
-      .services-grid, .testimonials-grid, .blog-grid { grid-template-columns: 1fr; }
-      .stat { padding: 0.5rem 1.5rem; }
-      .stat-divider { display: none; }
-    }
-    @media (max-width: 600px) {
-      .hero-title { font-size: 2rem; }
-      .hero-actions { flex-direction: column; align-items: flex-start; }
-      .slider-arrows { display: none; }
-    }
+    /* TESTIMONIALS */
+    .testimonials { padding:6rem 2rem; background:linear-gradient(180deg,var(--p900) 0%,var(--p800) 100%); }
+    .testimonials .section-label { color:var(--g300); }
+    .testimonials .section-title { color:#fff; }
+    .testimonials-grid { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:repeat(2,1fr); gap:1.8rem; }
+    .testimonial-card { background:rgba(255,255,255,0.06); border:1px solid rgba(212,160,23,0.2); border-radius:20px; padding:2rem; transition:all 0.25s; }
+    .testimonial-card:hover { background:rgba(255,255,255,0.1); border-color:rgba(212,160,23,0.4); }
+    .quote-mark { font-size:4rem; color:var(--g400); line-height:0.7; margin-bottom:1rem; font-family:serif; }
+    .testimonial-text { color:rgba(255,255,255,0.85); font-size:0.97rem; line-height:1.85; margin-bottom:1.5rem; }
+    .testimonial-author { display:flex; align-items:center; gap:0.9rem; }
+    .author-avatar { width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg,var(--g500),var(--p400)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:1rem; flex-shrink:0; }
+    .author-info { display:flex; flex-direction:column; gap:0.15rem; }
+    .author-info strong { color:#fff; font-size:0.95rem; }
+    .author-info span { color:var(--g300); font-size:0.82rem; }
+
+    /* BLOG */
+    .blog { padding:6rem 2rem; background:var(--bg-light); }
+    .blog-grid { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:repeat(3,1fr); gap:1.8rem; }
+    .blog-card { background:#fff; border-radius:16px; padding:1.8rem; border:1px solid rgba(90,45,145,0.08); transition:transform 0.25s,box-shadow 0.25s; }
+    .blog-card:hover { transform:translateY(-5px); box-shadow:0 15px 40px rgba(90,45,145,0.12); }
+    .blog-card-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+    .blog-cat { background:var(--bg-mid); color:var(--p600); font-size:0.78rem; font-weight:600; padding:0.25rem 0.8rem; border-radius:50px; }
+    .blog-date { color:var(--text-light); font-size:0.78rem; }
+    .blog-title { font-size:1.05rem; font-weight:700; color:var(--p900); margin-bottom:0.8rem; line-height:1.5; }
+    .blog-desc { color:var(--text-mid); font-size:0.9rem; line-height:1.7; margin-bottom:1.2rem; }
+
+    /* FAQ */
+    .faq { padding:6rem 2rem; background:#fff; }
+    .faq-list { max-width:800px; margin:0 auto; display:flex; flex-direction:column; gap:0.8rem; }
+    .faq-item { border:1px solid rgba(90,45,145,0.12); border-radius:14px; overflow:hidden; transition:border-color 0.2s; }
+    .faq-item.open { border-color:var(--p400); }
+    .faq-question { width:100%; display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:1.3rem 1.5rem; background:transparent; border:none; cursor:pointer; text-align:right; font-family:'Cairo',Arial,sans-serif; font-size:1rem; font-weight:600; color:var(--p900); transition:background 0.2s; }
+    .faq-item.open .faq-question { background:var(--bg-mid); }
+    .faq-icon { font-size:1.4rem; color:var(--g500); flex-shrink:0; }
+    .faq-answer { padding:1.2rem 1.5rem 1.4rem; color:var(--text-mid); font-size:0.95rem; line-height:1.85; border-top:1px solid rgba(90,45,145,0.08); display:none; }
+    .faq-item.open .faq-answer { display:block; animation:fadeSlide 0.25s ease; }
+    @keyframes fadeSlide { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+
+    /* CTA */
+    .cta { padding:6rem 2rem; text-align:center; background:linear-gradient(135deg,var(--p700) 0%,var(--p600) 50%,var(--p800) 100%); position:relative; overflow:hidden; }
+    .cta::before { content:'✦'; position:absolute; top:2rem; right:3rem; font-size:4rem; color:rgba(212,160,23,0.15); }
+    .cta::after { content:'✦'; position:absolute; bottom:2rem; left:3rem; font-size:3rem; color:rgba(212,160,23,0.1); }
+    .cta-content { position:relative; z-index:1; max-width:640px; margin:0 auto; }
+    .cta-title { font-size:clamp(1.8rem,3.5vw,2.5rem); font-weight:800; color:#fff; margin-bottom:1.2rem; }
+    .cta-desc { color:rgba(255,255,255,0.82); font-size:1.05rem; line-height:1.8; margin-bottom:2.5rem; }
+    .cta-actions { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; }
+    .btn-outline-light { display:inline-block; background:transparent; color:#fff; font-weight:600; font-size:1rem; padding:0.85rem 2rem; border-radius:50px; border:2px solid rgba(255,255,255,0.5); cursor:pointer; transition:border-color 0.2s,transform 0.2s; }
+    .btn-outline-light:hover { border-color:#fff; transform:translateY(-2px); }
+
+    /* FOOTER */
+    .footer { background:var(--p900); padding:2.5rem 2rem; border-top:1px solid rgba(212,160,23,0.15); }
+    .footer-inner { max-width:1100px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; }
+    .footer-copy { color:rgba(255,255,255,0.45); font-size:0.85rem; }
+
+    /* RESPONSIVE */
+    @media (max-width:1060px) { .nav-links a { font-size:0.75rem; padding:0.35rem 0.45rem; } }
+    @media (max-width:900px) { .nav-links,.currency-wrap{display:none!important} .mobile-menu-btn{display:flex} .about-container{grid-template-columns:1fr;gap:2rem} .about-img{max-height:400px;width:80%;margin:0 auto} .services-grid,.testimonials-grid,.blog-grid{grid-template-columns:1fr} .stat{padding:0.5rem 1.5rem} .stat-divider{display:none} .cart-panel{width:300px} }
+    @media (max-width:600px) { .hero-title{font-size:2rem} .hero-actions{flex-direction:column;align-items:flex-start} .slider-arrows{display:none} .cart-panel{left:auto;right:0;width:95vw} }
   </style>
 </head>
 <body>
 
-  <!-- NAVBAR -->
-  <nav class="navbar">
-    <div class="nav-container">
-      <div class="nav-logo">
-        <span class="logo-icon">✦</span>
-        <span class="logo-text">مساحة الشفاء</span>
+<!-- ═══ NAVBAR ═══ -->
+<nav class="navbar">
+  <div class="nav-container">
+    <div class="nav-logo">
+      <span class="logo-icon">✦</span>
+      <span class="logo-text">مساحة الشفاء</span>
+    </div>
+
+    <div class="nav-links">
+      <a href="#hero">الرئيسية</a>
+      <a href="#paid-courses">الدورات المدفوعة</a>
+      <a href="#paid-sessions">الجلسات والاستشارات المدفوعة</a>
+      <a href="#vip">خدمات VIP</a>
+      <a href="#blog">تعلم بوعي</a>
+    </div>
+
+    <div class="nav-actions">
+      <!-- Currency -->
+      <div class="currency-wrap" id="currencyWrap">
+        <button class="currency-btn" id="currencyBtn" onclick="toggleCurrency(event)">
+          <span id="curLabel">JOD — د.أ</span>
+          <span class="caret">▼</span>
+        </button>
+        <div class="currency-dropdown" id="currencyDropdown">
+          <div class="currency-option selected" data-code="JOD" data-symbol="د.أ" onclick="selectCurrency(this)">
+            <span class="cur-name">الدينار الأردني</span><span class="cur-code">JOD</span><span class="cur-check">✔</span>
+          </div>
+          <div class="currency-option" data-code="SAR" data-symbol="ر.س" onclick="selectCurrency(this)">
+            <span class="cur-name">الريال السعودي</span><span class="cur-code">SAR</span><span class="cur-check">✔</span>
+          </div>
+          <div class="currency-option" data-code="AED" data-symbol="د.إ" onclick="selectCurrency(this)">
+            <span class="cur-name">الدرهم الإماراتي</span><span class="cur-code">AED</span><span class="cur-check">✔</span>
+          </div>
+          <div class="currency-option" data-code="USD" data-symbol="$" onclick="selectCurrency(this)">
+            <span class="cur-name">الدولار الأمريكي</span><span class="cur-code">USD</span><span class="cur-check">✔</span>
+          </div>
+        </div>
       </div>
-      <div class="nav-links">
-        <a href="#about">من أنا</a>
-        <a href="#services">الخدمات</a>
-        <a href="#testimonials">آراء العملاء</a>
-        <a href="#blog">المدونة</a>
-        <a href="#faq">الأسئلة الشائعة</a>
-        <a href="#book" class="nav-btn">احجز جلستك</a>
+
+      <!-- Cart -->
+      <div class="cart-wrap" id="cartWrap">
+        <button class="cart-btn" onclick="toggleCart(event)" title="سلة المشتريات">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+          </svg>
+          <span class="cart-count" id="cartCount">0</span>
+        </button>
+        <div class="cart-panel" id="cartPanel">
+          <div class="cart-header">
+            <h3>🛒 سلة المشتريات</h3>
+            <span class="cart-clear" onclick="clearCart()">إفراغ السلة</span>
+          </div>
+          <div class="cart-items" id="cartItems">
+            <div class="cart-empty" id="cartEmpty">
+              <div class="cart-empty-icon">🛍️</div>
+              <p>سلتك فارغة حالياً</p>
+            </div>
+          </div>
+          <div class="cart-footer" id="cartFooter" style="display:none">
+            <div class="cart-total-row">
+              <span class="cart-total-label">الإجمالي</span>
+              <span class="cart-total-amount" id="cartTotal">0 د.أ</span>
+            </div>
+            <button class="cart-checkout" onclick="checkout()">إتمام الشراء</button>
+          </div>
+        </div>
       </div>
+
+      <a href="#book" class="nav-btn">احجز جلستك</a>
+
       <button class="mobile-menu-btn" onclick="document.getElementById('mobileMenu').classList.toggle('open')">
         <span></span><span></span><span></span>
       </button>
     </div>
-    <div class="mobile-menu" id="mobileMenu">
-      <a href="#about">من أنا</a>
-      <a href="#services">الخدمات</a>
-      <a href="#testimonials">آراء العملاء</a>
-      <a href="#blog">المدونة</a>
-      <a href="#faq">الأسئلة الشائعة</a>
-      <a href="#book" class="nav-btn">احجز جلستك</a>
+  </div>
+
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#hero"          onclick="closeMobile()">الرئيسية</a>
+    <a href="#paid-courses"  onclick="closeMobile()">الدورات المدفوعة</a>
+    <a href="#paid-sessions" onclick="closeMobile()">الجلسات والاستشارات المدفوعة</a>
+    <a href="#vip"           onclick="closeMobile()">خدمات VIP</a>
+    <a href="#blog"          onclick="closeMobile()">تعلم بوعي</a>
+    <div class="mobile-currency-row">
+      <span>العملة:</span>
+      <button class="mob-cur-btn selected" data-code="JOD" data-symbol="د.أ" onclick="mobSelectCur(this)">JOD</button>
+      <button class="mob-cur-btn" data-code="SAR" data-symbol="ر.س" onclick="mobSelectCur(this)">SAR</button>
+      <button class="mob-cur-btn" data-code="AED" data-symbol="د.إ" onclick="mobSelectCur(this)">AED</button>
+      <button class="mob-cur-btn" data-code="USD" data-symbol="$" onclick="mobSelectCur(this)">USD</button>
     </div>
-  </nav>
+    <a href="#book" class="nav-btn" onclick="closeMobile()">احجز جلستك</a>
+  </div>
+</nav>
 
-  <!-- HERO SLIDER -->
-  <section class="hero" id="hero">
-    <!-- Slide backgrounds (replace src with your own images) -->
-    <div class="hero-slide active" id="slide0" style="background-image: url('https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1600&q=80');"></div>
-    <div class="hero-slide" id="slide1" style="background-image: url('https://images.unsplash.com/photo-1545389336-cf090694435e?w=1600&q=80');"></div>
-    <div class="hero-slide" id="slide2" style="background-image: url('https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?w=1600&q=80');"></div>
-
-    <div class="hero-overlay"></div>
-
-    <div class="hero-content" id="heroContent">
-      <span class="hero-badge" id="heroBadge">مساحة الشفاء</span>
-      <h1 class="hero-title" id="heroTitle">
-        استعد توازنك،<br />
-        <span class="hero-title-gold" id="heroTitle2">وانعم بالسلام الحقيقي.</span>
-      </h1>
-      <p class="hero-subtitle" id="heroSubtitle">
-        مساحة هادئة وآمنة للشفاء بالطاقة، واستعادة العافية الجسدية والروحية. مع ضحى، تبدأ رحلتك نحو نسخة أكثر انسجاماً من نفسك.
-      </p>
-      <div class="hero-actions">
-        <a href="#book" class="btn-primary">احجز جلستك الأولى</a>
-        <a href="#services" class="btn-outline">تعرّف على الخدمات</a>
-      </div>
+<!-- ═══ HERO ═══ -->
+<section class="hero" id="hero">
+  <div class="hero-slide active" id="slide0" style="background-image:url('https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1600&q=80');"></div>
+  <div class="hero-slide"        id="slide1" style="background-image:url('https://images.unsplash.com/photo-1545389336-cf090694435e?w=1600&q=80');"></div>
+  <div class="hero-slide"        id="slide2" style="background-image:url('https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?w=1600&q=80');"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-content" id="heroContent">
+    <span class="hero-badge" id="heroBadge">مساحة الشفاء</span>
+    <h1 class="hero-title" id="heroTitle">استعد توازنك،<br/><span class="hero-title-gold" id="heroTitle2">وانعم بالسلام الحقيقي.</span></h1>
+    <p class="hero-subtitle" id="heroSubtitle">مساحة هادئة وآمنة للشفاء بالطاقة، واستعادة العافية الجسدية والروحية. مع ضحى، تبدأ رحلتك نحو نسخة أكثر انسجاماً من نفسك.</p>
+    <div class="hero-actions">
+      <a href="#book" class="btn-primary">احجز جلستك الأولى</a>
+      <a href="#paid-sessions" class="btn-outline">تعرّف على الخدمات</a>
     </div>
+  </div>
+  <div class="slider-dots">
+    <button class="dot active" onclick="goToSlide(0)"></button>
+    <button class="dot"        onclick="goToSlide(1)"></button>
+    <button class="dot"        onclick="goToSlide(2)"></button>
+  </div>
+  <div class="slider-arrows">
+    <button class="arrow" onclick="prevSlide()">&#8250;</button>
+    <button class="arrow" onclick="nextSlide()">&#8249;</button>
+  </div>
+</section>
 
-    <div class="slider-dots" id="sliderDots">
-      <button class="dot active" onclick="goToSlide(0)"></button>
-      <button class="dot" onclick="goToSlide(1)"></button>
-      <button class="dot" onclick="goToSlide(2)"></button>
+<!-- STATS -->
+<section class="stats-bar">
+  <div class="stat"><span class="stat-number">+١٢٠٠</span><span class="stat-label">جلسة شفاء</span></div>
+  <div class="stat-divider"></div>
+  <div class="stat"><span class="stat-number">١٥+</span><span class="stat-label">سنة خبرة</span></div>
+  <div class="stat-divider"></div>
+  <div class="stat"><span class="stat-number">١٨</span><span class="stat-label">دولة حول العالم</span></div>
+  <div class="stat-divider"></div>
+  <div class="stat"><span class="stat-number">٤</span><span class="stat-label">شهادات معتمدة</span></div>
+</section>
+
+<!-- ═══ ABOUT ═══ -->
+<section class="about" id="about">
+  <div class="about-container">
+    <div class="about-image-wrap">
+      <img class="about-img" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&q=80" alt="ضحى"/>
+      <div class="about-badge-float">معالج طاقة معتمد</div>
     </div>
-
-    <div class="slider-arrows">
-      <button class="arrow" onclick="prevSlide()">&#8250;</button>
-      <button class="arrow" onclick="nextSlide()">&#8249;</button>
+    <div class="about-content">
+      <span class="section-label">من أنا</span>
+      <h2 class="section-title">ضحى — معالج الطاقة والمرشد الروحي</h2>
+      <p class="about-text">بدأت رحلتي مع الشفاء بالطاقة منذ أكثر من خمس عشرة سنة، بعد أن عشت تجربة تحوّل شخصية عميقة غيّرت نظرتي للحياة كلياً. أدركتُ حينها أن الجسم البشري يحمل في داخله قدرة هائلة على الشفاء الذاتي — كل ما يحتاجه هو المساحة الصحيحة والدعم المناسب.</p>
+      <p class="about-text">اليوم، أرافق عملاءً من مختلف أنحاء العالم في رحلاتهم نحو التوازن والسلام الداخلي. أجمع في ممارستي بين أعمق تقاليد الشفاء الشرقية والمستجدات العلمية في علم الأعصاب وعلم الطاقة الحيوية.</p>
+      <div class="certs">
+        <p class="certs-title">حاصل على شهادات معتمدة في:</p>
+        <ul class="certs-list">
+          <li>✦ الريكي — الدرجة الثالثة (Master)</li>
+          <li>✦ توازن الشاكرات والطاقة الحيوية</li>
+          <li>✦ التأمل العلاجي والوعي الكامل (Mindfulness)</li>
+          <li>✦ العلاج بالصوت والترددات</li>
+        </ul>
+      </div>
+      <a href="#book" class="btn-primary">ابدأ رحلتك معي</a>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- STATS BAR -->
-  <section class="stats-bar">
-    <div class="stat"><span class="stat-number">+١٢٠٠</span><span class="stat-label">جلسة شفاء</span></div>
-    <div class="stat-divider"></div>
-    <div class="stat"><span class="stat-number">١٥+</span><span class="stat-label">سنة خبرة</span></div>
-    <div class="stat-divider"></div>
-    <div class="stat"><span class="stat-number">١٨</span><span class="stat-label">دولة حول العالم</span></div>
-    <div class="stat-divider"></div>
-    <div class="stat"><span class="stat-number">٤</span><span class="stat-label">شهادات معتمدة</span></div>
-  </section>
-
-  <!-- ABOUT -->
-  <section class="about" id="about">
-    <div class="about-container">
-      <div class="about-image-wrap">
-        <!-- Replace with your own about photo -->
-        <img class="about-img" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&q=80" alt="ضحى" />
-        <div class="about-badge-float">معالج طاقة معتمد</div>
-      </div>
-      <div class="about-content">
-        <span class="section-label">من أنا</span>
-        <h2 class="section-title">ضحى — معالج الطاقة والمرشد الروحي</h2>
-        <p class="about-text">بدأت رحلتي مع الشفاء بالطاقة منذ أكثر من خمس عشرة سنة، بعد أن عشت تجربة تحوّل شخصية عميقة غيّرت نظرتي للحياة كلياً. أدركتُ حينها أن الجسم البشري يحمل في داخله قدرة هائلة على الشفاء الذاتي — كل ما يحتاجه هو المساحة الصحيحة والدعم المناسب.</p>
-        <p class="about-text">اليوم، أرافق عملاءً من مختلف أنحاء العالم في رحلاتهم نحو التوازن والسلام الداخلي. أجمع في ممارستي بين أعمق تقاليد الشفاء الشرقية والمستجدات العلمية في علم الأعصاب وعلم الطاقة الحيوية.</p>
-        <div class="certs">
-          <p class="certs-title">حاصل على شهادات معتمدة في:</p>
-          <ul class="certs-list">
-            <li>✦ الريكي — الدرجة الثالثة (Master)</li>
-            <li>✦ توازن الشاكرات والطاقة الحيوية</li>
-            <li>✦ التأمل العلاجي والوعي الكامل (Mindfulness)</li>
-            <li>✦ العلاج بالصوت والترددات</li>
-          </ul>
-        </div>
-        <a href="#book" class="btn-primary">ابدأ رحلتك معي</a>
-      </div>
+<!-- ═══ PAID COURSES ═══ -->
+<section class="services" id="paid-courses">
+  <div class="section-header">
+    <span class="section-label">الدورات المدفوعة</span>
+    <h2 class="section-title">دوراتنا التدريبية المتخصصة</h2>
+    <p class="section-desc">دورات عميقة ومنهجية لمن يريد أن يتعلم الشفاء بالطاقة بشكل احترافي.</p>
+  </div>
+  <div class="services-grid">
+    <div class="service-card">
+      <div class="service-icon">🎓</div>
+      <h3 class="service-title">دورة الريكي المستوى الأول</h3>
+      <p class="service-desc">تعلّم أساسيات الريكي وكيفية توجيه طاقة الشفاء لنفسك وللآخرين. تتضمن الأطر النظرية والتطبيق العملي الكامل مع شهادة معتمدة.</p>
+      <p class="service-price cur-price" data-jod="45">45 د.أ</p>
+      <button class="add-to-cart-btn" onclick="addToCart('دورة الريكي المستوى الأول','🎓',45)">+ أضف للسلة</button>
     </div>
-  </section>
-
-  <!-- SERVICES -->
-  <section class="services" id="services">
-    <div class="section-header">
-      <span class="section-label">ما نقدمه</span>
-      <h2 class="section-title">خدمات الشفاء</h2>
-      <p class="section-desc">كل خدمة مصممة لتلبية احتياجك تحديداً — سواء كنت تبحث عن شفاء فردي عميق أو تجربة جماعية تحوّلية.</p>
+    <div class="service-card">
+      <div class="service-icon">✨</div>
+      <h3 class="service-title">دورة توازن الشاكرات</h3>
+      <p class="service-desc">رحلة تعليمية شاملة لفهم مراكز الطاقة السبعة في جسمك، وكيفية قراءتها وتنشيطها وموازنتها للوصول إلى حياة أكثر انسجاماً.</p>
+      <p class="service-price cur-price" data-jod="55">55 د.أ</p>
+      <button class="add-to-cart-btn" onclick="addToCart('دورة توازن الشاكرات','✨',55)">+ أضف للسلة</button>
     </div>
-    <div class="services-grid">
-      <div class="service-card">
-        <div class="service-icon">✧</div>
-        <h3 class="service-title">جلسات الشفاء الفردية</h3>
-        <p class="service-desc">جلسات خاصة مخصصة بالكامل لك، تُدار بعناية واهتمام فائقين. نستهدف فيها إزالة الانسدادات الطاقية، وتوازن الشاكرات، وتنشيط قدرة الجسم الطبيعية على الشفاء.</p>
-        <a href="#book" class="service-link">احجز الآن ←</a>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">◈</div>
-        <h3 class="service-title">ورش العمل الجماعية</h3>
-        <p class="service-desc">تجمعات شفائية دافئة بقيادة ضحى، تجمع المشاركين في رحلة مشتركة نحو الوعي والتحرر. بيئة آمنة تتيح لك الاستكشاف والنمو بصحبة آخرين على الطريق ذاته.</p>
-        <a href="#book" class="service-link">احجز الآن ←</a>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">◉</div>
-        <h3 class="service-title">المحاضرات والتعليم</h3>
-        <p class="service-desc">محاضرات تثقيفية تجمع بين العلم والروحانية — تشرح آليات عمل الطاقة في الجسم وتمنحك أدوات عملية لتطبيقها في حياتك اليومية.</p>
-        <a href="#book" class="service-link">احجز الآن ←</a>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">✦</div>
-        <h3 class="service-title">جلسات عن بُعد</h3>
-        <p class="service-desc">الشفاء لا يعرف حدوداً جغرافية. جلساتنا عن بُعد فعّالة تماماً كالجلسات الحضورية، وتتيح لك الوصول إلى التجربة الكاملة من أي مكان في العالم.</p>
-        <a href="#book" class="service-link">احجز الآن ←</a>
-      </div>
+    <div class="service-card">
+      <div class="service-icon">🧘</div>
+      <h3 class="service-title">دورة التأمل العلاجي</h3>
+      <p class="service-desc">دورة متكاملة في أنواع التأمل وتقنيات الوعي الكامل. تتعلم كيف تُهدئ الجهاز العصبي وتُفعّل قدرات الجسم الذاتية على الشفاء.</p>
+      <p class="service-price cur-price" data-jod="40">40 د.أ</p>
+      <button class="add-to-cart-btn" onclick="addToCart('دورة التأمل العلاجي','🧘',40)">+ أضف للسلة</button>
     </div>
-  </section>
-
-  <!-- TESTIMONIALS -->
-  <section class="testimonials" id="testimonials">
-    <div class="section-header">
-      <span class="section-label">آراء العملاء</span>
-      <h2 class="section-title">ماذا قالوا عن تجربتهم</h2>
+    <div class="service-card">
+      <div class="service-icon">🎵</div>
+      <h3 class="service-title">دورة الشفاء بالصوت والترددات</h3>
+      <p class="service-desc">تعرّف على علم الترددات الصوتية وكيف تؤثر على الطاقة والخلايا. استخدام الأجراس التبتية والأصوات الطبيعية في الجلسات العلاجية.</p>
+      <p class="service-price cur-price" data-jod="50">50 د.أ</p>
+      <button class="add-to-cart-btn" onclick="addToCart('دورة الشفاء بالصوت والترددات','🎵',50)">+ أضف للسلة</button>
     </div>
-    <div class="testimonials-grid">
-      <div class="testimonial-card">
-        <div class="quote-mark">"</div>
-        <p class="testimonial-text">وصلتُ إلى ضحى وأنا في قمة الإرهاق والانقطاع عن نفسي. بعد ثلاث جلسات فقط، شعرت كأن شيئاً ما انفتح من الداخل — هدوء لم أعرفه من سنوات. هذه التجربة غيّرت مساري.</p>
-        <div class="testimonial-author">
-          <div class="author-avatar">س</div>
-          <div class="author-info"><strong>سارة العمري</strong><span>عمّان، الأردن</span></div>
-        </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="quote-mark">"</div>
-        <p class="testimonial-text">كنتُ متشككاً في البداية، لكن الجلسة الأولى أقنعتني. ضحى يمتلك حضوراً استثنائياً وقدرة نادرة على الإنصات والإحساس بما يحتاجه الشخص دون أن يتكلم. أنصح به بشدة.</p>
-        <div class="testimonial-author">
-          <div class="author-avatar">ك</div>
-          <div class="author-info"><strong>كريم حداد</strong><span>بيروت، لبنان</span></div>
-        </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="quote-mark">"</div>
-        <p class="testimonial-text">حضرتُ ورشة صحوة الشاكرات وخرجتُ بفهم جديد كلياً لجسدي وطاقتي. الأدوات التي تعلمتها لا تزال ترافقني يومياً. شكراً ضحى على هذا العطاء.</p>
-        <div class="testimonial-author">
-          <div class="author-avatar">ن</div>
-          <div class="author-info"><strong>نور الشمري</strong><span>الرياض، المملكة العربية السعودية</span></div>
-        </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="quote-mark">"</div>
-        <p class="testimonial-text">الجلسة عن بُعد كانت تجربة مذهلة — لم أتوقع أن أشعر بهذا العمق عبر الشاشة. ضحى يخلق مساحة من الأمان والاحتواء بشكل يصعب وصفه بالكلمات.</p>
-        <div class="testimonial-author">
-          <div class="author-avatar">ل</div>
-          <div class="author-info"><strong>ليلى إبراهيم</strong><span>دبي، الإمارات</span></div>
-        </div>
-      </div>
+  </div>
+</section>
+
+<!-- ═══ PAID SESSIONS ═══ -->
+<section class="services" id="paid-sessions" style="background:var(--bg-light)">
+  <div class="section-header">
+    <span class="section-label">الجلسات والاستشارات المدفوعة</span>
+    <h2 class="section-title">جلسات شفاء شخصية</h2>
+    <p class="section-desc">كل جلسة مصممة لتلبية احتياجك تحديداً — سواء كنت تبحث عن شفاء فردي عميق أو تجربة جماعية تحوّلية.</p>
+  </div>
+  <div class="services-grid">
+    <div class="service-card">
+      <div class="service-icon">✧</div>
+      <h3 class="service-title">جلسة شفاء فردية (حضوري)</h3>
+      <p class="service-desc">جلسة خاصة مخصصة بالكامل لك. نستهدف فيها إزالة الانسدادات الطاقية وتوازن الشاكرات وتنشيط قدرة الجسم الطبيعية على الشفاء.</p>
+      <p class="service-price cur-price" data-jod="35">35 د.أ</p>
+      <button class="add-to-cart-btn" onclick="addToCart('جلسة شفاء فردية (حضوري)','✧',35)">+ أضف للسلة</button>
     </div>
-  </section>
-
-  <!-- BLOG -->
-  <section class="blog" id="blog">
-    <div class="section-header">
-      <span class="section-label">المدونة</span>
-      <h2 class="section-title">أفكار ومقالات في الشفاء</h2>
+    <div class="service-card">
+      <div class="service-icon">◈</div>
+      <h3 class="service-title">جلسة شفاء عن بُعد</h3>
+      <p class="service-desc">الشفاء لا يعرف حدوداً جغرافية. جلساتنا عن بُعد فعّالة تماماً كالجلسات الحضورية وتتيح لك الوصول إلى التجربة الكاملة من أي مكان في العالم.</p>
+      <p class="service-price cur-price" data-jod="30">30 د.أ</p>
+      <button class="add-to-cart-btn" onclick="addToCart('جلسة شفاء عن بُعد','◈',30)">+ أضف للسلة</button>
     </div>
-    <div class="blog-grid">
-      <div class="blog-card">
-        <div class="blog-card-top"><span class="blog-cat">شفاء بالطاقة</span><span class="blog-date">مارس ٢٠٢٦</span></div>
-        <h3 class="blog-title">الشاكرات السبع: دليلك العملي للتوازن اليومي</h3>
-        <p class="blog-desc">الشاكرات ليست مجرد مفهوم روحي — إنها مراكز طاقة حقيقية في جسمك يمكنك تعلّم قراءتها والتعامل معها.</p>
-        <a href="#blog" class="service-link">اقرأ المقال ←</a>
-      </div>
-      <div class="blog-card">
-        <div class="blog-card-top"><span class="blog-cat">علم الجهاز العصبي</span><span class="blog-date">فبراير ٢٠٢٦</span></div>
-        <h3 class="blog-title">لماذا التنفس هو أقوى أداة شفاء تملكها</h3>
-        <p class="blog-desc">العلم يُثبت ما عرفه الشرق منذ آلاف السنين: أنماط التنفس تؤثر مباشرةً على جهازك العصبي وحالتك الطاقية.</p>
-        <a href="#blog" class="service-link">اقرأ المقال ←</a>
-      </div>
-      <div class="blog-card">
-        <div class="blog-card-top"><span class="blog-cat">الصحة العاطفية</span><span class="blog-date">يناير ٢٠٢٦</span></div>
-        <h3 class="blog-title">الفرق بين الحزن الصحي والحمل الطاقي الثقيل</h3>
-        <p class="blog-desc">ليس كل ألم مرض، وليس كل حزن يحتاج إلى إزالة. أحياناً الحزن رسالة من الجسم والروح — المهم أن تعرف كيف تستمع إليه.</p>
-        <a href="#blog" class="service-link">اقرأ المقال ←</a>
-      </div>
+    <div class="service-card">
+      <div class="service-icon">◉</div>
+      <h3 class="service-title">استشارة طاقية (٣٠ دقيقة)</h3>
+      <p class="service-desc">جلسة استشارية مركّزة لتقييم حالتك الطاقية وتحديد نقاط الخلل. تحصل على خطة شفاء مخصصة وتوصيات عملية يمكنك تطبيقها فوراً.</p>
+      <p class="service-price cur-price" data-jod="20">20 د.أ</p>
+      <button class="add-to-cart-btn" onclick="addToCart('استشارة طاقية (٣٠ دقيقة)','◉',20)">+ أضف للسلة</button>
     </div>
-  </section>
-
-  <!-- FAQ -->
-  <section class="faq" id="faq">
-    <div class="section-header">
-      <span class="section-label">الأسئلة الشائعة</span>
-      <h2 class="section-title">ما الذي تريد معرفته؟</h2>
-      <p class="section-desc">إجابات على أكثر الأسئلة شيوعاً حول الشفاء بالطاقة وكيفية البدء في رحلتك.</p>
+    <div class="service-card">
+      <div class="service-icon">✦</div>
+      <h3 class="service-title">ورشة عمل جماعية</h3>
+      <p class="service-desc">تجمعات شفائية دافئة بقيادة ضحى، تجمع المشاركين في رحلة مشتركة نحو الوعي والتحرر. بيئة آمنة تتيح لك الاستكشاف والنمو بصحبة آخرين.</p>
+      <p class="service-price cur-price" data-jod="25">25 د.أ</p>
+      <button class="add-to-cart-btn" onclick="addToCart('ورشة عمل جماعية','✦',25)">+ أضف للسلة</button>
     </div>
-    <div class="faq-list">
-      <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
-          <span>هل الشفاء بالطاقة علمي ومثبت؟</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-answer">نعم، تشير الأبحاث العلمية الحديثة إلى أن تقنيات مثل الريكي والتأمل لها تأثيرات موثقة على الجهاز العصبي والصحة النفسية والجسدية. آلاف الدراسات تثبت فاعليتها في تخفيف التوتر، تحسين النوم، وتعزيز المناعة.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
-          <span>كم عدد الجلسات التي أحتاجها لأرى نتائج؟</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-answer">يختلف ذلك من شخص لآخر، لكن كثير من العملاء يشعرون بتحسن ملموس بعد الجلسة الأولى. للتغيير العميق والمستدام، نوصي بثلاث جلسات على الأقل لمعالجة الجذور العميقة.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
-          <span>هل يمكنني حجز جلسة عن بُعد وأنا خارج الأردن؟</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-answer">بالتأكيد! الشفاء لا يعرف حدوداً جغرافية. نستقبل عملاء من أكثر من ١٨ دولة عبر جلسات مرئية مباشرة فعّالة تماماً كالجلسات الحضورية.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
-          <span>ما الذي يجب أن أتوقعه في جلستي الأولى؟</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-answer">ستبدأ بمحادثة تعريفية نفهم فيها احتياجاتك وأهدافك. ثم تدخل في حالة استرخاء عميق بينما نعمل على مستوى الطاقة. معظم العملاء يشعرون بدفء وهدوء عميق خلال الجلسة.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
-          <span>هل هناك تعارض بين الشفاء بالطاقة والعلاج الطبي؟</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-answer">لا تعارض على الإطلاق. الشفاء بالطاقة علاج تكميلي يعمل جنباً إلى جنب مع العلاج الطبي التقليدي ولا يحل محله. نحرص دائماً على التوافق مع خطة علاجك الطبية.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
-          <span>ما هي سياسة الإلغاء والاسترداد؟</span><span class="faq-icon">+</span>
-        </button>
-        <div class="faq-answer">يمكن إلغاء الجلسة أو إعادة جدولتها مجاناً قبل ٢٤ ساعة من الموعد. في حالة الإلغاء المتأخر، يُطبق رسم بسيط. للاستفسار عن الاسترداد، يرجى التواصل معنا مباشرة.</div>
-      </div>
+  </div>
+</section>
+
+<!-- ═══ VIP ═══ -->
+<section class="services" id="vip">
+  <div class="section-header">
+    <span class="section-label">خدمات VIP</span>
+    <h2 class="section-title">تجربة شفاء لا مثيل لها</h2>
+    <p class="section-desc">للمن يستحقون الأفضل — رعاية حصرية وشخصية على أعلى مستوى من الاهتمام والعمق.</p>
+  </div>
+  <div class="services-grid">
+    <div class="service-card vip-card">
+      <div class="service-icon">👑</div>
+      <h3 class="service-title">برنامج الشفاء المكثّف (شهر كامل)</h3>
+      <p class="service-desc">برنامج شخصي مخصص لمدة شهر كامل يتضمن ٨ جلسات خاصة + متابعة يومية + خطة تأمل وتغذية طاقية + دعم مستمر على مدار الساعة.</p>
+      <p class="service-price cur-price" data-jod="250">250 د.أ</p>
+      <button class="add-to-cart-btn vip-btn" onclick="addToCart('برنامج الشفاء المكثّف (شهر)','👑',250)">+ أضف للسلة</button>
     </div>
-  </section>
-
-  <!-- CTA -->
-  <section class="cta" id="book">
-    <div class="cta-content">
-      <h2 class="cta-title">هل أنت مستعد للبدء؟</h2>
-      <p class="cta-desc">لا تتردد في التواصل معنا لأي سؤال، أو احجز جلستك الأولى مباشرةً. نحن هنا لنرافقك في كل خطوة.</p>
-      <div class="cta-actions">
-        <a href="mailto:info@raad-wellness.com" class="btn-primary">احجز جلستك</a>
-        <a href="mailto:info@raad-wellness.com" class="btn-outline-light">تواصل معنا</a>
-      </div>
+    <div class="service-card vip-card">
+      <div class="service-icon">💎</div>
+      <h3 class="service-title">ريتريت الشفاء الخاص (يوم كامل)</h3>
+      <p class="service-desc">يوم كامل لك وحدك مع ضحى — شفاء عميق، تأمل جماعي، علاج بالصوت، وجلسة توازن شاكرات شاملة. تجربة تحوّلية لا تُنسى.</p>
+      <p class="service-price cur-price" data-jod="180">180 د.أ</p>
+      <button class="add-to-cart-btn vip-btn" onclick="addToCart('ريتريت الشفاء الخاص (يوم)','💎',180)">+ أضف للسلة</button>
     </div>
-  </section>
-
-  <!-- FOOTER -->
-  <footer class="footer">
-    <div class="footer-inner">
-      <div class="footer-logo">
-        <span class="logo-icon">✦</span>
-        <span class="logo-text">مساحة الشفاء</span>
-      </div>
-      <p class="footer-copy">جميع الحقوق محفوظة © ٢٠٢٦ — ضحى للشفاء بالطاقة</p>
+    <div class="service-card vip-card">
+      <div class="service-icon">🌙</div>
+      <h3 class="service-title">باقة الزوجين — شفاء العلاقة</h3>
+      <p class="service-desc">جلسات مخصصة للأزواج تعمل على تنظيف الطاقة بين الشريكين وتحسين الاتصال الروحي والعاطفي. تشمل ٤ جلسات مشتركة + جلستين فرديتين.</p>
+      <p class="service-price cur-price" data-jod="150">150 د.أ</p>
+      <button class="add-to-cart-btn vip-btn" onclick="addToCart('باقة الزوجين — شفاء العلاقة','🌙',150)">+ أضف للسلة</button>
     </div>
-  </footer>
+    <div class="service-card vip-card">
+      <div class="service-icon">⭐</div>
+      <h3 class="service-title">الدعم الشهري المستمر (VIP)</h3>
+      <p class="service-desc">اشتراك شهري يمنحك أولوية الحجز، وجلستين شفاء شهريتين، ومتابعة أسبوعية عبر الواتساب، وصولاً حصرياً لجميع المواد التعليمية الجديدة.</p>
+      <p class="service-price cur-price" data-jod="120" data-suffix=" / شهر">120 د.أ / شهر</p>
+      <button class="add-to-cart-btn vip-btn" onclick="addToCart('الدعم الشهري المستمر (VIP)','⭐',120)">+ أضف للسلة</button>
+    </div>
+  </div>
+</section>
 
-  <!-- ===================== JAVASCRIPT ===================== -->
-  <script>
-    // ── SLIDER DATA ──────────────────────────────────────────
-    var slides = [
-      {
-        badge: 'مساحة الشفاء',
-        title: 'استعد توازنك،',
-        title2: 'وانعم بالسلام الحقيقي.',
-        subtitle: 'مساحة هادئة وآمنة للشفاء بالطاقة، واستعادة العافية الجسدية والروحية. مع ضحى، تبدأ رحلتك نحو نسخة أكثر انسجاماً من نفسك.'
-      },
-      {
-        badge: 'الشفاء بالطاقة',
-        title: 'أطلق طاقتك الداخلية،',
-        title2: 'وانسجم مع كونك.',
-        subtitle: 'من خلال تقنيات الريكي وتوازن الشاكرات، نساعدك على إزالة الانسدادات وتدفق الطاقة الحيوية بشكل طبيعي.'
-      },
-      {
-        badge: 'رحلة التحول',
-        title: 'ابدأ رحلة التحول،',
-        title2: 'نحو نسختك الأفضل.',
-        subtitle: 'أكثر من ١٢٠٠ جلسة شفاء ناجحة. جلسات فردية وجماعية وعن بُعد. تجربة تحوّلية حقيقية بقيادة ضحى.'
-      }
-    ];
+<!-- ═══ TESTIMONIALS ═══ -->
+<section class="testimonials" id="testimonials">
+  <div class="section-header">
+    <span class="section-label">آراء العملاء</span>
+    <h2 class="section-title">ماذا قالوا عن تجربتهم</h2>
+  </div>
+  <div class="testimonials-grid">
+    <div class="testimonial-card">
+      <div class="quote-mark">"</div>
+      <p class="testimonial-text">وصلتُ إلى ضحى وأنا في قمة الإرهاق والانقطاع عن نفسي. بعد ثلاث جلسات فقط، شعرت كأن شيئاً ما انفتح من الداخل — هدوء لم أعرفه من سنوات.</p>
+      <div class="testimonial-author"><div class="author-avatar">س</div><div class="author-info"><strong>سارة العمري</strong><span>عمّان، الأردن</span></div></div>
+    </div>
+    <div class="testimonial-card">
+      <div class="quote-mark">"</div>
+      <p class="testimonial-text">كنتُ متشككاً في البداية، لكن الجلسة الأولى أقنعتني. ضحى يمتلك حضوراً استثنائياً وقدرة نادرة على الإنصات والإحساس بما يحتاجه الشخص دون أن يتكلم.</p>
+      <div class="testimonial-author"><div class="author-avatar">ك</div><div class="author-info"><strong>كريم حداد</strong><span>بيروت، لبنان</span></div></div>
+    </div>
+    <div class="testimonial-card">
+      <div class="quote-mark">"</div>
+      <p class="testimonial-text">حضرتُ ورشة صحوة الشاكرات وخرجتُ بفهم جديد كلياً لجسدي وطاقتي. الأدوات التي تعلمتها لا تزال ترافقني يومياً.</p>
+      <div class="testimonial-author"><div class="author-avatar">ن</div><div class="author-info"><strong>نور الشمري</strong><span>الرياض، المملكة العربية السعودية</span></div></div>
+    </div>
+    <div class="testimonial-card">
+      <div class="quote-mark">"</div>
+      <p class="testimonial-text">الجلسة عن بُعد كانت تجربة مذهلة — لم أتوقع أن أشعر بهذا العمق عبر الشاشة. ضحى يخلق مساحة من الأمان والاحتواء بشكل يصعب وصفه بالكلمات.</p>
+      <div class="testimonial-author"><div class="author-avatar">ل</div><div class="author-info"><strong>ليلى إبراهيم</strong><span>دبي، الإمارات</span></div></div>
+    </div>
+  </div>
+</section>
 
-    var current = 0;
-    var total   = slides.length;
-    var timer   = null;
-    var busy    = false;
+<!-- ═══ BLOG ═══ -->
+<section class="blog" id="blog">
+  <div class="section-header">
+    <span class="section-label">تعلم بوعي</span>
+    <h2 class="section-title">أفكار ومقالات في الشفاء</h2>
+  </div>
+  <div class="blog-grid">
+    <div class="blog-card">
+      <div class="blog-card-top"><span class="blog-cat">شفاء بالطاقة</span><span class="blog-date">مارس ٢٠٢٦</span></div>
+      <h3 class="blog-title">الشاكرات السبع: دليلك العملي للتوازن اليومي</h3>
+      <p class="blog-desc">الشاكرات ليست مجرد مفهوم روحي — إنها مراكز طاقة حقيقية في جسمك يمكنك تعلّم قراءتها والتعامل معها.</p>
+      <a href="#blog" class="service-link">اقرأ المقال ←</a>
+    </div>
+    <div class="blog-card">
+      <div class="blog-card-top"><span class="blog-cat">علم الجهاز العصبي</span><span class="blog-date">فبراير ٢٠٢٦</span></div>
+      <h3 class="blog-title">لماذا التنفس هو أقوى أداة شفاء تملكها</h3>
+      <p class="blog-desc">العلم يُثبت ما عرفه الشرق منذ آلاف السنين: أنماط التنفس تؤثر مباشرةً على جهازك العصبي وحالتك الطاقية.</p>
+      <a href="#blog" class="service-link">اقرأ المقال ←</a>
+    </div>
+    <div class="blog-card">
+      <div class="blog-card-top"><span class="blog-cat">الصحة العاطفية</span><span class="blog-date">يناير ٢٠٢٦</span></div>
+      <h3 class="blog-title">الفرق بين الحزن الصحي والحمل الطاقي الثقيل</h3>
+      <p class="blog-desc">ليس كل ألم مرض، وليس كل حزن يحتاج إلى إزالة. أحياناً الحزن رسالة من الجسم والروح — المهم أن تعرف كيف تستمع إليه.</p>
+      <a href="#blog" class="service-link">اقرأ المقال ←</a>
+    </div>
+  </div>
+</section>
 
-    function showSlide(index) {
-      if (busy) return;
-      busy = true;
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="section-header">
+    <span class="section-label">الأسئلة الشائعة</span>
+    <h2 class="section-title">ما الذي تريد معرفته؟</h2>
+    <p class="section-desc">إجابات على أكثر الأسئلة شيوعاً حول الشفاء بالطاقة وكيفية البدء في رحلتك.</p>
+  </div>
+  <div class="faq-list">
+    <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)"><span>هل الشفاء بالطاقة علمي ومثبت؟</span><span class="faq-icon">+</span></button><div class="faq-answer">نعم، تشير الأبحاث العلمية الحديثة إلى أن تقنيات مثل الريكي والتأمل لها تأثيرات موثقة على الجهاز العصبي والصحة النفسية والجسدية.</div></div>
+    <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)"><span>كم عدد الجلسات التي أحتاجها لأرى نتائج؟</span><span class="faq-icon">+</span></button><div class="faq-answer">يختلف ذلك من شخص لآخر، لكن كثير من العملاء يشعرون بتحسن ملموس بعد الجلسة الأولى. للتغيير العميق والمستدام، نوصي بثلاث جلسات على الأقل.</div></div>
+    <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)"><span>هل يمكنني حجز جلسة عن بُعد وأنا خارج الأردن؟</span><span class="faq-icon">+</span></button><div class="faq-answer">بالتأكيد! الشفاء لا يعرف حدوداً جغرافية. نستقبل عملاء من أكثر من ١٨ دولة عبر جلسات مرئية مباشرة فعّالة تماماً كالجلسات الحضورية.</div></div>
+    <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)"><span>ما الذي يجب أن أتوقعه في جلستي الأولى؟</span><span class="faq-icon">+</span></button><div class="faq-answer">ستبدأ بمحادثة تعريفية نفهم فيها احتياجاتك وأهدافك. ثم تدخل في حالة استرخاء عميق بينما نعمل على مستوى الطاقة.</div></div>
+    <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)"><span>هل هناك تعارض بين الشفاء بالطاقة والعلاج الطبي؟</span><span class="faq-icon">+</span></button><div class="faq-answer">لا تعارض على الإطلاق. الشفاء بالطاقة علاج تكميلي يعمل جنباً إلى جنب مع العلاج الطبي التقليدي ولا يحل محله.</div></div>
+    <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)"><span>ما هي سياسة الإلغاء والاسترداد؟</span><span class="faq-icon">+</span></button><div class="faq-answer">يمكن إلغاء الجلسة أو إعادة جدولتها مجاناً قبل ٢٤ ساعة من الموعد. في حالة الإلغاء المتأخر، يُطبق رسم بسيط.</div></div>
+  </div>
+</section>
 
-      // fade out content
-      var content = document.getElementById('heroContent');
-      content.classList.remove('visible');
+<!-- CTA -->
+<section class="cta" id="book">
+  <div class="cta-content">
+    <h2 class="cta-title">هل أنت مستعد للبدء؟</h2>
+    <p class="cta-desc">لا تتردد في التواصل معنا لأي سؤال، أو احجز جلستك الأولى مباشرةً. نحن هنا لنرافقك في كل خطوة.</p>
+    <div class="cta-actions">
+      <a href="mailto:info@raad-wellness.com" class="btn-primary">احجز جلستك</a>
+      <a href="mailto:info@raad-wellness.com" class="btn-outline-light">تواصل معنا</a>
+    </div>
+  </div>
+</section>
 
-      setTimeout(function () {
-        // switch background
-        document.getElementById('slide' + current).classList.remove('active');
-        current = (index + total) % total;
-        document.getElementById('slide' + current).classList.add('active');
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="nav-logo"><span class="logo-icon">✦</span><span class="logo-text">مساحة الشفاء</span></div>
+    <p class="footer-copy">جميع الحقوق محفوظة © ٢٠٢٦ — ضحى للشفاء بالطاقة</p>
+  </div>
+</footer>
 
-        // update dots
-        var dots = document.querySelectorAll('.dot');
-        dots.forEach(function (d, i) { d.classList.toggle('active', i === current); });
+<script>
+// ── SLIDER ──────────────────────────────────
+var slides=[
+  {badge:'مساحة الشفاء',   title:'استعد توازنك،',       title2:'وانعم بالسلام الحقيقي.',  sub:'مساحة هادئة وآمنة للشفاء بالطاقة، واستعادة العافية الجسدية والروحية. مع ضحى، تبدأ رحلتك نحو نسخة أكثر انسجاماً من نفسك.'},
+  {badge:'الشفاء بالطاقة', title:'أطلق طاقتك الداخلية،', title2:'وانسجم مع كونك.',          sub:'من خلال تقنيات الريكي وتوازن الشاكرات، نساعدك على إزالة الانسدادات وتدفق الطاقة الحيوية بشكل طبيعي.'},
+  {badge:'رحلة التحول',    title:'ابدأ رحلة التحول،',   title2:'نحو نسختك الأفضل.',       sub:'أكثر من ١٢٠٠ جلسة شفاء ناجحة. جلسات فردية وجماعية وعن بُعد. تجربة تحوّلية حقيقية بقيادة ضحى.'}
+];
+var cur=0,busy=false,tim=null;
+function showSlide(idx){
+  if(busy)return; busy=true;
+  var c=document.getElementById('heroContent');
+  c.classList.remove('visible');
+  setTimeout(function(){
+    document.getElementById('slide'+cur).classList.remove('active');
+    cur=(idx+3)%3;
+    document.getElementById('slide'+cur).classList.add('active');
+    document.querySelectorAll('.dot').forEach(function(d,i){d.classList.toggle('active',i===cur);});
+    var s=slides[cur];
+    document.getElementById('heroBadge').textContent=s.badge;
+    document.getElementById('heroTitle').innerHTML=s.title+'<br/><span class="hero-title-gold">'+s.title2+'</span>';
+    document.getElementById('heroSubtitle').textContent=s.sub;
+    setTimeout(function(){c.classList.add('visible');busy=false;},80);
+  },500);
+}
+function goToSlide(i){clearInterval(tim);showSlide(i);startAuto();}
+function nextSlide(){goToSlide(cur+1);}
+function prevSlide(){goToSlide(cur-1);}
+function startAuto(){tim=setInterval(function(){showSlide(cur+1);},5000);}
 
-        // update text
-        var s = slides[current];
-        document.getElementById('heroBadge').textContent    = s.badge;
-        document.getElementById('heroTitle').childNodes[0].textContent = s.title + '\n';
-        document.getElementById('heroTitle2').textContent  = s.title2;
-        document.getElementById('heroSubtitle').textContent = s.subtitle;
+// ── CURRENCY ────────────────────────────────
+var curCode='JOD', curSym='د.أ';
+var rates={JOD:1, SAR:3.78, AED:4.1, USD:1.41};
 
-        // fade in content
-        setTimeout(function () {
-          content.classList.add('visible');
-          busy = false;
-        }, 80);
-      }, 500);
-    }
+function selectCurrency(el){
+  curCode=el.dataset.code; curSym=el.dataset.symbol;
+  document.getElementById('curLabel').textContent=curCode+' — '+curSym;
+  document.querySelectorAll('.currency-option').forEach(function(o){o.classList.toggle('selected',o===el);});
+  document.getElementById('currencyWrap').classList.remove('open');
+  updatePrices(); updateCartTotal();
+}
+function mobSelectCur(btn){
+  curCode=btn.dataset.code; curSym=btn.dataset.symbol;
+  document.getElementById('curLabel').textContent=curCode+' — '+curSym;
+  document.querySelectorAll('.mob-cur-btn').forEach(function(b){b.classList.toggle('selected',b===btn);});
+  document.querySelectorAll('.currency-option').forEach(function(o){o.classList.toggle('selected',o.dataset.code===curCode);});
+  updatePrices(); updateCartTotal();
+}
+function toggleCurrency(e){
+  e.stopPropagation();
+  document.getElementById('currencyWrap').classList.toggle('open');
+  document.getElementById('cartWrap').classList.remove('open');
+}
+function updatePrices(){
+  document.querySelectorAll('.cur-price').forEach(function(el){
+    var base=parseFloat(el.dataset.jod)||0;
+    var val=(base*rates[curCode]);
+    var suffix=el.dataset.suffix||'';
+    el.textContent=(val%1===0?val:val.toFixed(1))+' '+curSym+suffix;
+  });
+}
 
-    function goToSlide(index) {
-      clearInterval(timer);
-      showSlide(index);
-      startAutoPlay();
-    }
+// ── CART ────────────────────────────────────
+var cart=[];
+function addToCart(name,icon,priceJOD){
+  var ex=cart.find(function(i){return i.name===name;});
+  if(ex){ex.qty++;}else{cart.push({name:name,icon:icon,jod:priceJOD,qty:1});}
+  renderCart();
+  document.getElementById('cartWrap').classList.add('open');
+  var cnt=document.getElementById('cartCount');
+  cnt.classList.remove('bump'); void cnt.offsetWidth; cnt.classList.add('bump');
+}
+function renderCart(){
+  var total=cart.reduce(function(s,i){return s+i.qty;},0);
+  document.getElementById('cartCount').textContent=total;
+  var el=document.getElementById('cartItems');
+  var ft=document.getElementById('cartFooter');
+  if(!cart.length){
+    el.innerHTML='<div class="cart-empty"><div class="cart-empty-icon">🛍️</div><p>سلتك فارغة حالياً</p></div>';
+    ft.style.display='none'; return;
+  }
+  ft.style.display='block';
+  var h='';
+  cart.forEach(function(item,idx){
+    var val=item.jod*rates[curCode];
+    var ps=(val%1===0?val:val.toFixed(1))+' '+curSym;
+    h+='<div class="cart-item">'
+      +'<div class="cart-item-icon">'+item.icon+'</div>'
+      +'<div class="cart-item-info">'
+        +'<div class="cart-item-name">'+item.name+'</div>'
+        +'<div class="cart-item-price">'+ps+'</div>'
+        +'<div class="cart-item-qty">'
+          +'<button class="qty-btn" onclick="changeQty('+idx+',-1)">−</button>'
+          +'<span class="qty-val">'+item.qty+'</span>'
+          +'<button class="qty-btn" onclick="changeQty('+idx+',1)">+</button>'
+        +'</div>'
+      +'</div>'
+      +'<span class="cart-item-remove" onclick="removeItem('+idx+')">✕</span>'
+      +'</div>';
+  });
+  el.innerHTML=h;
+  updateCartTotal();
+}
+function updateCartTotal(){
+  var tot=cart.reduce(function(s,i){return s+(i.jod*rates[curCode]*i.qty);},0);
+  document.getElementById('cartTotal').textContent=(tot%1===0?tot:tot.toFixed(1))+' '+curSym;
+}
+function changeQty(idx,d){cart[idx].qty+=d;if(cart[idx].qty<=0)cart.splice(idx,1);renderCart();}
+function removeItem(idx){cart.splice(idx,1);renderCart();}
+function clearCart(){cart=[];renderCart();}
+function checkout(){alert('شكراً على طلبك! سيتم التواصل معك قريباً لإتمام الدفع.');clearCart();document.getElementById('cartWrap').classList.remove('open');}
+function toggleCart(e){e.stopPropagation();document.getElementById('cartWrap').classList.toggle('open');document.getElementById('currencyWrap').classList.remove('open');}
 
-    function nextSlide() { goToSlide(current + 1); }
-    function prevSlide() { goToSlide(current - 1); }
+// ── FAQ ─────────────────────────────────────
+function toggleFaq(btn){
+  var item=btn.closest('.faq-item'),isOpen=item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(function(el){el.classList.remove('open');el.querySelector('.faq-icon').textContent='+';});
+  if(!isOpen){item.classList.add('open');btn.querySelector('.faq-icon').textContent='−';}
+}
 
-    function startAutoPlay() {
-      timer = setInterval(function () { showSlide(current + 1); }, 5000);
-    }
+// ── MOBILE MENU ──────────────────────────────
+function closeMobile(){document.getElementById('mobileMenu').classList.remove('open');}
 
-    // ── INIT SLIDER ──────────────────────────────────────────
-    window.addEventListener('DOMContentLoaded', function () {
-      document.getElementById('heroContent').classList.add('visible');
-      startAutoPlay();
-    });
+// ── OUTSIDE CLICK ────────────────────────────
+document.addEventListener('click',function(e){
+  if(!document.getElementById('currencyWrap').contains(e.target)) document.getElementById('currencyWrap').classList.remove('open');
+  if(!document.getElementById('cartWrap').contains(e.target)) document.getElementById('cartWrap').classList.remove('open');
+});
 
-    // ── FAQ ACCORDION ────────────────────────────────────────
-    function toggleFaq(btn) {
-      var item = btn.closest('.faq-item');
-      var icon = btn.querySelector('.faq-icon');
-      var isOpen = item.classList.contains('open');
-
-      // close all
-      document.querySelectorAll('.faq-item').forEach(function (el) {
-        el.classList.remove('open');
-        el.querySelector('.faq-icon').textContent = '+';
-      });
-
-      // open clicked if it was closed
-      if (!isOpen) {
-        item.classList.add('open');
-        icon.textContent = '−';
-      }
-    }
-
-    // ── MOBILE MENU: close on link click ─────────────────────
-    document.querySelectorAll('#mobileMenu a').forEach(function (a) {
-      a.addEventListener('click', function () {
-        document.getElementById('mobileMenu').classList.remove('open');
-      });
-    });
-  </script>
-
+// ── INIT ─────────────────────────────────────
+window.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('heroContent').classList.add('visible');
+  startAuto();
+});
+</script>
 </body>
 </html>
