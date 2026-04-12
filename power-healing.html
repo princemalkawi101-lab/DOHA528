@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مساحة الشفاء — ضحى للطاقة والشفاء الروحي</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
+  <style>
+    /* ===================== RESET & BASE ===================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Cairo', Arial, sans-serif;
+      background: #fff;
+      color: #1a0a2e;
+      direction: rtl;
+      line-height: 1.7;
+    }
+    a { text-decoration: none; color: inherit; }
+    img { max-width: 100%; display: block; }
+
+    /* ===================== VARIABLES ===================== */
+    :root {
+      --p900: #1a0a2e;
+      --p800: #2d1554;
+      --p700: #3d1f72;
+      --p600: #5a2d91;
+      --p500: #7b3fb5;
+      --p400: #9d5fd4;
+      --p300: #c49de8;
+      --p100: #f0e8ff;
+      --g600: #b8860b;
+      --g500: #d4a017;
+      --g400: #e8b923;
+      --g300: #f0cc55;
+      --g100: #fdf8e1;
+      --bg-light: #f9f5ff;
+      --bg-mid: #f0e8ff;
+      --text-mid: #4a3065;
+      --text-light: #8a6faa;
+    }
+
+    /* ===================== NAVBAR ===================== */
+    .navbar {
+      position: fixed; top: 0; right: 0; left: 0; z-index: 1000;
+      background: rgba(26,10,46,0.96);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(212,160,23,0.2);
+    }
+    .nav-container {
+      max-width: 1200px; margin: 0 auto; padding: 0 2rem;
+      height: 70px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 0.6rem; }
+    .logo-icon { color: var(--g400); font-size: 1.4rem; }
+    .logo-text { color: #fff; font-size: 1.2rem; font-weight: 700; }
+    .nav-links { display: flex; align-items: center; gap: 1.8rem; }
+    .nav-links a { color: rgba(255,255,255,0.8); font-size: 0.92rem; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--g300); }
+    .nav-btn {
+      background: var(--g500) !important; color: var(--p900) !important;
+      padding: 0.5rem 1.4rem !important; border-radius: 50px !important;
+      font-weight: 700 !important; font-size: 0.88rem !important;
+      transition: background 0.2s, transform 0.15s !important;
+    }
+    .nav-btn:hover { background: var(--g300) !important; transform: translateY(-1px); }
+    .mobile-menu-btn {
+      display: none; flex-direction: column; gap: 5px;
+      background: none; border: none; cursor: pointer; padding: 4px;
+    }
+    .mobile-menu-btn span { display: block; width: 24px; height: 2px; background: #fff; border-radius: 2px; }
+    .mobile-menu {
+      display: none; flex-direction: column;
+      padding: 1rem 2rem 1.5rem; gap: 0.8rem;
+      background: rgba(26,10,46,0.98);
+      border-top: 1px solid rgba(212,160,23,0.15);
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { color: rgba(255,255,255,0.85); font-size: 1rem; padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.07); }
+
+    /* ===================== HERO SLIDER ===================== */
+    .hero {
+      position: relative; height: 100vh; min-height: 600px;
+      overflow: hidden; display: flex; align-items: center;
+    }
+    .hero-slide {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center;
+      opacity: 0; transition: opacity 0.8s ease, transform 0.8s ease;
+      transform: scale(1.04);
+    }
+    .hero-slide.active { opacity: 1; transform: scale(1); }
+    .hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(26,10,46,0.82) 0%, rgba(45,21,84,0.6) 50%, rgba(26,10,46,0.75) 100%);
+      z-index: 1;
+    }
+    .hero-content {
+      position: relative; z-index: 2;
+      max-width: 1200px; margin: 0 auto;
+      padding: 0 2rem; padding-top: 70px;
+      opacity: 0; transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .hero-content.visible { opacity: 1; transform: translateY(0); }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(212,160,23,0.2);
+      border: 1px solid var(--g500);
+      color: var(--g300);
+      font-size: 0.85rem; padding: 0.35rem 1.1rem;
+      border-radius: 50px; margin-bottom: 1.5rem;
+    }
+    .hero-title { font-size: clamp(2.2rem,5vw,3.8rem); font-weight: 900; color: #fff; line-height: 1.25; margin-bottom: 1.5rem; }
+    .hero-title-gold { color: var(--g300); }
+    .hero-subtitle { font-size: clamp(1rem,2vw,1.2rem); color: rgba(255,255,255,0.82); max-width: 600px; margin-bottom: 2.5rem; line-height: 1.8; }
+    .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--g500), var(--g400));
+      color: var(--p900); font-weight: 700; font-size: 1rem;
+      padding: 0.85rem 2rem; border-radius: 50px; border: none; cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(212,160,23,0.35);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(212,160,23,0.45); }
+    .btn-outline {
+      display: inline-block; background: transparent; color: #fff;
+      font-weight: 600; font-size: 1rem; padding: 0.85rem 2rem;
+      border-radius: 50px; border: 2px solid rgba(255,255,255,0.5); cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, transform 0.2s;
+    }
+    .btn-outline:hover { border-color: var(--g300); color: var(--g300); transform: translateY(-2px); }
+    .slider-dots {
+      position: absolute; bottom: 2.5rem; left: 50%;
+      transform: translateX(-50%); display: flex; gap: 0.6rem; z-index: 3;
+    }
+    .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.6); background: transparent;
+      cursor: pointer; transition: all 0.3s; padding: 0;
+    }
+    .dot.active { background: var(--g400); border-color: var(--g400); transform: scale(1.3); }
+    .slider-arrows { position: absolute; bottom: 2.2rem; left: 2rem; display: flex; gap: 0.5rem; z-index: 3; }
+    .arrow {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.08);
+      color: #fff; font-size: 1.4rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+    }
+    .arrow:hover { background: rgba(212,160,23,0.25); border-color: var(--g400); }
+
+    /* ===================== STATS BAR ===================== */
+    .stats-bar {
+      background: linear-gradient(135deg, var(--p800), var(--p700));
+      display: flex; justify-content: center; align-items: center;
+      flex-wrap: wrap; padding: 2.5rem 2rem;
+    }
+    .stat { display: flex; flex-direction: column; align-items: center; padding: 0.5rem 3rem; }
+    .stat-number { font-size: 2rem; font-weight: 900; color: var(--g300); line-height: 1; }
+    .stat-label { color: rgba(255,255,255,0.75); font-size: 0.9rem; margin-top: 0.3rem; }
+    .stat-divider { width: 1px; height: 50px; background: rgba(212,160,23,0.25); }
+
+    /* ===================== SECTION HEADER ===================== */
+    .section-header { text-align: center; margin-bottom: 3.5rem; }
+    .section-label {
+      display: inline-block; color: var(--p500);
+      font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em;
+      margin-bottom: 0.8rem; position: relative; padding: 0 1rem;
+    }
+    .section-label::before, .section-label::after {
+      content: ''; position: absolute; top: 50%; width: 2.5rem; height: 1px; background: var(--g500);
+    }
+    .section-label::before { right: 100%; }
+    .section-label::after { left: 100%; }
+    .section-title { font-size: clamp(1.8rem,3.5vw,2.5rem); font-weight: 800; color: var(--p900); margin-bottom: 1rem; }
+    .section-desc { font-size: 1.05rem; color: var(--text-mid); max-width: 600px; margin: 0 auto; }
+
+    /* ===================== ABOUT ===================== */
+    .about { padding: 6rem 2rem; background: var(--bg-light); }
+    .about-container {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr 1.6fr; gap: 4rem; align-items: center;
+    }
+    .about-image-wrap { position: relative; }
+    .about-img {
+      width: 100%; border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(90,45,145,0.25); object-fit: cover; aspect-ratio: 3/4;
+    }
+    .about-badge-float {
+      position: absolute; bottom: -1rem; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--g500), var(--g400));
+      color: var(--p900); font-weight: 700; font-size: 0.85rem;
+      padding: 0.6rem 1.5rem; border-radius: 50px; white-space: nowrap;
+      box-shadow: 0 4px 20px rgba(212,160,23,0.4);
+    }
+    .about-text { color: var(--text-mid); font-size: 1rem; margin-bottom: 1.2rem; line-height: 1.9; }
+    .certs {
+      background: var(--bg-mid); border-right: 3px solid var(--g500);
+      padding: 1.2rem 1.5rem; border-radius: 12px; margin: 1.5rem 0 2rem;
+    }
+    .certs-title { font-size: 0.95rem; font-weight: 700; color: var(--p800); margin-bottom: 0.8rem; }
+    .certs-list { list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
+    .certs-list li { color: var(--text-mid); font-size: 0.92rem; }
+
+    /* ===================== SERVICES ===================== */
+    .services { padding: 6rem 2rem; background: #fff; }
+    .services-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(2,1fr); gap: 1.8rem; }
+    .service-card {
+      background: var(--bg-light); border: 1px solid rgba(90,45,145,0.1);
+      border-radius: 20px; padding: 2.2rem;
+      transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+      position: relative; overflow: hidden;
+    }
+    .service-card::before {
+      content: ''; position: absolute; top: 0; right: 0; width: 100%; height: 3px;
+      background: linear-gradient(90deg, var(--p400), var(--g400)); opacity: 0; transition: opacity 0.25s;
+    }
+    .service-card:hover { transform: translateY(-6px); box-shadow: 0 20px 50px rgba(90,45,145,0.15); border-color: rgba(90,45,145,0.25); }
+    .service-card:hover::before { opacity: 1; }
+    .service-icon { font-size: 2rem; color: var(--g500); margin-bottom: 1rem; }
+    .service-title { font-size: 1.15rem; font-weight: 700; color: var(--p900); margin-bottom: 0.8rem; }
+    .service-desc { color: var(--text-mid); font-size: 0.95rem; line-height: 1.8; margin-bottom: 1.2rem; }
+    .service-link { color: var(--p500); font-weight: 600; font-size: 0.9rem; transition: color 0.2s; }
+    .service-link:hover { color: var(--g500); }
+
+    /* ===================== TESTIMONIALS ===================== */
+    .testimonials {
+      padding: 6rem 2rem;
+      background: linear-gradient(180deg, var(--p900) 0%, var(--p800) 100%);
+    }
+    .testimonials .section-label { color: var(--g300); }
+    .testimonials .section-title { color: #fff; }
+    .testimonials-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(2,1fr); gap: 1.8rem; }
+    .testimonial-card {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(212,160,23,0.2);
+      border-radius: 20px; padding: 2rem; transition: all 0.25s;
+    }
+    .testimonial-card:hover { background: rgba(255,255,255,0.1); border-color: rgba(212,160,23,0.4); }
+    .quote-mark { font-size: 4rem; color: var(--g400); line-height: 0.7; margin-bottom: 1rem; font-family: serif; }
+    .testimonial-text { color: rgba(255,255,255,0.85); font-size: 0.97rem; line-height: 1.85; margin-bottom: 1.5rem; }
+    .testimonial-author { display: flex; align-items: center; gap: 0.9rem; }
+    .author-avatar {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--g500), var(--p400));
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 1rem; flex-shrink: 0;
+    }
+    .author-info { display: flex; flex-direction: column; gap: 0.15rem; }
+    .author-info strong { color: #fff; font-size: 0.95rem; }
+    .author-info span { color: var(--g300); font-size: 0.82rem; }
+
+    /* ===================== BLOG ===================== */
+    .blog { padding: 6rem 2rem; background: var(--bg-light); }
+    .blog-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(3,1fr); gap: 1.8rem; }
+    .blog-card { background: #fff; border-radius: 16px; padding: 1.8rem; border: 1px solid rgba(90,45,145,0.08); transition: transform 0.25s, box-shadow 0.25s; }
+    .blog-card:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(90,45,145,0.12); }
+    .blog-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .blog-cat { background: var(--bg-mid); color: var(--p600); font-size: 0.78rem; font-weight: 600; padding: 0.25rem 0.8rem; border-radius: 50px; }
+    .blog-date { color: var(--text-light); font-size: 0.78rem; }
+    .blog-title { font-size: 1.05rem; font-weight: 700; color: var(--p900); margin-bottom: 0.8rem; line-height: 1.5; }
+    .blog-desc { color: var(--text-mid); font-size: 0.9rem; line-height: 1.7; margin-bottom: 1.2rem; }
+
+    /* ===================== FAQ ===================== */
+    .faq { padding: 6rem 2rem; background: #fff; }
+    .faq-list { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.8rem; }
+    .faq-item { border: 1px solid rgba(90,45,145,0.12); border-radius: 14px; overflow: hidden; transition: border-color 0.2s; }
+    .faq-item.open { border-color: var(--p400); }
+    .faq-question {
+      width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+      padding: 1.3rem 1.5rem; background: transparent; border: none; cursor: pointer;
+      text-align: right; font-family: 'Cairo', Arial, sans-serif; font-size: 1rem; font-weight: 600; color: var(--p900); transition: background 0.2s;
+    }
+    .faq-item.open .faq-question { background: var(--bg-mid); }
+    .faq-icon { font-size: 1.4rem; color: var(--g500); flex-shrink: 0; transition: transform 0.2s; }
+    .faq-answer {
+      padding: 1.2rem 1.5rem 1.4rem; color: var(--text-mid); font-size: 0.95rem; line-height: 1.85;
+      border-top: 1px solid rgba(90,45,145,0.08); display: none;
+    }
+    .faq-item.open .faq-answer { display: block; animation: fadeSlide 0.25s ease; }
+    @keyframes fadeSlide { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ===================== CTA ===================== */
+    .cta {
+      padding: 6rem 2rem; text-align: center;
+      background: linear-gradient(135deg, var(--p700) 0%, var(--p600) 50%, var(--p800) 100%);
+      position: relative; overflow: hidden;
+    }
+    .cta::before { content: '✦'; position: absolute; top: 2rem; right: 3rem; font-size: 4rem; color: rgba(212,160,23,0.15); }
+    .cta::after  { content: '✦'; position: absolute; bottom: 2rem; left: 3rem; font-size: 3rem; color: rgba(212,160,23,0.1); }
+    .cta-content { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; }
+    .cta-title { font-size: clamp(1.8rem,3.5vw,2.5rem); font-weight: 800; color: #fff; margin-bottom: 1.2rem; }
+    .cta-desc { color: rgba(255,255,255,0.82); font-size: 1.05rem; line-height: 1.8; margin-bottom: 2.5rem; }
+    .cta-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-outline-light {
+      display: inline-block; background: transparent; color: #fff; font-weight: 600; font-size: 1rem;
+      padding: 0.85rem 2rem; border-radius: 50px; border: 2px solid rgba(255,255,255,0.5); cursor: pointer;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .btn-outline-light:hover { border-color: #fff; transform: translateY(-2px); }
+
+    /* ===================== FOOTER ===================== */
+    .footer { background: var(--p900); padding: 2.5rem 2rem; border-top: 1px solid rgba(212,160,23,0.15); }
+    .footer-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+    .footer-logo { display: flex; align-items: center; gap: 0.6rem; }
+    .footer-copy { color: rgba(255,255,255,0.45); font-size: 0.85rem; }
+
+    /* ===================== RESPONSIVE ===================== */
+    @media (max-width: 900px) {
+      .nav-links { display: none; }
+      .mobile-menu-btn { display: flex; }
+      .about-container { grid-template-columns: 1fr; gap: 2rem; }
+      .about-img { max-height: 400px; width: 80%; margin: 0 auto; }
+      .services-grid, .testimonials-grid, .blog-grid { grid-template-columns: 1fr; }
+      .stat { padding: 0.5rem 1.5rem; }
+      .stat-divider { display: none; }
+    }
+    @media (max-width: 600px) {
+      .hero-title { font-size: 2rem; }
+      .hero-actions { flex-direction: column; align-items: flex-start; }
+      .slider-arrows { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <span class="logo-icon">✦</span>
+        <span class="logo-text">مساحة الشفاء</span>
+      </div>
+      <div class="nav-links">
+        <a href="#about">من أنا</a>
+        <a href="#services">الخدمات</a>
+        <a href="#testimonials">آراء العملاء</a>
+        <a href="#blog">المدونة</a>
+        <a href="#faq">الأسئلة الشائعة</a>
+        <a href="#book" class="nav-btn">احجز جلستك</a>
+      </div>
+      <button class="mobile-menu-btn" onclick="document.getElementById('mobileMenu').classList.toggle('open')">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
+      <a href="#about">من أنا</a>
+      <a href="#services">الخدمات</a>
+      <a href="#testimonials">آراء العملاء</a>
+      <a href="#blog">المدونة</a>
+      <a href="#faq">الأسئلة الشائعة</a>
+      <a href="#book" class="nav-btn">احجز جلستك</a>
+    </div>
+  </nav>
+
+  <!-- HERO SLIDER -->
+  <section class="hero" id="hero">
+    <!-- Slide backgrounds (replace src with your own images) -->
+    <div class="hero-slide active" id="slide0" style="background-image: url('https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1600&q=80');"></div>
+    <div class="hero-slide" id="slide1" style="background-image: url('https://images.unsplash.com/photo-1545389336-cf090694435e?w=1600&q=80');"></div>
+    <div class="hero-slide" id="slide2" style="background-image: url('https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?w=1600&q=80');"></div>
+
+    <div class="hero-overlay"></div>
+
+    <div class="hero-content" id="heroContent">
+      <span class="hero-badge" id="heroBadge">مساحة الشفاء</span>
+      <h1 class="hero-title" id="heroTitle">
+        استعد توازنك،<br />
+        <span class="hero-title-gold" id="heroTitle2">وانعم بالسلام الحقيقي.</span>
+      </h1>
+      <p class="hero-subtitle" id="heroSubtitle">
+        مساحة هادئة وآمنة للشفاء بالطاقة، واستعادة العافية الجسدية والروحية. مع ضحى، تبدأ رحلتك نحو نسخة أكثر انسجاماً من نفسك.
+      </p>
+      <div class="hero-actions">
+        <a href="#book" class="btn-primary">احجز جلستك الأولى</a>
+        <a href="#services" class="btn-outline">تعرّف على الخدمات</a>
+      </div>
+    </div>
+
+    <div class="slider-dots" id="sliderDots">
+      <button class="dot active" onclick="goToSlide(0)"></button>
+      <button class="dot" onclick="goToSlide(1)"></button>
+      <button class="dot" onclick="goToSlide(2)"></button>
+    </div>
+
+    <div class="slider-arrows">
+      <button class="arrow" onclick="prevSlide()">&#8250;</button>
+      <button class="arrow" onclick="nextSlide()">&#8249;</button>
+    </div>
+  </section>
+
+  <!-- STATS BAR -->
+  <section class="stats-bar">
+    <div class="stat"><span class="stat-number">+١٢٠٠</span><span class="stat-label">جلسة شفاء</span></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><span class="stat-number">١٥+</span><span class="stat-label">سنة خبرة</span></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><span class="stat-number">١٨</span><span class="stat-label">دولة حول العالم</span></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><span class="stat-number">٤</span><span class="stat-label">شهادات معتمدة</span></div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="about" id="about">
+    <div class="about-container">
+      <div class="about-image-wrap">
+        <!-- Replace with your own about photo -->
+        <img class="about-img" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&q=80" alt="ضحى" />
+        <div class="about-badge-float">معالج طاقة معتمد</div>
+      </div>
+      <div class="about-content">
+        <span class="section-label">من أنا</span>
+        <h2 class="section-title">ضحى — معالج الطاقة والمرشد الروحي</h2>
+        <p class="about-text">بدأت رحلتي مع الشفاء بالطاقة منذ أكثر من خمس عشرة سنة، بعد أن عشت تجربة تحوّل شخصية عميقة غيّرت نظرتي للحياة كلياً. أدركتُ حينها أن الجسم البشري يحمل في داخله قدرة هائلة على الشفاء الذاتي — كل ما يحتاجه هو المساحة الصحيحة والدعم المناسب.</p>
+        <p class="about-text">اليوم، أرافق عملاءً من مختلف أنحاء العالم في رحلاتهم نحو التوازن والسلام الداخلي. أجمع في ممارستي بين أعمق تقاليد الشفاء الشرقية والمستجدات العلمية في علم الأعصاب وعلم الطاقة الحيوية.</p>
+        <div class="certs">
+          <p class="certs-title">حاصل على شهادات معتمدة في:</p>
+          <ul class="certs-list">
+            <li>✦ الريكي — الدرجة الثالثة (Master)</li>
+            <li>✦ توازن الشاكرات والطاقة الحيوية</li>
+            <li>✦ التأمل العلاجي والوعي الكامل (Mindfulness)</li>
+            <li>✦ العلاج بالصوت والترددات</li>
+          </ul>
+        </div>
+        <a href="#book" class="btn-primary">ابدأ رحلتك معي</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section class="services" id="services">
+    <div class="section-header">
+      <span class="section-label">ما نقدمه</span>
+      <h2 class="section-title">خدمات الشفاء</h2>
+      <p class="section-desc">كل خدمة مصممة لتلبية احتياجك تحديداً — سواء كنت تبحث عن شفاء فردي عميق أو تجربة جماعية تحوّلية.</p>
+    </div>
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="service-icon">✧</div>
+        <h3 class="service-title">جلسات الشفاء الفردية</h3>
+        <p class="service-desc">جلسات خاصة مخصصة بالكامل لك، تُدار بعناية واهتمام فائقين. نستهدف فيها إزالة الانسدادات الطاقية، وتوازن الشاكرات، وتنشيط قدرة الجسم الطبيعية على الشفاء.</p>
+        <a href="#book" class="service-link">احجز الآن ←</a>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">◈</div>
+        <h3 class="service-title">ورش العمل الجماعية</h3>
+        <p class="service-desc">تجمعات شفائية دافئة بقيادة ضحى، تجمع المشاركين في رحلة مشتركة نحو الوعي والتحرر. بيئة آمنة تتيح لك الاستكشاف والنمو بصحبة آخرين على الطريق ذاته.</p>
+        <a href="#book" class="service-link">احجز الآن ←</a>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">◉</div>
+        <h3 class="service-title">المحاضرات والتعليم</h3>
+        <p class="service-desc">محاضرات تثقيفية تجمع بين العلم والروحانية — تشرح آليات عمل الطاقة في الجسم وتمنحك أدوات عملية لتطبيقها في حياتك اليومية.</p>
+        <a href="#book" class="service-link">احجز الآن ←</a>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">✦</div>
+        <h3 class="service-title">جلسات عن بُعد</h3>
+        <p class="service-desc">الشفاء لا يعرف حدوداً جغرافية. جلساتنا عن بُعد فعّالة تماماً كالجلسات الحضورية، وتتيح لك الوصول إلى التجربة الكاملة من أي مكان في العالم.</p>
+        <a href="#book" class="service-link">احجز الآن ←</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="testimonials" id="testimonials">
+    <div class="section-header">
+      <span class="section-label">آراء العملاء</span>
+      <h2 class="section-title">ماذا قالوا عن تجربتهم</h2>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial-card">
+        <div class="quote-mark">"</div>
+        <p class="testimonial-text">وصلتُ إلى ضحى وأنا في قمة الإرهاق والانقطاع عن نفسي. بعد ثلاث جلسات فقط، شعرت كأن شيئاً ما انفتح من الداخل — هدوء لم أعرفه من سنوات. هذه التجربة غيّرت مساري.</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">س</div>
+          <div class="author-info"><strong>سارة العمري</strong><span>عمّان، الأردن</span></div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="quote-mark">"</div>
+        <p class="testimonial-text">كنتُ متشككاً في البداية، لكن الجلسة الأولى أقنعتني. ضحى يمتلك حضوراً استثنائياً وقدرة نادرة على الإنصات والإحساس بما يحتاجه الشخص دون أن يتكلم. أنصح به بشدة.</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">ك</div>
+          <div class="author-info"><strong>كريم حداد</strong><span>بيروت، لبنان</span></div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="quote-mark">"</div>
+        <p class="testimonial-text">حضرتُ ورشة صحوة الشاكرات وخرجتُ بفهم جديد كلياً لجسدي وطاقتي. الأدوات التي تعلمتها لا تزال ترافقني يومياً. شكراً ضحى على هذا العطاء.</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">ن</div>
+          <div class="author-info"><strong>نور الشمري</strong><span>الرياض، المملكة العربية السعودية</span></div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="quote-mark">"</div>
+        <p class="testimonial-text">الجلسة عن بُعد كانت تجربة مذهلة — لم أتوقع أن أشعر بهذا العمق عبر الشاشة. ضحى يخلق مساحة من الأمان والاحتواء بشكل يصعب وصفه بالكلمات.</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">ل</div>
+          <div class="author-info"><strong>ليلى إبراهيم</strong><span>دبي، الإمارات</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BLOG -->
+  <section class="blog" id="blog">
+    <div class="section-header">
+      <span class="section-label">المدونة</span>
+      <h2 class="section-title">أفكار ومقالات في الشفاء</h2>
+    </div>
+    <div class="blog-grid">
+      <div class="blog-card">
+        <div class="blog-card-top"><span class="blog-cat">شفاء بالطاقة</span><span class="blog-date">مارس ٢٠٢٦</span></div>
+        <h3 class="blog-title">الشاكرات السبع: دليلك العملي للتوازن اليومي</h3>
+        <p class="blog-desc">الشاكرات ليست مجرد مفهوم روحي — إنها مراكز طاقة حقيقية في جسمك يمكنك تعلّم قراءتها والتعامل معها.</p>
+        <a href="#blog" class="service-link">اقرأ المقال ←</a>
+      </div>
+      <div class="blog-card">
+        <div class="blog-card-top"><span class="blog-cat">علم الجهاز العصبي</span><span class="blog-date">فبراير ٢٠٢٦</span></div>
+        <h3 class="blog-title">لماذا التنفس هو أقوى أداة شفاء تملكها</h3>
+        <p class="blog-desc">العلم يُثبت ما عرفه الشرق منذ آلاف السنين: أنماط التنفس تؤثر مباشرةً على جهازك العصبي وحالتك الطاقية.</p>
+        <a href="#blog" class="service-link">اقرأ المقال ←</a>
+      </div>
+      <div class="blog-card">
+        <div class="blog-card-top"><span class="blog-cat">الصحة العاطفية</span><span class="blog-date">يناير ٢٠٢٦</span></div>
+        <h3 class="blog-title">الفرق بين الحزن الصحي والحمل الطاقي الثقيل</h3>
+        <p class="blog-desc">ليس كل ألم مرض، وليس كل حزن يحتاج إلى إزالة. أحياناً الحزن رسالة من الجسم والروح — المهم أن تعرف كيف تستمع إليه.</p>
+        <a href="#blog" class="service-link">اقرأ المقال ←</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq" id="faq">
+    <div class="section-header">
+      <span class="section-label">الأسئلة الشائعة</span>
+      <h2 class="section-title">ما الذي تريد معرفته؟</h2>
+      <p class="section-desc">إجابات على أكثر الأسئلة شيوعاً حول الشفاء بالطاقة وكيفية البدء في رحلتك.</p>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>هل الشفاء بالطاقة علمي ومثبت؟</span><span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">نعم، تشير الأبحاث العلمية الحديثة إلى أن تقنيات مثل الريكي والتأمل لها تأثيرات موثقة على الجهاز العصبي والصحة النفسية والجسدية. آلاف الدراسات تثبت فاعليتها في تخفيف التوتر، تحسين النوم، وتعزيز المناعة.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>كم عدد الجلسات التي أحتاجها لأرى نتائج؟</span><span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">يختلف ذلك من شخص لآخر، لكن كثير من العملاء يشعرون بتحسن ملموس بعد الجلسة الأولى. للتغيير العميق والمستدام، نوصي بثلاث جلسات على الأقل لمعالجة الجذور العميقة.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>هل يمكنني حجز جلسة عن بُعد وأنا خارج الأردن؟</span><span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">بالتأكيد! الشفاء لا يعرف حدوداً جغرافية. نستقبل عملاء من أكثر من ١٨ دولة عبر جلسات مرئية مباشرة فعّالة تماماً كالجلسات الحضورية.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>ما الذي يجب أن أتوقعه في جلستي الأولى؟</span><span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">ستبدأ بمحادثة تعريفية نفهم فيها احتياجاتك وأهدافك. ثم تدخل في حالة استرخاء عميق بينما نعمل على مستوى الطاقة. معظم العملاء يشعرون بدفء وهدوء عميق خلال الجلسة.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>هل هناك تعارض بين الشفاء بالطاقة والعلاج الطبي؟</span><span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">لا تعارض على الإطلاق. الشفاء بالطاقة علاج تكميلي يعمل جنباً إلى جنب مع العلاج الطبي التقليدي ولا يحل محله. نحرص دائماً على التوافق مع خطة علاجك الطبية.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span>ما هي سياسة الإلغاء والاسترداد؟</span><span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">يمكن إلغاء الجلسة أو إعادة جدولتها مجاناً قبل ٢٤ ساعة من الموعد. في حالة الإلغاء المتأخر، يُطبق رسم بسيط. للاستفسار عن الاسترداد، يرجى التواصل معنا مباشرة.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta" id="book">
+    <div class="cta-content">
+      <h2 class="cta-title">هل أنت مستعد للبدء؟</h2>
+      <p class="cta-desc">لا تتردد في التواصل معنا لأي سؤال، أو احجز جلستك الأولى مباشرةً. نحن هنا لنرافقك في كل خطوة.</p>
+      <div class="cta-actions">
+        <a href="mailto:info@raad-wellness.com" class="btn-primary">احجز جلستك</a>
+        <a href="mailto:info@raad-wellness.com" class="btn-outline-light">تواصل معنا</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <span class="logo-icon">✦</span>
+        <span class="logo-text">مساحة الشفاء</span>
+      </div>
+      <p class="footer-copy">جميع الحقوق محفوظة © ٢٠٢٦ — ضحى للشفاء بالطاقة</p>
+    </div>
+  </footer>
+
+  <!-- ===================== JAVASCRIPT ===================== -->
+  <script>
+    // ── SLIDER DATA ──────────────────────────────────────────
+    var slides = [
+      {
+        badge: 'مساحة الشفاء',
+        title: 'استعد توازنك،',
+        title2: 'وانعم بالسلام الحقيقي.',
+        subtitle: 'مساحة هادئة وآمنة للشفاء بالطاقة، واستعادة العافية الجسدية والروحية. مع ضحى، تبدأ رحلتك نحو نسخة أكثر انسجاماً من نفسك.'
+      },
+      {
+        badge: 'الشفاء بالطاقة',
+        title: 'أطلق طاقتك الداخلية،',
+        title2: 'وانسجم مع كونك.',
+        subtitle: 'من خلال تقنيات الريكي وتوازن الشاكرات، نساعدك على إزالة الانسدادات وتدفق الطاقة الحيوية بشكل طبيعي.'
+      },
+      {
+        badge: 'رحلة التحول',
+        title: 'ابدأ رحلة التحول،',
+        title2: 'نحو نسختك الأفضل.',
+        subtitle: 'أكثر من ١٢٠٠ جلسة شفاء ناجحة. جلسات فردية وجماعية وعن بُعد. تجربة تحوّلية حقيقية بقيادة ضحى.'
+      }
+    ];
+
+    var current = 0;
+    var total   = slides.length;
+    var timer   = null;
+    var busy    = false;
+
+    function showSlide(index) {
+      if (busy) return;
+      busy = true;
+
+      // fade out content
+      var content = document.getElementById('heroContent');
+      content.classList.remove('visible');
+
+      setTimeout(function () {
+        // switch background
+        document.getElementById('slide' + current).classList.remove('active');
+        current = (index + total) % total;
+        document.getElementById('slide' + current).classList.add('active');
+
+        // update dots
+        var dots = document.querySelectorAll('.dot');
+        dots.forEach(function (d, i) { d.classList.toggle('active', i === current); });
+
+        // update text
+        var s = slides[current];
+        document.getElementById('heroBadge').textContent    = s.badge;
+        document.getElementById('heroTitle').childNodes[0].textContent = s.title + '\n';
+        document.getElementById('heroTitle2').textContent  = s.title2;
+        document.getElementById('heroSubtitle').textContent = s.subtitle;
+
+        // fade in content
+        setTimeout(function () {
+          content.classList.add('visible');
+          busy = false;
+        }, 80);
+      }, 500);
+    }
+
+    function goToSlide(index) {
+      clearInterval(timer);
+      showSlide(index);
+      startAutoPlay();
+    }
+
+    function nextSlide() { goToSlide(current + 1); }
+    function prevSlide() { goToSlide(current - 1); }
+
+    function startAutoPlay() {
+      timer = setInterval(function () { showSlide(current + 1); }, 5000);
+    }
+
+    // ── INIT SLIDER ──────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', function () {
+      document.getElementById('heroContent').classList.add('visible');
+      startAutoPlay();
+    });
+
+    // ── FAQ ACCORDION ────────────────────────────────────────
+    function toggleFaq(btn) {
+      var item = btn.closest('.faq-item');
+      var icon = btn.querySelector('.faq-icon');
+      var isOpen = item.classList.contains('open');
+
+      // close all
+      document.querySelectorAll('.faq-item').forEach(function (el) {
+        el.classList.remove('open');
+        el.querySelector('.faq-icon').textContent = '+';
+      });
+
+      // open clicked if it was closed
+      if (!isOpen) {
+        item.classList.add('open');
+        icon.textContent = '−';
+      }
+    }
+
+    // ── MOBILE MENU: close on link click ─────────────────────
+    document.querySelectorAll('#mobileMenu a').forEach(function (a) {
+      a.addEventListener('click', function () {
+        document.getElementById('mobileMenu').classList.remove('open');
+      });
+    });
+  </script>
+
+</body>
+</html>
