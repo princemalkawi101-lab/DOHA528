@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Power Healing"
+version = "1.0.0"
+id = "artifacts/power-healing"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23900
+
+[services.development]
+run = "pnpm --filter @workspace/power-healing run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/power-healing", "run", "build" ]
+publicDir = "artifacts/power-healing/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23900"
+BASE_PATH = "/"

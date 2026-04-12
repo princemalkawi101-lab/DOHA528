@@ -1,0 +1,26 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "Ot5yjo0gRp3AWs3AuSGT2"
+uri = "file://artifacts/power-healing/src/assets/hero1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "TNv1gY_kMF6z6VforyC0J"
+uri = "file://artifacts/power-healing/src/assets/hero2.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "LPT6LZ84kO-r4rmHY6HVI"
+uri = "file://artifacts/power-healing/src/assets/hero3.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "REDDZ48ha7C6ycozPXmYo"
+uri = "file://artifacts/power-healing/src/assets/about.png"
+type = "image"
+title = "generated_image"
