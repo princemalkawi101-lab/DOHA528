@@ -48,22 +48,166 @@
       border-bottom: 1px solid rgba(212,160,23,0.2);
     }
     .nav-container {
-      max-width: 1200px; margin: 0 auto; padding: 0 2rem;
-      height: 70px; display: flex; align-items: center; justify-content: space-between;
+      max-width: 1280px; margin: 0 auto; padding: 0 1.5rem;
+      height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
     }
-    .nav-logo { display: flex; align-items: center; gap: 0.6rem; }
-    .logo-icon { color: var(--g400); font-size: 1.4rem; }
-    .logo-text { color: #fff; font-size: 1.2rem; font-weight: 700; }
-    .nav-links { display: flex; align-items: center; gap: 1.8rem; }
-    .nav-links a { color: rgba(255,255,255,0.8); font-size: 0.92rem; font-weight: 500; transition: color 0.2s; }
-    .nav-links a:hover { color: var(--g300); }
+    .nav-logo { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+    .logo-icon { color: var(--g400); font-size: 1.3rem; }
+    .logo-text { color: #fff; font-size: 1.1rem; font-weight: 700; white-space: nowrap; }
+
+    /* main nav links */
+    .nav-links { display: flex; align-items: center; gap: 0.2rem; flex: 1; justify-content: center; }
+    .nav-links a {
+      color: rgba(255,255,255,0.8); font-size: 0.85rem; font-weight: 500;
+      padding: 0.4rem 0.75rem; border-radius: 8px;
+      transition: color 0.2s, background 0.2s; white-space: nowrap;
+    }
+    .nav-links a:hover { color: var(--g300); background: rgba(255,255,255,0.06); }
+    .nav-links a.active-link { color: var(--g300); }
+
+    /* nav right side: currency + cart + book */
+    .nav-actions { display: flex; align-items: center; gap: 0.7rem; flex-shrink: 0; }
+
+    /* ── CURRENCY SELECTOR ── */
+    .currency-wrap { position: relative; }
+    .currency-btn {
+      display: flex; align-items: center; gap: 0.35rem;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.85); font-family: 'Cairo', Arial, sans-serif;
+      font-size: 0.82rem; font-weight: 600; padding: 0.42rem 0.85rem;
+      border-radius: 8px; cursor: pointer; white-space: nowrap;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .currency-btn:hover { background: rgba(255,255,255,0.14); border-color: var(--g500); }
+    .currency-btn .caret { font-size: 0.65rem; opacity: 0.7; transition: transform 0.2s; }
+    .currency-wrap.open .caret { transform: rotate(180deg); }
+    .currency-dropdown {
+      display: none; position: absolute; top: calc(100% + 8px); right: 0;
+      background: #1e0e38; border: 1px solid rgba(212,160,23,0.25);
+      border-radius: 12px; overflow: hidden; min-width: 200px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+      animation: dropIn 0.18s ease;
+    }
+    .currency-wrap.open .currency-dropdown { display: block; }
+    .currency-option {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.75rem 1.1rem; cursor: pointer; transition: background 0.15s;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .currency-option:last-child { border-bottom: none; }
+    .currency-option:hover { background: rgba(212,160,23,0.12); }
+    .currency-option.selected { background: rgba(212,160,23,0.18); }
+    .cur-name { color: rgba(255,255,255,0.9); font-size: 0.88rem; font-weight: 500; }
+    .cur-code { color: var(--g400); font-size: 0.78rem; font-weight: 700; }
+    .cur-check { color: var(--g400); font-size: 0.9rem; opacity: 0; }
+    .currency-option.selected .cur-check { opacity: 1; }
+
+    /* ── CART BUTTON ── */
+    .cart-wrap { position: relative; }
+    .cart-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 40px; height: 40px; border-radius: 10px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.85); cursor: pointer; position: relative;
+      transition: background 0.2s, border-color 0.2s; flex-shrink: 0;
+    }
+    .cart-btn:hover { background: rgba(212,160,23,0.2); border-color: var(--g500); }
+    .cart-btn svg { width: 18px; height: 18px; }
+    .cart-count {
+      position: absolute; top: -6px; left: -6px;
+      background: var(--g400); color: var(--p900);
+      font-size: 0.65rem; font-weight: 900; line-height: 1;
+      min-width: 18px; height: 18px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      padding: 2px; transition: transform 0.2s;
+    }
+    .cart-count.bump { animation: bump 0.3s ease; }
+    @keyframes bump { 0%,100%{transform:scale(1)} 50%{transform:scale(1.4)} }
+
+    /* ── CART PANEL ── */
+    .cart-panel {
+      display: none; position: absolute; top: calc(100% + 10px); left: 0;
+      width: 340px; background: #1e0e38;
+      border: 1px solid rgba(212,160,23,0.25);
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.5);
+      animation: dropIn 0.2s ease;
+    }
+    .cart-wrap.open .cart-panel { display: block; }
+    @keyframes dropIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+    .cart-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .cart-header h3 { color: #fff; font-size: 1rem; font-weight: 700; }
+    .cart-clear { color: rgba(255,255,255,0.45); font-size: 0.78rem; cursor: pointer; transition: color 0.2s; }
+    .cart-clear:hover { color: #ff7878; }
+    .cart-items { max-height: 280px; overflow-y: auto; }
+    .cart-items::-webkit-scrollbar { width: 4px; }
+    .cart-items::-webkit-scrollbar-track { background: transparent; }
+    .cart-items::-webkit-scrollbar-thumb { background: rgba(212,160,23,0.4); border-radius: 4px; }
+    .cart-item {
+      display: flex; align-items: flex-start; gap: 0.9rem;
+      padding: 0.9rem 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.06);
+      transition: background 0.15s;
+    }
+    .cart-item:hover { background: rgba(255,255,255,0.04); }
+    .cart-item-icon {
+      width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--p600), var(--p400));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+    }
+    .cart-item-info { flex: 1; min-width: 0; }
+    .cart-item-name { color: rgba(255,255,255,0.9); font-size: 0.88rem; font-weight: 600; line-height: 1.35; }
+    .cart-item-price { color: var(--g400); font-size: 0.82rem; font-weight: 700; margin-top: 0.2rem; }
+    .cart-item-qty {
+      display: flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem;
+    }
+    .qty-btn {
+      width: 22px; height: 22px; border-radius: 6px;
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+      color: #fff; font-size: 0.85rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .qty-btn:hover { background: rgba(212,160,23,0.3); }
+    .qty-val { color: #fff; font-size: 0.82rem; font-weight: 700; min-width: 16px; text-align: center; }
+    .cart-item-remove { color: rgba(255,255,255,0.3); cursor: pointer; font-size: 0.9rem; transition: color 0.15s; padding: 2px; }
+    .cart-item-remove:hover { color: #ff7878; }
+    .cart-empty {
+      padding: 2.5rem 1.2rem; text-align: center;
+    }
+    .cart-empty-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .cart-empty p { color: rgba(255,255,255,0.4); font-size: 0.9rem; }
+    .cart-footer {
+      padding: 1rem 1.2rem;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.2);
+    }
+    .cart-total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.9rem; }
+    .cart-total-label { color: rgba(255,255,255,0.6); font-size: 0.88rem; }
+    .cart-total-amount { color: var(--g300); font-size: 1.1rem; font-weight: 900; }
+    .cart-checkout {
+      width: 100%; padding: 0.75rem; border-radius: 10px;
+      background: linear-gradient(135deg, var(--g500), var(--g400));
+      color: var(--p900); font-family: 'Cairo', Arial, sans-serif;
+      font-size: 0.95rem; font-weight: 700; border: none; cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .cart-checkout:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* nav book btn */
     .nav-btn {
-      background: var(--g500) !important; color: var(--p900) !important;
-      padding: 0.5rem 1.4rem !important; border-radius: 50px !important;
-      font-weight: 700 !important; font-size: 0.88rem !important;
-      transition: background 0.2s, transform 0.15s !important;
+      background: var(--g500); color: var(--p900);
+      padding: 0.48rem 1.2rem; border-radius: 8px;
+      font-weight: 700; font-size: 0.83rem;
+      transition: background 0.2s, transform 0.15s;
+      white-space: nowrap; flex-shrink: 0;
     }
-    .nav-btn:hover { background: var(--g300) !important; transform: translateY(-1px); }
+    .nav-btn:hover { background: var(--g300); transform: translateY(-1px); }
+
+    /* mobile menu toggle */
     .mobile-menu-btn {
       display: none; flex-direction: column; gap: 5px;
       background: none; border: none; cursor: pointer; padding: 4px;
@@ -71,12 +215,24 @@
     .mobile-menu-btn span { display: block; width: 24px; height: 2px; background: #fff; border-radius: 2px; }
     .mobile-menu {
       display: none; flex-direction: column;
-      padding: 1rem 2rem 1.5rem; gap: 0.8rem;
-      background: rgba(26,10,46,0.98);
+      padding: 1rem 1.5rem 1.5rem; gap: 0.6rem;
+      background: rgba(26,10,46,0.99);
       border-top: 1px solid rgba(212,160,23,0.15);
     }
     .mobile-menu.open { display: flex; }
-    .mobile-menu a { color: rgba(255,255,255,0.85); font-size: 1rem; padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .mobile-menu a { color: rgba(255,255,255,0.85); font-size: 0.95rem; padding: 0.45rem 0; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .mobile-currency-row {
+      display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .mobile-currency-row span { color: rgba(255,255,255,0.5); font-size: 0.8rem; }
+    .mob-cur-btn {
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.8); font-family: 'Cairo', Arial, sans-serif;
+      font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.7rem;
+      border-radius: 6px; cursor: pointer; transition: all 0.15s;
+    }
+    .mob-cur-btn.selected { background: rgba(212,160,23,0.25); border-color: var(--g500); color: var(--g300); }
 
     /* ===================== HERO SLIDER ===================== */
     .hero {
@@ -98,17 +254,15 @@
     .hero-content {
       position: relative; z-index: 2;
       max-width: 1200px; margin: 0 auto;
-      padding: 0 2rem; padding-top: 70px;
+      padding: 0 2rem; padding-top: 68px;
       opacity: 0; transform: translateY(20px);
       transition: opacity 0.6s ease, transform 0.6s ease;
     }
     .hero-content.visible { opacity: 1; transform: translateY(0); }
     .hero-badge {
       display: inline-block;
-      background: rgba(212,160,23,0.2);
-      border: 1px solid var(--g500);
-      color: var(--g300);
-      font-size: 0.85rem; padding: 0.35rem 1.1rem;
+      background: rgba(212,160,23,0.2); border: 1px solid var(--g500);
+      color: var(--g300); font-size: 0.85rem; padding: 0.35rem 1.1rem;
       border-radius: 50px; margin-bottom: 1.5rem;
     }
     .hero-title { font-size: clamp(2.2rem,5vw,3.8rem); font-weight: 900; color: #fff; line-height: 1.25; margin-bottom: 1.5rem; }
@@ -221,8 +375,18 @@
     .service-icon { font-size: 2rem; color: var(--g500); margin-bottom: 1rem; }
     .service-title { font-size: 1.15rem; font-weight: 700; color: var(--p900); margin-bottom: 0.8rem; }
     .service-desc { color: var(--text-mid); font-size: 0.95rem; line-height: 1.8; margin-bottom: 1.2rem; }
-    .service-link { color: var(--p500); font-weight: 600; font-size: 0.9rem; transition: color 0.2s; }
+    .service-price { font-size: 1rem; font-weight: 700; color: var(--p600); margin-bottom: 1rem; }
+    .service-link { color: var(--p500); font-weight: 600; font-size: 0.9rem; transition: color 0.2s; cursor: pointer; }
     .service-link:hover { color: var(--g500); }
+    .add-to-cart-btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: linear-gradient(135deg, var(--p600), var(--p500));
+      color: #fff; font-family: 'Cairo', Arial, sans-serif;
+      font-size: 0.85rem; font-weight: 600; padding: 0.55rem 1.2rem;
+      border-radius: 8px; border: none; cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s; margin-top: 0.5rem;
+    }
+    .add-to-cart-btn:hover { opacity: 0.9; transform: translateY(-1px); }
 
     /* ===================== TESTIMONIALS ===================== */
     .testimonials {
@@ -272,13 +436,13 @@
       text-align: right; font-family: 'Cairo', Arial, sans-serif; font-size: 1rem; font-weight: 600; color: var(--p900); transition: background 0.2s;
     }
     .faq-item.open .faq-question { background: var(--bg-mid); }
-    .faq-icon { font-size: 1.4rem; color: var(--g500); flex-shrink: 0; transition: transform 0.2s; }
+    .faq-icon { font-size: 1.4rem; color: var(--g500); flex-shrink: 0; }
     .faq-answer {
       padding: 1.2rem 1.5rem 1.4rem; color: var(--text-mid); font-size: 0.95rem; line-height: 1.85;
       border-top: 1px solid rgba(90,45,145,0.08); display: none;
     }
     .faq-item.open .faq-answer { display: block; animation: fadeSlide 0.25s ease; }
-    @keyframes fadeSlide { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeSlide { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
 
     /* ===================== CTA ===================== */
     .cta {
@@ -306,90 +470,175 @@
     .footer-copy { color: rgba(255,255,255,0.45); font-size: 0.85rem; }
 
     /* ===================== RESPONSIVE ===================== */
+    @media (max-width: 1060px) {
+      .nav-links a { font-size: 0.78rem; padding: 0.35rem 0.5rem; }
+    }
     @media (max-width: 900px) {
       .nav-links { display: none; }
+      .currency-wrap { display: none; }
       .mobile-menu-btn { display: flex; }
       .about-container { grid-template-columns: 1fr; gap: 2rem; }
       .about-img { max-height: 400px; width: 80%; margin: 0 auto; }
       .services-grid, .testimonials-grid, .blog-grid { grid-template-columns: 1fr; }
       .stat { padding: 0.5rem 1.5rem; }
       .stat-divider { display: none; }
+      .cart-panel { width: 300px; }
     }
     @media (max-width: 600px) {
       .hero-title { font-size: 2rem; }
       .hero-actions { flex-direction: column; align-items: flex-start; }
       .slider-arrows { display: none; }
+      .cart-panel { left: auto; right: 0; width: 95vw; }
     }
   </style>
 </head>
 <body>
 
-  <!-- NAVBAR -->
+  <!-- ═══════════════════════════════════════════
+       NAVBAR
+  ═══════════════════════════════════════════ -->
   <nav class="navbar">
     <div class="nav-container">
+
+      <!-- Logo -->
       <div class="nav-logo">
         <span class="logo-icon">✦</span>
         <span class="logo-text">مساحة الشفاء</span>
       </div>
+
+      <!-- Desktop links -->
       <div class="nav-links">
-        <a href="#about">من أنا</a>
-        <a href="#services">الخدمات</a>
-        <a href="#testimonials">آراء العملاء</a>
-        <a href="#blog">المدونة</a>
-        <a href="#faq">الأسئلة الشائعة</a>
-        <a href="#book" class="nav-btn">احجز جلستك</a>
+        <a href="#hero">الرئيسية</a>
+        <a href="#paid-courses">الدورات المدفوعة</a>
+        <a href="#paid-sessions">الجلسات والاستشارات المدفوعة</a>
+        <a href="#vip">خدمات VIP</a>
+        <a href="#blog">تعلم بوعي</a>
       </div>
-      <button class="mobile-menu-btn" onclick="document.getElementById('mobileMenu').classList.toggle('open')">
-        <span></span><span></span><span></span>
-      </button>
+
+      <!-- Actions: currency + cart + book -->
+      <div class="nav-actions">
+
+        <!-- Currency selector -->
+        <div class="currency-wrap" id="currencyWrap">
+          <button class="currency-btn" id="currencyBtn" onclick="toggleCurrency(event)">
+            <span id="curLabel">JOD — د.أ</span>
+            <span class="caret">▼</span>
+          </button>
+          <div class="currency-dropdown" id="currencyDropdown">
+            <div class="currency-option selected" data-code="JOD" data-symbol="د.أ" data-name="الدينار الأردني" onclick="selectCurrency(this)">
+              <span class="cur-name">الدينار الأردني</span>
+              <span class="cur-code">JOD</span>
+              <span class="cur-check">✔</span>
+            </div>
+            <div class="currency-option" data-code="SAR" data-symbol="ر.س" data-name="الريال السعودي" onclick="selectCurrency(this)">
+              <span class="cur-name">الريال السعودي</span>
+              <span class="cur-code">SAR</span>
+              <span class="cur-check">✔</span>
+            </div>
+            <div class="currency-option" data-code="AED" data-symbol="د.إ" data-name="الدرهم الإماراتي" onclick="selectCurrency(this)">
+              <span class="cur-name">الدرهم الإماراتي</span>
+              <span class="cur-code">AED</span>
+              <span class="cur-check">✔</span>
+            </div>
+            <div class="currency-option" data-code="USD" data-symbol="$" data-name="الدولار الأمريكي" onclick="selectCurrency(this)">
+              <span class="cur-name">الدولار الأمريكي</span>
+              <span class="cur-code">USD</span>
+              <span class="cur-check">✔</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cart button -->
+        <div class="cart-wrap" id="cartWrap">
+          <button class="cart-btn" onclick="toggleCart(event)" title="سلة المشتريات">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+            <span class="cart-count" id="cartCount">0</span>
+          </button>
+
+          <!-- Cart panel -->
+          <div class="cart-panel" id="cartPanel">
+            <div class="cart-header">
+              <h3>🛒 سلة المشتريات</h3>
+              <span class="cart-clear" onclick="clearCart()">إفراغ السلة</span>
+            </div>
+            <div class="cart-items" id="cartItems">
+              <div class="cart-empty" id="cartEmpty">
+                <div class="cart-empty-icon">🛍️</div>
+                <p>سلتك فارغة حالياً</p>
+              </div>
+            </div>
+            <div class="cart-footer" id="cartFooter" style="display:none;">
+              <div class="cart-total-row">
+                <span class="cart-total-label">الإجمالي</span>
+                <span class="cart-total-amount" id="cartTotal">0 JOD</span>
+              </div>
+              <button class="cart-checkout" onclick="checkout()">إتمام الشراء</button>
+            </div>
+          </div>
+        </div>
+
+        <a href="#book" class="nav-btn">احجز جلستك</a>
+
+        <!-- Mobile menu toggle -->
+        <button class="mobile-menu-btn" onclick="document.getElementById('mobileMenu').classList.toggle('open')">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     </div>
+
+    <!-- Mobile menu -->
     <div class="mobile-menu" id="mobileMenu">
-      <a href="#about">من أنا</a>
-      <a href="#services">الخدمات</a>
-      <a href="#testimonials">آراء العملاء</a>
-      <a href="#blog">المدونة</a>
-      <a href="#faq">الأسئلة الشائعة</a>
-      <a href="#book" class="nav-btn">احجز جلستك</a>
+      <a href="#hero"          onclick="closeMobile()">الرئيسية</a>
+      <a href="#paid-courses"  onclick="closeMobile()">الدورات المدفوعة</a>
+      <a href="#paid-sessions" onclick="closeMobile()">الجلسات والاستشارات المدفوعة</a>
+      <a href="#vip"           onclick="closeMobile()">خدمات VIP</a>
+      <a href="#blog"          onclick="closeMobile()">تعلم بوعي</a>
+      <div class="mobile-currency-row">
+        <span>العملة:</span>
+        <button class="mob-cur-btn selected" data-code="JOD" data-symbol="د.أ" onclick="mobSelectCur(this)">JOD</button>
+        <button class="mob-cur-btn" data-code="SAR" data-symbol="ر.س" onclick="mobSelectCur(this)">SAR</button>
+        <button class="mob-cur-btn" data-code="AED" data-symbol="د.إ" onclick="mobSelectCur(this)">AED</button>
+        <button class="mob-cur-btn" data-code="USD" data-symbol="$" onclick="mobSelectCur(this)">USD</button>
+      </div>
+      <a href="#book" class="nav-btn" onclick="closeMobile()">احجز جلستك</a>
     </div>
   </nav>
 
-  <!-- HERO SLIDER -->
+  <!-- ═══════════════════════════════════════════
+       HERO SLIDER
+  ═══════════════════════════════════════════ -->
   <section class="hero" id="hero">
-    <!-- Slide backgrounds (replace src with your own images) -->
-    <div class="hero-slide active" id="slide0" style="background-image: url('https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1600&q=80');"></div>
-    <div class="hero-slide" id="slide1" style="background-image: url('https://images.unsplash.com/photo-1545389336-cf090694435e?w=1600&q=80');"></div>
-    <div class="hero-slide" id="slide2" style="background-image: url('https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?w=1600&q=80');"></div>
-
+    <div class="hero-slide active" id="slide0" style="background-image:url('https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1600&q=80');"></div>
+    <div class="hero-slide"        id="slide1" style="background-image:url('https://images.unsplash.com/photo-1545389336-cf090694435e?w=1600&q=80');"></div>
+    <div class="hero-slide"        id="slide2" style="background-image:url('https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?w=1600&q=80');"></div>
     <div class="hero-overlay"></div>
-
     <div class="hero-content" id="heroContent">
       <span class="hero-badge" id="heroBadge">مساحة الشفاء</span>
       <h1 class="hero-title" id="heroTitle">
         استعد توازنك،<br />
         <span class="hero-title-gold" id="heroTitle2">وانعم بالسلام الحقيقي.</span>
       </h1>
-      <p class="hero-subtitle" id="heroSubtitle">
-        مساحة هادئة وآمنة للشفاء بالطاقة، واستعادة العافية الجسدية والروحية. مع ضحى، تبدأ رحلتك نحو نسخة أكثر انسجاماً من نفسك.
-      </p>
+      <p class="hero-subtitle" id="heroSubtitle">مساحة هادئة وآمنة للشفاء بالطاقة، واستعادة العافية الجسدية والروحية. مع ضحى، تبدأ رحلتك نحو نسخة أكثر انسجاماً من نفسك.</p>
       <div class="hero-actions">
         <a href="#book" class="btn-primary">احجز جلستك الأولى</a>
-        <a href="#services" class="btn-outline">تعرّف على الخدمات</a>
+        <a href="#paid-sessions" class="btn-outline">تعرّف على الخدمات</a>
       </div>
     </div>
-
     <div class="slider-dots" id="sliderDots">
       <button class="dot active" onclick="goToSlide(0)"></button>
-      <button class="dot" onclick="goToSlide(1)"></button>
-      <button class="dot" onclick="goToSlide(2)"></button>
+      <button class="dot"        onclick="goToSlide(1)"></button>
+      <button class="dot"        onclick="goToSlide(2)"></button>
     </div>
-
     <div class="slider-arrows">
       <button class="arrow" onclick="prevSlide()">&#8250;</button>
       <button class="arrow" onclick="nextSlide()">&#8249;</button>
     </div>
   </section>
 
-  <!-- STATS BAR -->
+  <!-- STATS -->
   <section class="stats-bar">
     <div class="stat"><span class="stat-number">+١٢٠٠</span><span class="stat-label">جلسة شفاء</span></div>
     <div class="stat-divider"></div>
@@ -400,11 +649,12 @@
     <div class="stat"><span class="stat-number">٤</span><span class="stat-label">شهادات معتمدة</span></div>
   </section>
 
-  <!-- ABOUT -->
+  <!-- ═══════════════════════════════════════════
+       ABOUT
+  ═══════════════════════════════════════════ -->
   <section class="about" id="about">
     <div class="about-container">
       <div class="about-image-wrap">
-        <!-- Replace with your own about photo -->
         <img class="about-img" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&q=80" alt="ضحى" />
         <div class="about-badge-float">معالج طاقة معتمد</div>
       </div>
@@ -427,42 +677,132 @@
     </div>
   </section>
 
-  <!-- SERVICES -->
-  <section class="services" id="services">
+  <!-- ═══════════════════════════════════════════
+       PAID COURSES  (الدورات المدفوعة)
+  ═══════════════════════════════════════════ -->
+  <section class="services" id="paid-courses">
     <div class="section-header">
-      <span class="section-label">ما نقدمه</span>
-      <h2 class="section-title">خدمات الشفاء</h2>
-      <p class="section-desc">كل خدمة مصممة لتلبية احتياجك تحديداً — سواء كنت تبحث عن شفاء فردي عميق أو تجربة جماعية تحوّلية.</p>
+      <span class="section-label">الدورات المدفوعة</span>
+      <h2 class="section-title">دوراتنا التدريبية المتخصصة</h2>
+      <p class="section-desc">دورات عميقة ومنهجية لمن يريد أن يتعلم الشفاء بالطاقة بشكل احترافي.</p>
     </div>
     <div class="services-grid">
       <div class="service-card">
-        <div class="service-icon">✧</div>
-        <h3 class="service-title">جلسات الشفاء الفردية</h3>
-        <p class="service-desc">جلسات خاصة مخصصة بالكامل لك، تُدار بعناية واهتمام فائقين. نستهدف فيها إزالة الانسدادات الطاقية، وتوازن الشاكرات، وتنشيط قدرة الجسم الطبيعية على الشفاء.</p>
-        <a href="#book" class="service-link">احجز الآن ←</a>
+        <div class="service-icon">🎓</div>
+        <h3 class="service-title">دورة الريكي المستوى الأول</h3>
+        <p class="service-desc">تعلّم أساسيات الريكي وكيفية توجيه طاقة الشفاء لنفسك وللآخرين. تتضمن الأطر النظرية والتطبيق العملي الكامل مع شهادة معتمدة.</p>
+        <p class="service-price cur-price" data-jod="45" data-sar="170" data-aed="185" data-usd="63">45 د.أ</p>
+        <button class="add-to-cart-btn" onclick="addToCart('دورة الريكي المستوى الأول','🎓',45)">+ أضف للسلة</button>
       </div>
       <div class="service-card">
-        <div class="service-icon">◈</div>
-        <h3 class="service-title">ورش العمل الجماعية</h3>
-        <p class="service-desc">تجمعات شفائية دافئة بقيادة ضحى، تجمع المشاركين في رحلة مشتركة نحو الوعي والتحرر. بيئة آمنة تتيح لك الاستكشاف والنمو بصحبة آخرين على الطريق ذاته.</p>
-        <a href="#book" class="service-link">احجز الآن ←</a>
+        <div class="service-icon">✨</div>
+        <h3 class="service-title">دورة توازن الشاكرات</h3>
+        <p class="service-desc">رحلة تعليمية شاملة لفهم مراكز الطاقة السبعة في جسمك، وكيفية قراءتها وتنشيطها وموازنتها للوصول إلى حياة أكثر انسجاماً.</p>
+        <p class="service-price cur-price" data-jod="55" data-sar="208" data-aed="226" data-usd="77">55 د.أ</p>
+        <button class="add-to-cart-btn" onclick="addToCart('دورة توازن الشاكرات','✨',55)">+ أضف للسلة</button>
       </div>
       <div class="service-card">
-        <div class="service-icon">◉</div>
-        <h3 class="service-title">المحاضرات والتعليم</h3>
-        <p class="service-desc">محاضرات تثقيفية تجمع بين العلم والروحانية — تشرح آليات عمل الطاقة في الجسم وتمنحك أدوات عملية لتطبيقها في حياتك اليومية.</p>
-        <a href="#book" class="service-link">احجز الآن ←</a>
+        <div class="service-icon">🧘</div>
+        <h3 class="service-title">دورة التأمل العلاجي</h3>
+        <p class="service-desc">دورة متكاملة في أنواع التأمل وتقنيات الوعي الكامل (Mindfulness). تتعلم كيف تُهدئ الجهاز العصبي وتُفعّل قدرات الجسم الذاتية على الشفاء.</p>
+        <p class="service-price cur-price" data-jod="40" data-sar="151" data-aed="164" data-usd="56">40 د.أ</p>
+        <button class="add-to-cart-btn" onclick="addToCart('دورة التأمل العلاجي','🧘',40)">+ أضف للسلة</button>
       </div>
       <div class="service-card">
-        <div class="service-icon">✦</div>
-        <h3 class="service-title">جلسات عن بُعد</h3>
-        <p class="service-desc">الشفاء لا يعرف حدوداً جغرافية. جلساتنا عن بُعد فعّالة تماماً كالجلسات الحضورية، وتتيح لك الوصول إلى التجربة الكاملة من أي مكان في العالم.</p>
-        <a href="#book" class="service-link">احجز الآن ←</a>
+        <div class="service-icon">🎵</div>
+        <h3 class="service-title">دورة الشفاء بالصوت والترددات</h3>
+        <p class="service-desc">تعرّف على علم الترددات الصوتية وكيف تؤثر على الطاقة والخلايا. استخدام الأجراس التبتية والأصوات الطبيعية في الجلسات العلاجية.</p>
+        <p class="service-price cur-price" data-jod="50" data-sar="189" data-aed="205" data-usd="70">50 د.أ</p>
+        <button class="add-to-cart-btn" onclick="addToCart('دورة الشفاء بالصوت والترددات','🎵',50)">+ أضف للسلة</button>
       </div>
     </div>
   </section>
 
-  <!-- TESTIMONIALS -->
+  <!-- ═══════════════════════════════════════════
+       PAID SESSIONS  (الجلسات والاستشارات)
+  ═══════════════════════════════════════════ -->
+  <section class="services" id="paid-sessions" style="background:var(--bg-light);">
+    <div class="section-header">
+      <span class="section-label">الجلسات والاستشارات المدفوعة</span>
+      <h2 class="section-title">جلسات شفاء شخصية</h2>
+      <p class="section-desc">كل جلسة مصممة لتلبية احتياجك تحديداً — سواء كنت تبحث عن شفاء فردي عميق أو تجربة جماعية تحوّلية.</p>
+    </div>
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="service-icon">✧</div>
+        <h3 class="service-title">جلسة شفاء فردية (حضوري)</h3>
+        <p class="service-desc">جلسة خاصة مخصصة بالكامل لك، تُدار بعناية واهتمام فائقين. نستهدف فيها إزالة الانسدادات الطاقية وتوازن الشاكرات وتنشيط قدرة الجسم الطبيعية على الشفاء.</p>
+        <p class="service-price cur-price" data-jod="35" data-sar="132" data-aed="144" data-usd="49">35 د.أ</p>
+        <button class="add-to-cart-btn" onclick="addToCart('جلسة شفاء فردية (حضوري)','✧',35)">+ أضف للسلة</button>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">◈</div>
+        <h3 class="service-title">جلسة شفاء عن بُعد</h3>
+        <p class="service-desc">الشفاء لا يعرف حدوداً جغرافية. جلساتنا عن بُعد فعّالة تماماً كالجلسات الحضورية وتتيح لك الوصول إلى التجربة الكاملة من أي مكان في العالم.</p>
+        <p class="service-price cur-price" data-jod="30" data-sar="113" data-aed="123" data-usd="42">30 د.أ</p>
+        <button class="add-to-cart-btn" onclick="addToCart('جلسة شفاء عن بُعد','◈',30)">+ أضف للسلة</button>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">◉</div>
+        <h3 class="service-title">استشارة طاقية (٣٠ دقيقة)</h3>
+        <p class="service-desc">جلسة استشارية مركّزة لتقييم حالتك الطاقية وتحديد نقاط الخلل. تحصل على خطة شفاء مخصصة وتوصيات عملية يمكنك تطبيقها فوراً.</p>
+        <p class="service-price cur-price" data-jod="20" data-sar="75" data-aed="82" data-usd="28">20 د.أ</p>
+        <button class="add-to-cart-btn" onclick="addToCart('استشارة طاقية (٣٠ دقيقة)','◉',20)">+ أضف للسلة</button>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">✦</div>
+        <h3 class="service-title">ورشة عمل جماعية</h3>
+        <p class="service-desc">تجمعات شفائية دافئة بقيادة ضحى، تجمع المشاركين في رحلة مشتركة نحو الوعي والتحرر. بيئة آمنة تتيح لك الاستكشاف والنمو بصحبة آخرين.</p>
+        <p class="service-price cur-price" data-jod="25" data-sar="94" data-aed="102" data-usd="35">25 د.أ</p>
+        <button class="add-to-cart-btn" onclick="addToCart('ورشة عمل جماعية','✦',25)">+ أضف للسلة</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       VIP SERVICES  (خدمات VIP)
+  ═══════════════════════════════════════════ -->
+  <section class="services" id="vip">
+    <div class="section-header">
+      <span class="section-label">خدمات VIP</span>
+      <h2 class="section-title">تجربة شفاء لا مثيل لها</h2>
+      <p class="section-desc">للمن يستحقون الأفضل — رعاية حصرية وشخصية على أعلى مستوى من الاهتمام والعمق.</p>
+    </div>
+    <div class="services-grid">
+      <div class="service-card" style="border-color: rgba(212,160,23,0.3); background: linear-gradient(135deg,#fdf8e1 0%,#f9f5ff 100%);">
+        <div class="service-icon">👑</div>
+        <h3 class="service-title">برنامج الشفاء المكثّف (شهر كامل)</h3>
+        <p class="service-desc">برنامج شخصي مخصص لمدة شهر كامل يتضمن ٨ جلسات خاصة + متابعة يومية + خطة تأمل وتغذية طاقية + دعم مستمر على مدار الساعة.</p>
+        <p class="service-price cur-price" data-jod="250" data-sar="944" data-aed="1025" data-usd="352">250 د.أ</p>
+        <button class="add-to-cart-btn" style="background:linear-gradient(135deg,var(--g600),var(--g400));color:var(--p900);" onclick="addToCart('برنامج الشفاء المكثّف (شهر)','👑',250)">+ أضف للسلة</button>
+      </div>
+      <div class="service-card" style="border-color: rgba(212,160,23,0.3); background: linear-gradient(135deg,#fdf8e1 0%,#f9f5ff 100%);">
+        <div class="service-icon">💎</div>
+        <h3 class="service-title">ريتريت الشفاء الخاص (يوم كامل)</h3>
+        <p class="service-desc">يوم كامل لك وحدك مع ضحى — شفاء عميق، تأمل جماعي، علاج بالصوت، وجلسة توازن شاكرات شاملة. تجربة تحوّلية لا تُنسى في بيئة هادئة ومريحة.</p>
+        <p class="service-price cur-price" data-jod="180" data-sar="680" data-aed="738" data-usd="253">180 د.أ</p>
+        <button class="add-to-cart-btn" style="background:linear-gradient(135deg,var(--g600),var(--g400));color:var(--p900);" onclick="addToCart('ريتريت الشفاء الخاص (يوم)','💎',180)">+ أضف للسلة</button>
+      </div>
+      <div class="service-card" style="border-color: rgba(212,160,23,0.3); background: linear-gradient(135deg,#fdf8e1 0%,#f9f5ff 100%);">
+        <div class="service-icon">🌙</div>
+        <h3 class="service-title">باقة الزوجين — شفاء العلاقة</h3>
+        <p class="service-desc">جلسات مخصصة للأزواج تعمل على تنظيف الطاقة بين الشريكين وتحسين الاتصال الروحي والعاطفي. تشمل ٤ جلسات مشتركة + جلستين فرديتين.</p>
+        <p class="service-price cur-price" data-jod="150" data-sar="567" data-aed="615" data-usd="211">150 د.أ</p>
+        <button class="add-to-cart-btn" style="background:linear-gradient(135deg,var(--g600),var(--g400));color:var(--p900);" onclick="addToCart('باقة الزوجين — شفاء العلاقة','🌙',150)">+ أضف للسلة</button>
+      </div>
+      <div class="service-card" style="border-color: rgba(212,160,23,0.3); background: linear-gradient(135deg,#fdf8e1 0%,#f9f5ff 100%);">
+        <div class="service-icon">⭐</div>
+        <h3 class="service-title">الدعم الشهري المستمر (VIP)</h3>
+        <p class="service-desc">اشتراك شهري يمنحك أولوية الحجز، وجلستين شفاء شهريتين، ومتابعة أسبوعية عبر الواتساب، وصولاً حصرياً لجميع المواد التعليمية الجديدة.</p>
+        <p class="service-price cur-price" data-jod="120" data-sar="453" data-aed="492" data-usd="169">120 د.أ / شهر</p>
+        <button class="add-to-cart-btn" style="background:linear-gradient(135deg,var(--g600),var(--g400));color:var(--p900);" onclick="addToCart('الدعم الشهري المستمر (VIP)','⭐',120)">+ أضف للسلة</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       TESTIMONIALS
+  ═══════════════════════════════════════════ -->
   <section class="testimonials" id="testimonials">
     <div class="section-header">
       <span class="section-label">آراء العملاء</span>
@@ -504,10 +844,12 @@
     </div>
   </section>
 
-  <!-- BLOG -->
+  <!-- ═══════════════════════════════════════════
+       BLOG  (تعلم بوعي)
+  ═══════════════════════════════════════════ -->
   <section class="blog" id="blog">
     <div class="section-header">
-      <span class="section-label">المدونة</span>
+      <span class="section-label">تعلم بوعي</span>
       <h2 class="section-title">أفكار ومقالات في الشفاء</h2>
     </div>
     <div class="blog-grid">
@@ -541,39 +883,27 @@
     </div>
     <div class="faq-list">
       <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
-          <span>هل الشفاء بالطاقة علمي ومثبت؟</span><span class="faq-icon">+</span>
-        </button>
+        <button class="faq-question" onclick="toggleFaq(this)"><span>هل الشفاء بالطاقة علمي ومثبت؟</span><span class="faq-icon">+</span></button>
         <div class="faq-answer">نعم، تشير الأبحاث العلمية الحديثة إلى أن تقنيات مثل الريكي والتأمل لها تأثيرات موثقة على الجهاز العصبي والصحة النفسية والجسدية. آلاف الدراسات تثبت فاعليتها في تخفيف التوتر، تحسين النوم، وتعزيز المناعة.</div>
       </div>
       <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
-          <span>كم عدد الجلسات التي أحتاجها لأرى نتائج؟</span><span class="faq-icon">+</span>
-        </button>
+        <button class="faq-question" onclick="toggleFaq(this)"><span>كم عدد الجلسات التي أحتاجها لأرى نتائج؟</span><span class="faq-icon">+</span></button>
         <div class="faq-answer">يختلف ذلك من شخص لآخر، لكن كثير من العملاء يشعرون بتحسن ملموس بعد الجلسة الأولى. للتغيير العميق والمستدام، نوصي بثلاث جلسات على الأقل لمعالجة الجذور العميقة.</div>
       </div>
       <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
-          <span>هل يمكنني حجز جلسة عن بُعد وأنا خارج الأردن؟</span><span class="faq-icon">+</span>
-        </button>
+        <button class="faq-question" onclick="toggleFaq(this)"><span>هل يمكنني حجز جلسة عن بُعد وأنا خارج الأردن؟</span><span class="faq-icon">+</span></button>
         <div class="faq-answer">بالتأكيد! الشفاء لا يعرف حدوداً جغرافية. نستقبل عملاء من أكثر من ١٨ دولة عبر جلسات مرئية مباشرة فعّالة تماماً كالجلسات الحضورية.</div>
       </div>
       <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
-          <span>ما الذي يجب أن أتوقعه في جلستي الأولى؟</span><span class="faq-icon">+</span>
-        </button>
+        <button class="faq-question" onclick="toggleFaq(this)"><span>ما الذي يجب أن أتوقعه في جلستي الأولى؟</span><span class="faq-icon">+</span></button>
         <div class="faq-answer">ستبدأ بمحادثة تعريفية نفهم فيها احتياجاتك وأهدافك. ثم تدخل في حالة استرخاء عميق بينما نعمل على مستوى الطاقة. معظم العملاء يشعرون بدفء وهدوء عميق خلال الجلسة.</div>
       </div>
       <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
-          <span>هل هناك تعارض بين الشفاء بالطاقة والعلاج الطبي؟</span><span class="faq-icon">+</span>
-        </button>
+        <button class="faq-question" onclick="toggleFaq(this)"><span>هل هناك تعارض بين الشفاء بالطاقة والعلاج الطبي؟</span><span class="faq-icon">+</span></button>
         <div class="faq-answer">لا تعارض على الإطلاق. الشفاء بالطاقة علاج تكميلي يعمل جنباً إلى جنب مع العلاج الطبي التقليدي ولا يحل محله. نحرص دائماً على التوافق مع خطة علاجك الطبية.</div>
       </div>
       <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
-          <span>ما هي سياسة الإلغاء والاسترداد؟</span><span class="faq-icon">+</span>
-        </button>
+        <button class="faq-question" onclick="toggleFaq(this)"><span>ما هي سياسة الإلغاء والاسترداد؟</span><span class="faq-icon">+</span></button>
         <div class="faq-answer">يمكن إلغاء الجلسة أو إعادة جدولتها مجاناً قبل ٢٤ ساعة من الموعد. في حالة الإلغاء المتأخر، يُطبق رسم بسيط. للاستفسار عن الاسترداد، يرجى التواصل معنا مباشرة.</div>
       </div>
     </div>
@@ -602,113 +932,206 @@
     </div>
   </footer>
 
-  <!-- ===================== JAVASCRIPT ===================== -->
+  <!-- ═══════════════════════════════════════════
+       JAVASCRIPT
+  ═══════════════════════════════════════════ -->
   <script>
-    // ── SLIDER DATA ──────────────────────────────────────────
-    var slides = [
-      {
-        badge: 'مساحة الشفاء',
-        title: 'استعد توازنك،',
-        title2: 'وانعم بالسلام الحقيقي.',
-        subtitle: 'مساحة هادئة وآمنة للشفاء بالطاقة، واستعادة العافية الجسدية والروحية. مع ضحى، تبدأ رحلتك نحو نسخة أكثر انسجاماً من نفسك.'
-      },
-      {
-        badge: 'الشفاء بالطاقة',
-        title: 'أطلق طاقتك الداخلية،',
-        title2: 'وانسجم مع كونك.',
-        subtitle: 'من خلال تقنيات الريكي وتوازن الشاكرات، نساعدك على إزالة الانسدادات وتدفق الطاقة الحيوية بشكل طبيعي.'
-      },
-      {
-        badge: 'رحلة التحول',
-        title: 'ابدأ رحلة التحول،',
-        title2: 'نحو نسختك الأفضل.',
-        subtitle: 'أكثر من ١٢٠٠ جلسة شفاء ناجحة. جلسات فردية وجماعية وعن بُعد. تجربة تحوّلية حقيقية بقيادة ضحى.'
-      }
-    ];
+  // ════════════════════════════════════════
+  // SLIDER
+  // ════════════════════════════════════════
+  var slides = [
+    { badge:'مساحة الشفاء',   title:'استعد توازنك،',       title2:'وانعم بالسلام الحقيقي.',  subtitle:'مساحة هادئة وآمنة للشفاء بالطاقة، واستعادة العافية الجسدية والروحية. مع ضحى، تبدأ رحلتك نحو نسخة أكثر انسجاماً من نفسك.' },
+    { badge:'الشفاء بالطاقة', title:'أطلق طاقتك الداخلية،', title2:'وانسجم مع كونك.',          subtitle:'من خلال تقنيات الريكي وتوازن الشاكرات، نساعدك على إزالة الانسدادات وتدفق الطاقة الحيوية بشكل طبيعي.' },
+    { badge:'رحلة التحول',    title:'ابدأ رحلة التحول،',   title2:'نحو نسختك الأفضل.',       subtitle:'أكثر من ١٢٠٠ جلسة شفاء ناجحة. جلسات فردية وجماعية وعن بُعد. تجربة تحوّلية حقيقية بقيادة ضحى.' }
+  ];
+  var current=0, sliderBusy=false, sliderTimer=null;
 
-    var current = 0;
-    var total   = slides.length;
-    var timer   = null;
-    var busy    = false;
+  function showSlide(idx){
+    if(sliderBusy) return; sliderBusy=true;
+    var content=document.getElementById('heroContent');
+    content.classList.remove('visible');
+    setTimeout(function(){
+      document.getElementById('slide'+current).classList.remove('active');
+      current=(idx+slides.length)%slides.length;
+      document.getElementById('slide'+current).classList.add('active');
+      document.querySelectorAll('.dot').forEach(function(d,i){ d.classList.toggle('active',i===current); });
+      var s=slides[current];
+      document.getElementById('heroBadge').textContent   = s.badge;
+      document.getElementById('heroTitle').childNodes[0].nodeValue = s.title+'\n';
+      document.getElementById('heroTitle2').textContent  = s.title2;
+      document.getElementById('heroSubtitle').textContent= s.subtitle;
+      setTimeout(function(){ content.classList.add('visible'); sliderBusy=false; },80);
+    },500);
+  }
+  function goToSlide(i){ clearInterval(sliderTimer); showSlide(i); startAuto(); }
+  function nextSlide(){ goToSlide(current+1); }
+  function prevSlide(){ goToSlide(current-1); }
+  function startAuto(){ sliderTimer=setInterval(function(){ showSlide(current+1); },5000); }
 
-    function showSlide(index) {
-      if (busy) return;
-      busy = true;
+  // ════════════════════════════════════════
+  // CURRENCY
+  // ════════════════════════════════════════
+  var curCode='JOD', curSymbol='د.أ';
+  var rates={ JOD:{jod:1,sar:3.78,aed:4.1,usd:1.41}, SAR:{jod:0.265,sar:1,aed:1.085,usd:0.267}, AED:{jod:0.244,sar:0.921,aed:1,usd:0.272}, USD:{jod:0.708,sar:3.75,aed:3.67,usd:1} };
 
-      // fade out content
-      var content = document.getElementById('heroContent');
-      content.classList.remove('visible');
+  function selectCurrency(el){
+    curCode   = el.dataset.code;
+    curSymbol = el.dataset.symbol;
+    document.getElementById('curLabel').textContent = curCode+' — '+curSymbol;
+    document.querySelectorAll('.currency-option').forEach(function(o){ o.classList.toggle('selected', o===el); });
+    document.getElementById('currencyWrap').classList.remove('open');
+    updateAllPrices();
+    updateCartTotal();
+  }
+  function mobSelectCur(btn){
+    curCode   = btn.dataset.code;
+    curSymbol = btn.dataset.symbol;
+    document.getElementById('curLabel').textContent = curCode+' — '+curSymbol;
+    document.querySelectorAll('.mob-cur-btn').forEach(function(b){ b.classList.toggle('selected',b===btn); });
+    // sync desktop dropdown
+    document.querySelectorAll('.currency-option').forEach(function(o){ o.classList.toggle('selected', o.dataset.code===curCode); });
+    updateAllPrices();
+    updateCartTotal();
+  }
+  function toggleCurrency(e){
+    e.stopPropagation();
+    document.getElementById('currencyWrap').classList.toggle('open');
+    document.getElementById('cartWrap').classList.remove('open');
+  }
 
-      setTimeout(function () {
-        // switch background
-        document.getElementById('slide' + current).classList.remove('active');
-        current = (index + total) % total;
-        document.getElementById('slide' + current).classList.add('active');
-
-        // update dots
-        var dots = document.querySelectorAll('.dot');
-        dots.forEach(function (d, i) { d.classList.toggle('active', i === current); });
-
-        // update text
-        var s = slides[current];
-        document.getElementById('heroBadge').textContent    = s.badge;
-        document.getElementById('heroTitle').childNodes[0].textContent = s.title + '\n';
-        document.getElementById('heroTitle2').textContent  = s.title2;
-        document.getElementById('heroSubtitle').textContent = s.subtitle;
-
-        // fade in content
-        setTimeout(function () {
-          content.classList.add('visible');
-          busy = false;
-        }, 80);
-      }, 500);
-    }
-
-    function goToSlide(index) {
-      clearInterval(timer);
-      showSlide(index);
-      startAutoPlay();
-    }
-
-    function nextSlide() { goToSlide(current + 1); }
-    function prevSlide() { goToSlide(current - 1); }
-
-    function startAutoPlay() {
-      timer = setInterval(function () { showSlide(current + 1); }, 5000);
-    }
-
-    // ── INIT SLIDER ──────────────────────────────────────────
-    window.addEventListener('DOMContentLoaded', function () {
-      document.getElementById('heroContent').classList.add('visible');
-      startAutoPlay();
+  function updateAllPrices(){
+    var key=curCode.toLowerCase();
+    document.querySelectorAll('.cur-price').forEach(function(el){
+      var base=parseFloat(el.dataset.jod)||0;
+      var r=rates['JOD'][key]||1;
+      var val=(base*r);
+      el.textContent = (Number.isInteger(val)?val:val.toFixed(1))+' '+curSymbol;
     });
+  }
 
-    // ── FAQ ACCORDION ────────────────────────────────────────
-    function toggleFaq(btn) {
-      var item = btn.closest('.faq-item');
-      var icon = btn.querySelector('.faq-icon');
-      var isOpen = item.classList.contains('open');
+  // ════════════════════════════════════════
+  // CART
+  // ════════════════════════════════════════
+  var cart=[];
 
-      // close all
-      document.querySelectorAll('.faq-item').forEach(function (el) {
-        el.classList.remove('open');
-        el.querySelector('.faq-icon').textContent = '+';
-      });
+  function addToCart(name, icon, priceJOD){
+    var existing=cart.find(function(i){ return i.name===name; });
+    if(existing){ existing.qty++; }
+    else { cart.push({ name:name, icon:icon, priceJOD:priceJOD, qty:1 }); }
+    renderCart();
+    // open cart panel briefly
+    document.getElementById('cartWrap').classList.add('open');
+    // bump animation
+    var cnt=document.getElementById('cartCount');
+    cnt.classList.remove('bump');
+    void cnt.offsetWidth;
+    cnt.classList.add('bump');
+  }
 
-      // open clicked if it was closed
-      if (!isOpen) {
-        item.classList.add('open');
-        icon.textContent = '−';
-      }
+  function renderCart(){
+    var totalCount=cart.reduce(function(s,i){ return s+i.qty; },0);
+    document.getElementById('cartCount').textContent=totalCount;
+
+    var itemsEl=document.getElementById('cartItems');
+    var emptyEl=document.getElementById('cartEmpty');
+    var footerEl=document.getElementById('cartFooter');
+
+    if(cart.length===0){
+      emptyEl.style.display='block';
+      footerEl.style.display='none';
+      itemsEl.innerHTML=''; itemsEl.appendChild(emptyEl);
+      return;
     }
+    emptyEl.style.display='none';
+    footerEl.style.display='block';
 
-    // ── MOBILE MENU: close on link click ─────────────────────
-    document.querySelectorAll('#mobileMenu a').forEach(function (a) {
-      a.addEventListener('click', function () {
-        document.getElementById('mobileMenu').classList.remove('open');
-      });
+    var html='';
+    cart.forEach(function(item, idx){
+      var key=curCode.toLowerCase();
+      var r=rates['JOD'][key]||1;
+      var unitVal=item.priceJOD*r;
+      var unitStr=(Number.isInteger(unitVal)?unitVal:unitVal.toFixed(1))+' '+curSymbol;
+      html+='<div class="cart-item">'
+        +'<div class="cart-item-icon">'+item.icon+'</div>'
+        +'<div class="cart-item-info">'
+          +'<div class="cart-item-name">'+item.name+'</div>'
+          +'<div class="cart-item-price">'+unitStr+'</div>'
+          +'<div class="cart-item-qty">'
+            +'<button class="qty-btn" onclick="changeQty('+idx+',-1)">−</button>'
+            +'<span class="qty-val">'+item.qty+'</span>'
+            +'<button class="qty-btn" onclick="changeQty('+idx+',1)">+</button>'
+          +'</div>'
+        +'</div>'
+        +'<span class="cart-item-remove" onclick="removeItem('+idx+')" title="حذف">✕</span>'
+        +'</div>';
     });
+    itemsEl.innerHTML=html;
+    updateCartTotal();
+  }
+
+  function updateCartTotal(){
+    var key=curCode.toLowerCase();
+    var r=rates['JOD'][key]||1;
+    var total=cart.reduce(function(s,i){ return s+(i.priceJOD*i.qty*r); },0);
+    var str=(Number.isInteger(total)?total:total.toFixed(1))+' '+curSymbol;
+    document.getElementById('cartTotal').textContent=str;
+  }
+
+  function changeQty(idx,delta){
+    cart[idx].qty+=delta;
+    if(cart[idx].qty<=0) cart.splice(idx,1);
+    renderCart();
+  }
+  function removeItem(idx){ cart.splice(idx,1); renderCart(); }
+  function clearCart(){ cart=[]; renderCart(); }
+  function checkout(){
+    alert('شكراً على طلبك! سيتم التواصل معك قريباً لإتمام الدفع.');
+    clearCart();
+    document.getElementById('cartWrap').classList.remove('open');
+  }
+
+  function toggleCart(e){
+    e.stopPropagation();
+    document.getElementById('cartWrap').classList.toggle('open');
+    document.getElementById('currencyWrap').classList.remove('open');
+  }
+
+  // ════════════════════════════════════════
+  // FAQ
+  // ════════════════════════════════════════
+  function toggleFaq(btn){
+    var item=btn.closest('.faq-item');
+    var icon=btn.querySelector('.faq-icon');
+    var isOpen=item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(function(el){
+      el.classList.remove('open');
+      el.querySelector('.faq-icon').textContent='+';
+    });
+    if(!isOpen){ item.classList.add('open'); icon.textContent='−'; }
+  }
+
+  // ════════════════════════════════════════
+  // MOBILE MENU
+  // ════════════════════════════════════════
+  function closeMobile(){ document.getElementById('mobileMenu').classList.remove('open'); }
+
+  // ════════════════════════════════════════
+  // CLOSE DROPDOWNS ON OUTSIDE CLICK
+  // ════════════════════════════════════════
+  document.addEventListener('click', function(e){
+    if(!document.getElementById('currencyWrap').contains(e.target))
+      document.getElementById('currencyWrap').classList.remove('open');
+    if(!document.getElementById('cartWrap').contains(e.target))
+      document.getElementById('cartWrap').classList.remove('open');
+  });
+
+  // ════════════════════════════════════════
+  // INIT
+  // ════════════════════════════════════════
+  window.addEventListener('DOMContentLoaded', function(){
+    document.getElementById('heroContent').classList.add('visible');
+    startAuto();
+  });
   </script>
-
 </body>
 </html>
