@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "Ot5yjo0gRp3AWs3AuSGT2"
@@ -24,3 +23,9 @@ id = "REDDZ48ha7C6ycozPXmYo"
 uri = "file://artifacts/power-healing/src/assets/about.png"
 type = "image"
 title = "generated_image"
+
+[[outputs]]
+id = "MfbeL2cbLptVUVLw_d2Z7"
+uri = "file://netlify-doha.zip"
+type = "unspecified"
+title = "موقع DOHA — جاهز لـ Netlify"
