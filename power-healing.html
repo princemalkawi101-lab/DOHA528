@@ -413,8 +413,8 @@
     [dir="ltr"] body { font-family:'Cairo', Arial, sans-serif; }
 
     /* ══════════ ADMIN PANEL ══════════ */
-    .admin-fab { position:fixed; bottom:1.8rem; left:1.8rem; width:46px; height:46px; border-radius:50%; background:rgba(26,10,46,0.9); border:1px solid rgba(212,160,23,0.4); color:var(--g300); font-size:1.15rem; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 20px rgba(0,0,0,0.45); transition:all 0.25s; z-index:50000; backdrop-filter:blur(10px); }
-    .admin-fab:hover { background:rgba(50,18,80,0.97); border-color:var(--g200); transform:scale(1.08); }
+    .admin-fab { position:fixed; bottom:1.8rem; left:1.8rem; padding:0.6rem 1.25rem; border-radius:50px; background:linear-gradient(135deg,var(--g300),#b8860b); border:none; color:#1a0a2e; font-size:0.9rem; font-weight:800; font-family:inherit; cursor:pointer; display:flex; align-items:center; gap:0.3rem; box-shadow:0 4px 22px rgba(212,160,23,0.45); transition:all 0.25s; z-index:50000; letter-spacing:0.03em; white-space:nowrap; }
+    .admin-fab:hover { transform:translateY(-2px); box-shadow:0 6px 28px rgba(212,160,23,0.6); }
 
     .admin-overlay { position:fixed; inset:0; background:#08031a; z-index:99998; display:none; flex-direction:column; overflow:hidden; }
     .admin-overlay.open { display:flex; }
@@ -867,7 +867,6 @@ var T = {
     faq3q:'هل يمكنني حجز جلسة عن بُعد وأنا خارج الأردن؟', faq3a:'بالتأكيد! نستقبل عملاء من أكثر من ١٨ دولة عبر جلسات مرئية مباشرة فعّالة تماماً كالجلسات الحضورية.',
     faq4q:'ما الذي يجب أن أتوقعه في جلستي الأولى؟', faq4a:'ستبدأ بمحادثة تعريفية نفهم فيها احتياجاتك وأهدافك. ثم تدخل في حالة استرخاء عميق بينما نعمل على مستوى الطاقة.',
     faq5q:'هل هناك تعارض بين الشفاء بالطاقة والعلاج الطبي؟', faq5a:'لا تعارض على الإطلاق. الشفاء بالطاقة علاج تكميلي يعمل جنباً إلى جنب مع العلاج الطبي التقليدي ولا يحل محله.',
-    faq6q:'ما هي سياسة الإلغاء والاسترداد؟', faq6a:'يمكن إلغاء الجلسة أو إعادة جدولتها مجاناً قبل ٢٤ ساعة من الموعد. في حالة الإلغاء المتأخر، يُطبق رسم بسيط.',
     ctaTitle:'هل أنت مستعد للبدء؟', ctaDesc:'لا تتردد في التواصل معنا لأي سؤال، أو احجز جلستك الأولى مباشرةً. نحن هنا لنرافقك في كل خطوة.',
     ctaBook:'احجز جلستك', ctaContact:'تواصل معنا',
     heroCta1:'احجز جلستك الأولى', heroCta2:'تعرّف على الخدمات',
@@ -922,7 +921,6 @@ var T = {
     faq3q:'Can I book a remote session from outside Jordan?', faq3a:'Absolutely! We welcome clients from over 18 countries via live video sessions that are just as effective as in-person sessions.',
     faq4q:'What should I expect in my first session?', faq4a:'You\'ll start with an introductory conversation to understand your needs and goals. Then you enter a state of deep relaxation while we work on the energy level.',
     faq5q:'Is there a conflict between energy healing and medical treatment?', faq5a:'No conflict whatsoever. Energy healing is a complementary therapy that works alongside conventional medical treatment — it does not replace it.',
-    faq6q:'What is your cancellation and refund policy?', faq6a:'Sessions can be cancelled or rescheduled free of charge up to 24 hours before the appointment. Late cancellations may incur a small fee.',
     ctaTitle:'Ready to Begin?', ctaDesc:'Don\'t hesitate to reach out with any question, or book your first session directly. We\'re here to accompany you every step of the way.',
     ctaBook:'Book Your Session', ctaContact:'Contact Us',
     heroCta1:'Book Your First Session', heroCta2:'Explore Our Services',
@@ -1175,32 +1173,20 @@ window.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 
-<!-- ══════════ ADMIN FAB ══════════ -->
-<button class="admin-fab" onclick="openAdmin()" title="لوحة التحكم">⚙</button>
+<!-- ══════════ ADD BUTTON (FAB) ══════════ -->
+<button class="admin-fab" onclick="openAdmin()">＋ إضافة</button>
 
-<!-- ══════════ ADMIN OVERLAY ══════════ -->
+<!-- ══════════ ADD PANEL ══════════ -->
 <div class="admin-overlay" id="adminOverlay">
   <div class="admin-header">
-    <span class="admin-title">⚙ لوحة التحكم — DOHA</span>
+    <span class="admin-title">＋ إضافة محتوى جديد</span>
     <button class="admin-close" onclick="closeAdmin()">✕</button>
   </div>
-
-  <!-- كلمة المرور -->
-  <div class="admin-pw-screen" id="adminPwScreen">
-    <h2>أدخل كلمة المرور للدخول</h2>
-    <input type="password" class="admin-pw-input" id="adminPwInput"
-           placeholder="••••••••"
-           onkeydown="if(event.key==='Enter')checkAdminPw()" />
-    <button class="admin-pw-btn" onclick="checkAdminPw()">دخول</button>
-    <span class="admin-pw-error" id="adminPwError"></span>
-  </div>
-
-  <!-- لوحة التحكم -->
-  <div class="admin-dashboard" id="adminDashboard">
+  <div class="admin-dashboard visible" id="adminDashboard">
     <div class="admin-tabs">
-      <button class="admin-tab active" onclick="switchAdminTab('courses',this)">🎓 الدورات</button>
-      <button class="admin-tab" onclick="switchAdminTab('sessions',this)">✧ الجلسات</button>
-      <button class="admin-tab" onclick="switchAdminTab('vip',this)">👑 VIP</button>
+      <button class="admin-tab active" onclick="switchAdminTab('courses',this)">🎓 دورة / كورس</button>
+      <button class="admin-tab" onclick="switchAdminTab('sessions',this)">✧ جلسة / ورشة</button>
+      <button class="admin-tab" onclick="switchAdminTab('vip',this)">👑 خدمة VIP</button>
     </div>
     <div class="admin-body" id="adminBody"></div>
   </div>
@@ -1326,35 +1312,12 @@ function renderAllSections(){
 function openAdmin(){
   document.getElementById('adminOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
-  var authed = sessionStorage.getItem('dohaAdminAuth')==='1';
-  document.getElementById('adminPwScreen').style.display    = authed ? 'none' : 'flex';
-  document.getElementById('adminDashboard').className       = 'admin-dashboard' + (authed ? ' visible' : '');
-  if(authed){ renderAdminTab(adminCurrentTab); }
-  else {
-    document.getElementById('adminPwInput').value = '';
-    document.getElementById('adminPwError').textContent = '';
-    setTimeout(function(){ document.getElementById('adminPwInput').focus(); }, 80);
-  }
+  renderAdminTab(adminCurrentTab);
 }
 
 function closeAdmin(){
   document.getElementById('adminOverlay').classList.remove('open');
   document.body.style.overflow = '';
-  document.body.classList.remove('admin-active');
-}
-
-function checkAdminPw(){
-  var val = document.getElementById('adminPwInput').value;
-  if(val === ADMIN_PW){
-    sessionStorage.setItem('dohaAdminAuth','1');
-    document.getElementById('adminPwScreen').style.display = 'none';
-    document.getElementById('adminDashboard').classList.add('visible');
-    renderAdminTab(adminCurrentTab);
-  } else {
-    document.getElementById('adminPwError').textContent = '❌ كلمة المرور غير صحيحة';
-    document.getElementById('adminPwInput').value = '';
-    document.getElementById('adminPwInput').focus();
-  }
 }
 
 function switchAdminTab(tab, btn){
