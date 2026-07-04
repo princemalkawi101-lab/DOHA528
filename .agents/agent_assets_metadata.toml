@@ -35,3 +35,9 @@ id = "EtDQf6VRIzs4ePyGcn1yd"
 uri = "file://doha-healing-netlify.zip"
 type = "unspecified"
 title = "✅ Production Build — doha-healing-netlify.zip (24 ملفاً فقط: HTML + JS + CSS + صور)"
+
+[[outputs]]
+id = "RObXE9eE8uwYSLpMMOJb9"
+uri = "file://power-healing-dist.zip"
+type = "unspecified"
+title = "✅ Production Build — dist/public contents only (index.html + favicon + opengraph)"
