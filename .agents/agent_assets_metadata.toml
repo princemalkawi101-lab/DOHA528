@@ -29,3 +29,9 @@ id = "MfbeL2cbLptVUVLw_d2Z7"
 uri = "file://netlify-doha.zip"
 type = "unspecified"
 title = "DOHA Live Site — مع Meta Pixel — جاهز لـ Netlify"
+
+[[outputs]]
+id = "EtDQf6VRIzs4ePyGcn1yd"
+uri = "file://doha-healing-netlify.zip"
+type = "unspecified"
+title = "doha-healing-netlify.zip — Netlify Deploy Package"
