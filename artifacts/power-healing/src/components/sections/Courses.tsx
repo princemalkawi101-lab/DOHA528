@@ -79,7 +79,9 @@ export function Courses() {
                     titleAr: it.titleAr,
                     titleEn: it.titleEn,
                     originalJod: it.originalPriceJod,
-                    telegramLink: it.telegramLink,
+                    telegramLink: it.telegramStandardLink || it.telegramLink,
+                    telegramStandardLink: it.telegramStandardLink || it.telegramLink,
+                    telegramVipLink: it.telegramVipLink || '',
                     requiresBooking: false,
                   })}
                   className="self-start inline-flex items-center gap-1.5 bg-gradient-to-br from-[hsl(var(--p600))] to-[hsl(var(--p500))] text-white font-semibold text-[0.85rem] py-2 px-5 rounded-lg border-none cursor-pointer hover:opacity-85 transition-opacity"

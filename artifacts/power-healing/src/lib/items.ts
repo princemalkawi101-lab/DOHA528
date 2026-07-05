@@ -26,6 +26,8 @@ export type Item = {
   vipPriceJod?: number | null;
   vipEnabled?: boolean;
   telegramLink: string;
+  telegramStandardLink?: string;
+  telegramVipLink?: string;
   order: number;
 };
 
@@ -78,6 +80,8 @@ export function newItemTemplate(kind: ItemKind, order: number): Item {
     vipPriceJod: null,
     vipEnabled: false,
     telegramLink: '',
+    telegramStandardLink: '',
+    telegramVipLink: '',
     order,
   };
 }

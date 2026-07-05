@@ -3,6 +3,27 @@ import { useLocation } from 'wouter';
 import { useApp } from '@/lib/store';
 import { Item, fetchItems, effectivePrice, discountPercent } from '@/lib/items';
 
+const DESC_LIMIT = 180;
+
+function CourseDescription({ desc, lang }: { desc: string; lang: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = desc.length > DESC_LIMIT;
+  const displayed = isLong && !expanded ? desc.slice(0, DESC_LIMIT).trimEnd() + '…' : desc;
+  return (
+    <div className="text-[hsl(var(--muted-foreground))] text-[0.88rem] leading-[1.7] mb-4 flex-1 whitespace-pre-line">
+      {displayed}
+      {isLong && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="block mt-1 text-[hsl(var(--p600))] font-semibold text-[0.82rem] hover:underline cursor-pointer bg-transparent border-none p-0"
+        >
+          {expanded ? (lang === 'ar' ? 'أقل ▲' : 'Less ▲') : (lang === 'ar' ? 'المزيد ▼' : 'Read more ▼')}
+        </button>
+      )}
+    </div>
+  );
+}
+
 type TabKey = 'all' | 'course' | 'workshop' | 'recorded' | 'individual-online' | 'vip';
 
 const TABS: { key: TabKey; labelAr: string; labelEn: string }[] = [
@@ -52,7 +73,9 @@ function ProductCard({ it }: { it: Item }) {
       titleAr: it.titleAr + (isVip ? ' (VIP)' : ''),
       titleEn: it.titleEn + (isVip ? ' (VIP)' : ''),
       originalJod: it.originalPriceJod,
-      telegramLink: it.telegramLink,
+      telegramLink: it.telegramStandardLink || it.telegramLink,
+      telegramStandardLink: it.telegramStandardLink || it.telegramLink,
+      telegramVipLink: it.telegramVipLink || '',
       requiresBooking: isIndividual || it.kind === 'vip',
     });
 
@@ -80,7 +103,7 @@ function ProductCard({ it }: { it: Item }) {
 
       <div className="text-[1.8rem] text-[hsl(var(--g500))] mb-3">{it.icon}</div>
       <h3 className="text-[1.05rem] font-bold text-[hsl(var(--p900))] mb-2 leading-snug line-clamp-2">{title}</h3>
-      <p className="text-[hsl(var(--muted-foreground))] text-[0.88rem] leading-[1.7] mb-4 flex-1 whitespace-pre-line line-clamp-4">{desc}</p>
+      <CourseDescription desc={desc} lang={lang} />
 
       {/* ── Price tier selector ── */}
       {hasVip ? (

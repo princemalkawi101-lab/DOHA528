@@ -87,17 +87,26 @@ export default function PaymentSuccess() {
                     <span className="text-2xl">{p.icon}</span>
                     <span className="text-white font-bold flex-1">{title}</span>
                   </div>
-                  {p.telegramLink ? (
-                    <a
-                      href={p.telegramLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 bg-[#229ED9] text-white font-bold py-2 px-4 rounded-lg text-sm hover:opacity-90"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.62 8.16-1.86 8.78c-.14.62-.51.77-1.03.48l-2.85-2.1-1.37 1.32c-.15.15-.28.28-.57.28l.2-2.9 5.27-4.76c.23-.2-.05-.32-.36-.12l-6.51 4.1-2.81-.88c-.61-.19-.62-.61.13-.9l10.99-4.24c.51-.19.96.12.79.93z"/></svg>
-                      {lang === 'ar' ? 'افتح القناة على تلجرام' : 'Open on Telegram'}
-                    </a>
-                  ) : (
+                  {(() => {
+                    const isVipPurchase = p.key.endsWith('-vip');
+                    const link = isVipPurchase
+                      ? (p.telegramVipLink || p.telegramLink)
+                      : (p.telegramStandardLink || p.telegramLink);
+                    return link ? (
+                      <a
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 bg-[#229ED9] text-white font-bold py-2 px-4 rounded-lg text-sm hover:opacity-90"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.62 8.16-1.86 8.78c-.14.62-.51.77-1.03.48l-2.85-2.1-1.37 1.32c-.15.15-.28.28-.57.28l.2-2.9 5.27-4.76c.23-.2-.05-.32-.36-.12l-6.51 4.1-2.81-.88c-.61-.19-.62-.61.13-.9l10.99-4.24c.51-.19.96.12.79.93z"/></svg>
+                        {isVipPurchase
+                          ? (lang === 'ar' ? '👑 افتح قناة VIP على تلجرام' : '👑 Open VIP on Telegram')
+                          : (lang === 'ar' ? 'افتح القناة على تلجرام' : 'Open on Telegram')}
+                      </a>
+                    ) : null;
+                  })()}
+                  {!p.telegramVipLink && !p.telegramStandardLink && !p.telegramLink && (
                     <p className="text-[rgba(255,255,255,0.5)] text-sm italic">
                       {lang === 'ar' ? 'لم يتم إعداد رابط بعد. سيتم التواصل معك قريباً.' : 'Link not set yet. We will contact you shortly.'}
                     </p>

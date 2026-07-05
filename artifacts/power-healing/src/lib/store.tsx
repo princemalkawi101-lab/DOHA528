@@ -31,6 +31,8 @@ export type CartItem = {
   originalJod?: number;
   qty: number;
   telegramLink?: string;
+  telegramStandardLink?: string;
+  telegramVipLink?: string;
   requiresBooking?: boolean;
 };
 
@@ -41,6 +43,8 @@ export type AddToCartOptions = {
   titleEn?: string;
   originalJod?: number;
   telegramLink?: string;
+  telegramStandardLink?: string;
+  telegramVipLink?: string;
   requiresBooking?: boolean;
 };
 
@@ -132,6 +136,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         originalJod: opts.originalJod,
         qty: 1,
         telegramLink: opts.telegramLink,
+        telegramStandardLink: opts.telegramStandardLink,
+        telegramVipLink: opts.telegramVipLink,
         requiresBooking: opts.requiresBooking,
       }];
     });

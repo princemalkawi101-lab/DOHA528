@@ -31,6 +31,7 @@ import {
   saveAdSliderConfig,
 } from '@/lib/adSlides';
 import { fetchAllPurchases, deletePurchase, Purchase } from '@/lib/purchases';
+import { Review, fetchReviews, saveReview, deleteReview, newReviewTemplate } from '@/lib/reviews';
 import {
   BarChart,
   Bar,
@@ -283,6 +284,17 @@ export default function Admin() {
 
   const [importing, setImporting] = useState(false);
   const [importStatus, setImportStatus] = useState<string>('');
+  const [adminTab, setAdminTab] = useState<'products' | 'bookings' | 'settings' | 'ads' | 'reviews'>('products');
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [reviewSavedId, setReviewSavedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (adminTab !== 'reviews') return;
+    if (loadingReviews || reviews.length > 0) return;
+    setLoadingReviews(true);
+    fetchReviews().then((list) => { setReviews(list); setLoadingReviews(false); });
+  }, [adminTab]);
 
   const handleImportSeed = async () => {
     const msg = lang === 'ar'
@@ -372,40 +384,38 @@ export default function Admin() {
           </div>
         </div>
 
-        <section className="bg-gradient-to-br from-[rgba(212,160,23,0.18)] to-[rgba(90,45,145,0.18)] border-2 border-[rgba(212,160,23,0.45)] rounded-2xl p-6 mb-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex-1 min-w-[200px]">
-              <h2 className="text-white text-lg font-black mb-1">
-                {lang === 'ar' ? '📥 استيراد العناصر من الملف' : '📥 Import Items From File'}
-              </h2>
-              <p className="text-[rgba(255,255,255,0.75)] text-sm">
-                {lang === 'ar'
-                  ? `تعبئة قاعدة البيانات بـ ${SEED_ITEMS.length} عنصر (8 كورسات + 11 ورشة + 6 جلسات مسجلة + 15 جلسة فردية) من ملف الدورات والكورسات. الأسعار محوّلة من الدولار إلى الدينار الأردني.`
-                  : `Populate the database with ${SEED_ITEMS.length} items (8 courses + 11 workshops + 6 recorded + 15 individual sessions) from the courses file. Prices converted from USD to JOD.`}
-              </p>
-              {importStatus && (
-                <p className="text-[hsl(var(--g500))] text-sm font-bold mt-2">{importStatus}</p>
-              )}
-            </div>
-            <button
-              onClick={handleImportSeed}
-              disabled={importing}
-              className="bg-gradient-to-br from-[hsl(var(--g600))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black text-sm py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity whitespace-nowrap"
-            >
-              {importing
-                ? lang === 'ar' ? 'جاري الاستيراد...' : 'Importing...'
-                : lang === 'ar' ? `استيراد ${SEED_ITEMS.length} عنصر` : `Import ${SEED_ITEMS.length} Items`}
-            </button>
-          </div>
-        </section>
-
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <StatCard label={lang === 'ar' ? 'إجمالي العناصر' : 'Total Items'} value={items.length.toString()} />
           <StatCard label={lang === 'ar' ? 'الحجوزات' : 'Bookings'} value={bookings.length.toString()} />
+          <StatCard label={lang === 'ar' ? 'التقييمات' : 'Reviews'} value={reviews.length.toString()} />
           <StatCard label={t('admin.stat.role')} value={t('admin.roleAdmin')} />
         </div>
 
-        {/* ───── Subscriber Management ───── */}
+        {/* ── Admin Tab Navigation ── */}
+        <div className="flex flex-wrap gap-2 mb-6 pb-4 border-b border-[rgba(255,255,255,0.1)]">
+          {([
+            { key: 'products', ar: '📚 المحتوى', en: '📚 Products' },
+            { key: 'bookings', ar: '📅 الحجوزات', en: '📅 Bookings' },
+            { key: 'settings', ar: '⚙️ الإعدادات', en: '⚙️ Settings' },
+            { key: 'ads', ar: '🎯 الإعلانات', en: '🎯 Banner Ads' },
+            { key: 'reviews', ar: '⭐ التقييمات', en: '⭐ Reviews' },
+          ] as { key: typeof adminTab; ar: string; en: string }[]).map((tb) => (
+            <button
+              key={tb.key}
+              onClick={() => setAdminTab(tb.key)}
+              className={`text-sm font-bold py-2.5 px-5 rounded-xl border transition-all cursor-pointer ${
+                adminTab === tb.key
+                  ? 'bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] border-transparent shadow-[0_4px_16px_rgba(212,160,23,0.3)]'
+                  : 'bg-[rgba(255,255,255,0.04)] text-[rgba(255,255,255,0.75)] border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.08)]'
+              }`}
+            >
+              {lang === 'ar' ? tb.ar : tb.en}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Bookings Tab ── */}
+        {adminTab === 'bookings' && <>
         <SubscriberSection
           lang={lang}
           purchases={purchases}
@@ -414,10 +424,11 @@ export default function Admin() {
           setSubscriberView={setSubscriberView}
           onDeletePurchase={handleDeletePurchase}
         />
-
-        {/* ───── Analytics Chart ───── */}
         <AnalyticsSection lang={lang} purchases={purchases} loading={loadingPurchases} />
+        </>}
 
+        {/* ── Ads Tab ── */}
+        {adminTab === 'ads' && <>
         {/* ───── Ad Slider Manager ───── */}
         <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
@@ -577,7 +588,10 @@ export default function Admin() {
             </div>
           )}
         </section>
+        </>}
 
+        {/* ── Products Tab ── */}
+        {adminTab === 'products' && <>
         {/* ───── Items manager — categorized tabs ───── */}
         <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
@@ -660,11 +674,25 @@ export default function Admin() {
                             placeholder={lang === 'ar' ? 'لا يوجد خصم' : 'No discount'}
                           />
                         </Field>
-                        <div className="md:col-span-2">
-                          <Field label={lang === 'ar' ? '🔒 رابط تلجرام (مخفي — يظهر بعد الدفع)' : '🔒 Telegram Link (hidden — shown after payment)'}>
-                            <input value={it.telegramLink} onChange={(e) => updateItem(it.id, { telegramLink: e.target.value })} dir="ltr" placeholder="https://t.me/..." className="adm-input" />
-                          </Field>
-                        </div>
+                        <Field label={lang === 'ar' ? '🔒 رابط تلجرام — الاشتراك العادي' : '🔒 Telegram Link — Standard'}>
+                          <input
+                            value={it.telegramStandardLink ?? it.telegramLink ?? ''}
+                            onChange={(e) => updateItem(it.id, { telegramStandardLink: e.target.value, telegramLink: e.target.value })}
+                            dir="ltr"
+                            placeholder="https://t.me/channel_standard"
+                            className="adm-input"
+                          />
+                        </Field>
+
+                        <Field label={lang === 'ar' ? '👑 رابط تلجرام — اشتراك VIP (يظهر بعد الدفع)' : '👑 Telegram Link — VIP (shown after payment)'}>
+                          <input
+                            value={it.telegramVipLink ?? ''}
+                            onChange={(e) => updateItem(it.id, { telegramVipLink: e.target.value })}
+                            dir="ltr"
+                            placeholder="https://t.me/channel_vip"
+                            className="adm-input"
+                          />
+                        </Field>
 
                         {/* ── VIP Pricing ── */}
                         <Field label={lang === 'ar' ? '👑 سعر VIP ($) — اختياري' : '👑 VIP Price (USD) — optional'}>
@@ -743,8 +771,10 @@ export default function Admin() {
             );
           })()}
         </section>
+        </>}
 
-        {/* Bookings */}
+        {/* ── Bookings Tab (continued) ── */}
+        {adminTab === 'bookings' && <>
         <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
           <h2 className="text-white text-lg font-black mb-4">
             {lang === 'ar' ? '📅 حجوزات الجلسات الفردية' : '📅 Individual Session Bookings'}
@@ -855,6 +885,189 @@ export default function Admin() {
             </div>
           )}
         </section>
+        </>}
+
+        {/* ── Settings Tab ── */}
+        {adminTab === 'settings' && <>
+        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
+          <h2 className="text-white text-lg font-black mb-5">
+            {lang === 'ar' ? '👤 إعدادات الملف الشخصي' : '👤 Profile Settings'}
+          </h2>
+          <div className="flex items-center gap-5 flex-wrap">
+            <div className="relative w-16 h-16 shrink-0">
+              {user.photoURL ? (
+                <img src={user.photoURL} alt="" className="w-16 h-16 rounded-full object-cover border-2 border-[rgba(212,160,23,0.5)]" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[hsl(var(--p600))] to-[hsl(var(--p400))] flex items-center justify-center text-white text-2xl font-black">
+                  {(user.displayName || user.email || '?')[0].toUpperCase()}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={avatarUploading}
+                className="absolute bottom-0 end-0 w-7 h-7 rounded-full bg-[hsl(var(--g500))] flex items-center justify-center border-2 border-[#1a0a2e] hover:opacity-90 disabled:opacity-50 cursor-pointer"
+              >
+                {avatarUploading ? <span className="text-white text-[0.5rem] animate-pulse">…</span> : <span className="text-white text-sm">📷</span>}
+              </button>
+            </div>
+            <div>
+              <p className="text-white font-bold">{user.displayName || user.email}</p>
+              <p className="text-[rgba(255,255,255,0.5)] text-sm mt-0.5">{user.email}</p>
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={avatarUploading}
+                className="text-[hsl(var(--g400))] text-xs mt-1.5 hover:underline disabled:opacity-50 cursor-pointer"
+              >
+                {avatarUploading ? (lang === 'ar' ? 'جاري الرفع…' : 'Uploading…') : (lang === 'ar' ? 'تغيير الصورة الشخصية' : 'Change profile photo')}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-gradient-to-br from-[rgba(212,160,23,0.18)] to-[rgba(90,45,145,0.18)] border-2 border-[rgba(212,160,23,0.45)] rounded-2xl p-6 mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex-1 min-w-[200px]">
+              <h2 className="text-white text-lg font-black mb-1">
+                {lang === 'ar' ? '📥 استيراد العناصر من الملف' : '📥 Import Items From File'}
+              </h2>
+              <p className="text-[rgba(255,255,255,0.75)] text-sm">
+                {lang === 'ar'
+                  ? `تعبئة قاعدة البيانات بـ ${SEED_ITEMS.length} عنصر (8 كورسات + 11 ورشة + 6 جلسات مسجلة + 15 جلسة فردية) من ملف الدورات والكورسات. الأسعار محوّلة من الدولار إلى الدينار الأردني.`
+                  : `Populate the database with ${SEED_ITEMS.length} items (8 courses + 11 workshops + 6 recorded + 15 individual sessions) from the courses file. Prices converted from USD to JOD.`}
+              </p>
+              {importStatus && (
+                <p className="text-[hsl(var(--g500))] text-sm font-bold mt-2">{importStatus}</p>
+              )}
+            </div>
+            <button
+              onClick={handleImportSeed}
+              disabled={importing}
+              className="bg-gradient-to-br from-[hsl(var(--g600))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black text-sm py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity whitespace-nowrap"
+            >
+              {importing
+                ? lang === 'ar' ? 'جاري الاستيراد...' : 'Importing...'
+                : lang === 'ar' ? `استيراد ${SEED_ITEMS.length} عنصر` : `Import ${SEED_ITEMS.length} Items`}
+            </button>
+          </div>
+        </section>
+        </>}
+
+        {/* ── Reviews Tab ── */}
+        {adminTab === 'reviews' && <>
+        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+            <h2 className="text-white text-lg font-black">
+              {lang === 'ar' ? '⭐ إدارة التقييمات والشهادات' : '⭐ Reviews & Testimonials'}
+              <span className="ms-2 text-[rgba(255,255,255,0.45)] text-xs font-medium">({reviews.length})</span>
+            </h2>
+            <button
+              onClick={() => {
+                const r = newReviewTemplate();
+                setReviews((prev) => [r, ...prev]);
+              }}
+              className="bg-[hsl(var(--g500))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90 cursor-pointer"
+            >
+              + {lang === 'ar' ? 'تقييم جديد' : 'Add Review'}
+            </button>
+          </div>
+          {loadingReviews ? (
+            <p className="text-[rgba(255,255,255,0.5)] text-sm">{lang === 'ar' ? 'جاري التحميل…' : 'Loading…'}</p>
+          ) : reviews.length === 0 ? (
+            <p className="text-[rgba(255,255,255,0.4)] text-sm italic">{lang === 'ar' ? 'لا توجد تقييمات بعد. اضغط «تقييم جديد» للبدء.' : 'No reviews yet. Click «Add Review» to get started.'}</p>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {reviews.map((rev) => (
+                <div key={rev.id} className="bg-[rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <Field label={lang === 'ar' ? 'نص التقييم (عربي)' : 'Review Text (Arabic)'}>
+                      <textarea
+                        value={rev.textAr}
+                        onChange={(e) => setReviews((prev) => prev.map((r) => r.id === rev.id ? { ...r, textAr: e.target.value } : r))}
+                        dir="rtl" rows={3} className="adm-input"
+                      />
+                    </Field>
+                    <Field label={lang === 'ar' ? 'نص التقييم (إنجليزي)' : 'Review Text (English)'}>
+                      <textarea
+                        value={rev.textEn}
+                        onChange={(e) => setReviews((prev) => prev.map((r) => r.id === rev.id ? { ...r, textEn: e.target.value } : r))}
+                        dir="ltr" rows={3} className="adm-input"
+                      />
+                    </Field>
+                    <Field label={lang === 'ar' ? 'اسم العميل (عربي)' : 'Author (Arabic)'}>
+                      <input
+                        value={rev.authorLabelAr || ''}
+                        onChange={(e) => setReviews((prev) => prev.map((r) => r.id === rev.id ? { ...r, authorLabelAr: e.target.value } : r))}
+                        dir="rtl" className="adm-input"
+                        placeholder={lang === 'ar' ? 'مثال: أم عبدالله، السعودية' : 'e.g. Sarah, UAE'}
+                      />
+                    </Field>
+                    <Field label={lang === 'ar' ? 'اسم العميل (إنجليزي)' : 'Author (English)'}>
+                      <input
+                        value={rev.authorLabelEn || ''}
+                        onChange={(e) => setReviews((prev) => prev.map((r) => r.id === rev.id ? { ...r, authorLabelEn: e.target.value } : r))}
+                        dir="ltr" className="adm-input"
+                        placeholder="e.g. Sarah, UAE"
+                      />
+                    </Field>
+                    <Field label={lang === 'ar' ? 'التقييم (1–5 نجوم)' : 'Rating (1–5 stars)'}>
+                      <input
+                        type="number" min={1} max={5}
+                        value={rev.rating ?? 5}
+                        onChange={(e) => setReviews((prev) => prev.map((r) => r.id === rev.id ? { ...r, rating: Math.min(5, Math.max(1, Number(e.target.value))) } : r))}
+                        className="adm-input"
+                      />
+                    </Field>
+                    <Field label={lang === 'ar' ? 'الحالة' : 'Status'}>
+                      <label className="flex items-center gap-3 cursor-pointer mt-1">
+                        <span className="relative inline-flex items-center shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={rev.active}
+                            onChange={(e) => setReviews((prev) => prev.map((r) => r.id === rev.id ? { ...r, active: e.target.checked } : r))}
+                            className="sr-only"
+                          />
+                          <span className={`w-10 h-5 rounded-full transition-colors ${rev.active ? 'bg-[hsl(var(--g500))]' : 'bg-[rgba(255,255,255,0.18)]'}`}>
+                            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ${rev.active ? 'left-[22px]' : 'left-0.5'}`} />
+                          </span>
+                        </span>
+                        <span className="text-[rgba(255,255,255,0.7)] text-sm">
+                          {rev.active ? (lang === 'ar' ? 'ظاهر للزوار' : 'Visible to visitors') : (lang === 'ar' ? 'مخفي' : 'Hidden')}
+                        </span>
+                      </label>
+                    </Field>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={async () => {
+                        await saveReview(rev);
+                        setReviewSavedId(rev.id);
+                        setTimeout(() => setReviewSavedId(null), 2000);
+                      }}
+                      className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90 cursor-pointer"
+                    >
+                      {lang === 'ar' ? 'حفظ' : 'Save'}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(lang === 'ar' ? 'حذف هذا التقييم نهائياً؟' : 'Delete this review permanently?')) return;
+                        await deleteReview(rev.id);
+                        setReviews((prev) => prev.filter((r) => r.id !== rev.id));
+                      }}
+                      className="bg-[rgba(255,80,80,0.15)] border border-[rgba(255,80,80,0.3)] text-[#ffb0b0] font-semibold py-2 px-4 rounded-lg text-sm hover:bg-[rgba(255,80,80,0.25)] cursor-pointer"
+                    >
+                      {lang === 'ar' ? 'حذف' : 'Delete'}
+                    </button>
+                    {reviewSavedId === rev.id && (
+                      <span className="text-[hsl(var(--g300))] text-sm font-semibold">{t('admin.saved')}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+        </>}
 
       </div>
 
