@@ -75,9 +75,24 @@ export default function Admin() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  // ── These MUST stay above early returns to obey Rules of Hooks ──
+  const [importing, setImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState<string>('');
+  const [adminTab, setAdminTab] = useState<'products' | 'bookings' | 'settings' | 'ads' | 'reviews'>('products');
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [reviewSavedId, setReviewSavedId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!loading && !user) setLocation('/login');
   }, [loading, user, setLocation]);
+
+  useEffect(() => {
+    if (adminTab !== 'reviews') return;
+    if (loadingReviews || reviews.length > 0) return;
+    setLoadingReviews(true);
+    fetchReviews().then((list) => { setReviews(list); setLoadingReviews(false); });
+  }, [adminTab, loadingReviews, reviews.length]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -267,34 +282,37 @@ export default function Admin() {
       canvas.height = Math.round(img.height * ratio);
       canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
       const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.85));
-      const path = `profile-pictures/${auth.currentUser.uid}.jpg`;
+      const currentUser = auth.currentUser;
+      const path = `profile-pictures/${currentUser.uid}.jpg`;
       const fileRef = storageRef(storage, path);
-      await uploadBytes(fileRef, blob, { contentType: 'image/jpeg' });
+      // Race uploadBytes against a 30 s timeout so the button is never permanently stuck
+      await Promise.race([
+        uploadBytes(fileRef, blob, { contentType: 'image/jpeg' }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Upload timed out – check Firebase Storage rules and bucket name')), 30_000),
+        ),
+      ]);
       const photoURL = await getDownloadURL(fileRef);
-      await updateProfile(auth.currentUser, { photoURL });
-      // Force React to pick up the new photoURL
+      await updateProfile(currentUser, { photoURL });
       window.dispatchEvent(new Event('profile-updated'));
     } catch (err) {
-      alert(lang === 'ar' ? 'تعذّر رفع الصورة، حاول مرة أخرى.' : 'Photo upload failed, please try again.');
+      console.error('Avatar upload error:', err);
+      const msg = err instanceof Error ? err.message : '';
+      const isTimeout = msg.includes('timed out');
+      alert(
+        lang === 'ar'
+          ? isTimeout
+            ? 'انتهت مهلة الرفع. تأكد من إعدادات Firebase Storage وقواعد الوصول.'
+            : 'تعذّر رفع الصورة، حاول مرة أخرى.'
+          : isTimeout
+            ? 'Upload timed out. Check Firebase Storage rules and bucket settings.'
+            : 'Photo upload failed, please try again.',
+      );
     } finally {
       setAvatarUploading(false);
       if (avatarInputRef.current) avatarInputRef.current.value = '';
     }
   };
-
-  const [importing, setImporting] = useState(false);
-  const [importStatus, setImportStatus] = useState<string>('');
-  const [adminTab, setAdminTab] = useState<'products' | 'bookings' | 'settings' | 'ads' | 'reviews'>('products');
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loadingReviews, setLoadingReviews] = useState(false);
-  const [reviewSavedId, setReviewSavedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (adminTab !== 'reviews') return;
-    if (loadingReviews || reviews.length > 0) return;
-    setLoadingReviews(true);
-    fetchReviews().then((list) => { setReviews(list); setLoadingReviews(false); });
-  }, [adminTab]);
 
   const handleImportSeed = async () => {
     const msg = lang === 'ar'
