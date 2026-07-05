@@ -31,7 +31,7 @@ import {
   saveAdSliderConfig,
 } from '@/lib/adSlides';
 import { fetchAllPurchases, deletePurchase, Purchase } from '@/lib/purchases';
-import { Review, fetchReviews, saveReview, deleteReview, newReviewTemplate } from '@/lib/reviews';
+import { Review, fetchReviews, saveReview, deleteReview, newReviewTemplate, seedHardcodedReviews, HARDCODED_TESTIMONIALS } from '@/lib/reviews';
 import {
   BarChart,
   Bar,
@@ -974,7 +974,27 @@ export default function Admin() {
           {loadingReviews ? (
             <p className="text-[rgba(255,255,255,0.5)] text-sm">{lang === 'ar' ? 'جاري التحميل…' : 'Loading…'}</p>
           ) : reviews.length === 0 ? (
-            <p className="text-[rgba(255,255,255,0.4)] text-sm italic">{lang === 'ar' ? 'لا توجد تقييمات بعد. اضغط «تقييم جديد» للبدء.' : 'No reviews yet. Click «Add Review» to get started.'}</p>
+            <div className="flex flex-col items-start gap-4">
+              <p className="text-[rgba(255,255,255,0.4)] text-sm italic">{lang === 'ar' ? 'لا توجد تقييمات بعد.' : 'No reviews yet.'}</p>
+              <button
+                onClick={async () => {
+                  if (!confirm(lang === 'ar'
+                    ? `استيراد ${HARDCODED_TESTIMONIALS.length} تقييم من الصفحة الرئيسية إلى قاعدة البيانات؟`
+                    : `Import ${HARDCODED_TESTIMONIALS.length} existing reviews from the homepage into the database?`)) return;
+                  setLoadingReviews(true);
+                  try {
+                    await seedHardcodedReviews();
+                    const list = await fetchReviews();
+                    setReviews(list);
+                  } finally {
+                    setLoadingReviews(false);
+                  }
+                }}
+                className="bg-[rgba(212,160,23,0.15)] border border-[rgba(212,160,23,0.4)] text-[hsl(var(--g300))] font-semibold py-2 px-4 rounded-lg text-sm hover:bg-[rgba(212,160,23,0.25)] cursor-pointer"
+              >
+                📥 {lang === 'ar' ? `استيراد ${HARDCODED_TESTIMONIALS.length} تقييم من الصفحة الرئيسية` : `Import ${HARDCODED_TESTIMONIALS.length} reviews from homepage`}
+              </button>
+            </div>
           ) : (
             <div className="flex flex-col gap-4">
               {reviews.map((rev) => (
