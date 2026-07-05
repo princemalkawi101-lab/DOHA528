@@ -2,10 +2,9 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
 import { collection, getDocs, orderBy, query as fsQuery } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useApp, RATES } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
-import { db, storage, auth } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import {
   Item,
   ItemKind,
@@ -41,6 +40,26 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
+
+async function uploadToImgBB(blob: Blob): Promise<string> {
+  const key = import.meta.env.VITE_IMGBB_API_KEY as string | undefined;
+  if (!key) throw new Error('VITE_IMGBB_API_KEY is not set');
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+  const form = new FormData();
+  form.append('key', key);
+  form.append('image', base64);
+  const res = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: form });
+  if (!res.ok) throw new Error(`ImgBB error ${res.status}`);
+  const json = await res.json();
+  const url: string = json?.data?.url;
+  if (!url) throw new Error('ImgBB returned no URL');
+  return url;
+}
 
 const KIND_LABELS: Record<ItemKind, { ar: string; en: string }> = {
   course:              { ar: 'كورس مدفوع',                       en: 'Paid Course' },
@@ -283,30 +302,16 @@ export default function Admin() {
       canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
       const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.85));
       const currentUser = auth.currentUser;
-      const path = `profile-pictures/${currentUser.uid}.jpg`;
-      const fileRef = storageRef(storage, path);
-      // Race uploadBytes against a 30 s timeout so the button is never permanently stuck
-      await Promise.race([
-        uploadBytes(fileRef, blob, { contentType: 'image/jpeg' }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Upload timed out – check Firebase Storage rules and bucket name')), 30_000),
-        ),
-      ]);
-      const photoURL = await getDownloadURL(fileRef);
+      // Upload to ImgBB — free CDN, no Firebase Storage billing required
+      const photoURL = await uploadToImgBB(blob);
       await updateProfile(currentUser, { photoURL });
       window.dispatchEvent(new Event('profile-updated'));
     } catch (err) {
       console.error('Avatar upload error:', err);
-      const msg = err instanceof Error ? err.message : '';
-      const isTimeout = msg.includes('timed out');
       alert(
         lang === 'ar'
-          ? isTimeout
-            ? 'انتهت مهلة الرفع. تأكد من إعدادات Firebase Storage وقواعد الوصول.'
-            : 'تعذّر رفع الصورة، حاول مرة أخرى.'
-          : isTimeout
-            ? 'Upload timed out. Check Firebase Storage rules and bucket settings.'
-            : 'Photo upload failed, please try again.',
+          ? 'تعذّر رفع الصورة، حاول مرة أخرى.'
+          : 'Photo upload failed, please try again.',
       );
     } finally {
       setAvatarUploading(false);
