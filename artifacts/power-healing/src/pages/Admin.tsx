@@ -5,6 +5,7 @@ import { updateProfile } from 'firebase/auth';
 import { useApp, RATES } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
 import { db, auth } from '@/lib/firebase';
+import { fetchSiteSettings, saveSiteSettings } from '@/lib/siteSettings';
 import {
   Item,
   ItemKind,
@@ -93,6 +94,10 @@ export default function Admin() {
   const [adSliderCfgSaving, setAdSliderCfgSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const aboutImgInputRef = useRef<HTMLInputElement>(null);
+  const [aboutImageUrl, setAboutImageUrl] = useState<string>('');
+  const [aboutImgUploading, setAboutImgUploading] = useState(false);
+  const [aboutImgSaved, setAboutImgSaved] = useState(false);
 
   // ── These MUST stay above early returns to obey Rules of Hooks ──
   const [importing, setImporting] = useState(false);
@@ -112,6 +117,10 @@ export default function Admin() {
     setLoadingReviews(true);
     fetchReviews().then((list) => { setReviews(list); setLoadingReviews(false); });
   }, [adminTab, loadingReviews, reviews.length]);
+
+  useEffect(() => {
+    fetchSiteSettings().then((s) => { if (s.aboutImageUrl) setAboutImageUrl(s.aboutImageUrl); });
+  }, []);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -316,6 +325,38 @@ export default function Admin() {
     } finally {
       setAvatarUploading(false);
       if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleAboutImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAboutImgUploading(true);
+    try {
+      const canvas = document.createElement('canvas');
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = reject;
+        img.src = URL.createObjectURL(file);
+      });
+      const MAX = 1200;
+      const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.9));
+      const url = await uploadToImgBB(blob);
+      await saveSiteSettings({ aboutImageUrl: url });
+      setAboutImageUrl(url);
+      setAboutImgSaved(true);
+      setTimeout(() => setAboutImgSaved(false), 3000);
+    } catch (err) {
+      console.error('About image upload error:', err);
+      alert(lang === 'ar' ? 'تعذّر رفع الصورة، حاول مرة أخرى.' : 'Image upload failed, please try again.');
+    } finally {
+      setAboutImgUploading(false);
+      if (aboutImgInputRef.current) aboutImgInputRef.current.value = '';
     }
   };
 
@@ -912,6 +953,60 @@ export default function Admin() {
 
         {/* ── Settings Tab ── */}
         {adminTab === 'settings' && <>
+        {/* ── About Me Image ── */}
+        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
+          <h2 className="text-white text-lg font-black mb-1">
+            {lang === 'ar' ? '🖼️ صورة "من أنا" في الصفحة الرئيسية' : '🖼️ About Me Photo (Home Page)'}
+          </h2>
+          <p className="text-[rgba(255,255,255,0.55)] text-sm mb-5">
+            {lang === 'ar'
+              ? 'هذه هي الصورة الظاهرة بجانب "دوحة ملكاوي" في قسم من أنا. ارفع صورة جديدة لتحديثها فوراً.'
+              : 'This is the profile photo shown next to "Doha Malkawi" in the About section. Upload a new image to update it instantly.'}
+          </p>
+          <div className="flex items-start gap-6 flex-wrap">
+            {/* Preview */}
+            <div className="w-28 h-36 rounded-xl overflow-hidden border-2 border-[rgba(212,160,23,0.4)] shrink-0 bg-[rgba(255,255,255,0.05)] flex items-center justify-center">
+              {aboutImageUrl ? (
+                <img src={aboutImageUrl} alt="About preview" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[rgba(255,255,255,0.3)] text-xs text-center px-2">
+                  {lang === 'ar' ? 'لا توجد صورة' : 'No image'}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => aboutImgInputRef.current?.click()}
+                disabled={aboutImgUploading}
+                className="bg-[hsl(var(--g500))] text-[hsl(var(--p900))] font-black text-sm py-2.5 px-6 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-opacity"
+              >
+                {aboutImgUploading
+                  ? (lang === 'ar' ? '⏳ جاري الرفع…' : '⏳ Uploading…')
+                  : (lang === 'ar' ? '📤 رفع صورة جديدة' : '📤 Upload New Photo')}
+              </button>
+              {aboutImgSaved && (
+                <p className="text-[hsl(var(--g400))] text-sm font-bold">
+                  {lang === 'ar' ? '✅ تم الحفظ وتحديث الموقع!' : '✅ Saved! Site updated.'}
+                </p>
+              )}
+              {aboutImageUrl && (
+                <p className="text-[rgba(255,255,255,0.4)] text-xs break-all max-w-xs" dir="ltr">
+                  {aboutImageUrl.slice(0, 60)}…
+                </p>
+              )}
+            </div>
+          </div>
+          <input
+            ref={aboutImgInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAboutImageUpload}
+          />
+        </section>
+
+        {/* ── Admin Profile ── */}
         <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
           <h2 className="text-white text-lg font-black mb-5">
             {lang === 'ar' ? '👤 إعدادات الملف الشخصي' : '👤 Profile Settings'}

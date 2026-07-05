@@ -1,7 +1,16 @@
+import { useEffect, useState } from 'react';
 import { useApp } from '@/lib/store';
+import { fetchSiteSettings } from '@/lib/siteSettings';
 
 export function About() {
   const { t, lang } = useApp();
+  const [aboutImageUrl, setAboutImageUrl] = useState<string>('/img/doha-profile.jpg');
+
+  useEffect(() => {
+    fetchSiteSettings().then((s) => {
+      if (s.aboutImageUrl) setAboutImageUrl(s.aboutImageUrl);
+    });
+  }, []);
 
   const handleBookClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -27,7 +36,7 @@ export function About() {
           <div className="relative">
             <img
               className="w-full rounded-[20px] shadow-[0_20px_60px_rgba(90,45,145,0.35)] object-cover aspect-[3/4]"
-              src="/img/doha-profile.jpg"
+              src={aboutImageUrl}
               alt="Doha Malkawi"
               loading="lazy"
             />
