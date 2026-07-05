@@ -95,6 +95,10 @@ export default function Admin() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const aboutImgInputRef = useRef<HTMLInputElement>(null);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [expandedAds, setExpandedAds] = useState<Set<string>>(new Set());
+  const toggleItem = (id: string) => setExpandedItems((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAd = (id: string) => setExpandedAds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [aboutImageUrl, setAboutImageUrl] = useState<string>('');
   const [aboutImgUploading, setAboutImgUploading] = useState(false);
   const [aboutImgSaved, setAboutImgSaved] = useState(false);
@@ -543,112 +547,139 @@ export default function Admin() {
             <p className="text-[rgba(255,255,255,0.4)] text-sm italic">{lang === 'ar' ? 'لا توجد بطاقات إعلانية بعد.' : 'No ad slides yet.'}</p>
           ) : (
             <div className="flex flex-col gap-4">
-              {adSlides.map((s) => (
-                <div key={s.id} className="bg-[rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4">
-                    {/* Image preview + upload */}
-                    <div>
-                      <div className="w-full aspect-[5/3] rounded-lg overflow-hidden bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.1)] mb-2 relative">
-                        {s.imageUrl ? (
-                          <img src={s.imageUrl} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[rgba(255,255,255,0.4)] text-xs">
-                            {lang === 'ar' ? 'لا توجد صورة' : 'No image'}
+              {adSlides.map((s) => {
+                const adOpen = expandedAds.has(s.id);
+                return (
+                <div key={s.id} className="bg-[rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.08)] rounded-xl overflow-hidden">
+                  {/* ── Accordion Header ── */}
+                  <button
+                    type="button"
+                    onClick={() => toggleAd(s.id)}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 text-start hover:bg-[rgba(255,255,255,0.04)] transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {s.imageUrl && !s.imageUrl.startsWith('data:') ? (
+                        <img src={s.imageUrl} alt="" className="w-10 h-7 rounded object-cover shrink-0 border border-[rgba(255,255,255,0.1)]" />
+                      ) : s.imageUrl ? (
+                        <div className="w-10 h-7 rounded bg-[rgba(255,255,255,0.08)] shrink-0 border border-[rgba(255,255,255,0.1)] flex items-center justify-center text-[0.55rem] text-[rgba(255,255,255,0.4)]">img</div>
+                      ) : (
+                        <div className="w-10 h-7 rounded bg-[rgba(255,255,255,0.05)] shrink-0 border border-[rgba(255,255,255,0.08)] flex items-center justify-center text-[rgba(255,255,255,0.25)]">🖼</div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-white font-bold text-sm truncate">
+                          {lang === 'ar' ? (s.titleAr || s.titleEn || s.id) : (s.titleEn || s.titleAr || s.id)}
+                        </p>
+                        <p className="text-[rgba(255,255,255,0.45)] text-xs flex items-center gap-2">
+                          <span>{s.status === 'available' ? (lang === 'ar' ? '✦ متاح' : '✦ Available') : (lang === 'ar' ? '◷ قريباً' : '◷ Coming Soon')}</span>
+                          {adSavedId === s.id && <span className="text-[hsl(var(--g400))] font-bold">✓ {t('admin.saved')}</span>}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`shrink-0 text-[rgba(255,255,255,0.5)] text-lg transition-transform duration-200 ${adOpen ? 'rotate-180' : ''}`}>
+                      ▾
+                    </span>
+                  </button>
+
+                  {/* ── Accordion Body ── */}
+                  {adOpen && (
+                    <div className="px-4 pb-4 border-t border-[rgba(255,255,255,0.06)]">
+                      <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4 mt-3">
+                        {/* Image preview + upload */}
+                        <div>
+                          <div className="w-full aspect-[5/3] rounded-lg overflow-hidden bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.1)] mb-2 relative">
+                            {s.imageUrl ? (
+                              <img src={s.imageUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[rgba(255,255,255,0.4)] text-xs">
+                                {lang === 'ar' ? 'لا توجد صورة' : 'No image'}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      <label className="block">
-                        <span className="block text-[rgba(255,255,255,0.6)] text-[0.72rem] font-semibold mb-1">
-                          {lang === 'ar' ? 'تحميل صورة' : 'Upload image'}
-                        </span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) handleAdImageUpload(s.id, f);
-                            e.target.value = '';
-                          }}
-                          className="block w-full text-[rgba(255,255,255,0.7)] text-[0.72rem] file:bg-[hsl(var(--g500))] file:text-[hsl(var(--p900))] file:font-bold file:border-0 file:px-2 file:py-1 file:rounded file:cursor-pointer file:me-2"
-                        />
-                        {adUploading === s.id && (
-                          <span className="text-[hsl(var(--g300))] text-[0.7rem] mt-1 block">
-                            {lang === 'ar' ? 'جاري المعالجة…' : 'Processing…'}
-                          </span>
-                        )}
-                      </label>
-                      <Field label={lang === 'ar' ? 'أو رابط صورة' : 'Or image URL'}>
-                        <input value={s.imageUrl.startsWith('data:') ? '' : s.imageUrl} onChange={(e) => updateAd(s.id, { imageUrl: e.target.value })} dir="ltr" placeholder="https://…" className="adm-input" />
-                      </Field>
-                    </div>
+                          <label className="block">
+                            <span className="block text-[rgba(255,255,255,0.6)] text-[0.72rem] font-semibold mb-1">
+                              {lang === 'ar' ? 'تحميل صورة' : 'Upload image'}
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleAdImageUpload(s.id, f);
+                                e.target.value = '';
+                              }}
+                              className="block w-full text-[rgba(255,255,255,0.7)] text-[0.72rem] file:bg-[hsl(var(--g500))] file:text-[hsl(var(--p900))] file:font-bold file:border-0 file:px-2 file:py-1 file:rounded file:cursor-pointer file:me-2"
+                            />
+                            {adUploading === s.id && (
+                              <span className="text-[hsl(var(--g300))] text-[0.7rem] mt-1 block">
+                                {lang === 'ar' ? 'جاري المعالجة…' : 'Processing…'}
+                              </span>
+                            )}
+                          </label>
+                          <Field label={lang === 'ar' ? 'أو رابط صورة' : 'Or image URL'}>
+                            <input value={s.imageUrl.startsWith('data:') ? '' : s.imageUrl} onChange={(e) => updateAd(s.id, { imageUrl: e.target.value })} dir="ltr" placeholder="https://…" className="adm-input" />
+                          </Field>
+                        </div>
 
-                    {/* Fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <Field label={lang === 'ar' ? 'العنوان (عربي)' : 'Title (Arabic)'}>
-                        <input value={s.titleAr} onChange={(e) => updateAd(s.id, { titleAr: e.target.value })} dir="rtl" className="adm-input" />
-                      </Field>
-                      <Field label={lang === 'ar' ? 'العنوان (إنجليزي)' : 'Title (English)'}>
-                        <input value={s.titleEn} onChange={(e) => updateAd(s.id, { titleEn: e.target.value })} dir="ltr" className="adm-input" />
-                      </Field>
-                      <Field label={lang === 'ar' ? 'الوصف القصير (عربي)' : 'Tagline (Arabic)'}>
-                        <input value={s.taglineAr} onChange={(e) => updateAd(s.id, { taglineAr: e.target.value })} dir="rtl" className="adm-input" />
-                      </Field>
-                      <Field label={lang === 'ar' ? 'الوصف القصير (إنجليزي)' : 'Tagline (English)'}>
-                        <input value={s.taglineEn} onChange={(e) => updateAd(s.id, { taglineEn: e.target.value })} dir="ltr" className="adm-input" />
-                      </Field>
-                      <Field label={lang === 'ar' ? 'الحالة' : 'Status'}>
-                        <select
-                          value={s.status}
-                          onChange={(e) => updateAd(s.id, { status: e.target.value as AdStatus })}
-                          className="adm-input"
-                          dir={lang === 'ar' ? 'rtl' : 'ltr'}
-                        >
-                          <option value="available" className="bg-[#1a0a2e]">{lang === 'ar' ? '✦ متاح الآن' : '✦ Available'}</option>
-                          <option value="coming-soon" className="bg-[#1a0a2e]">{lang === 'ar' ? '◷ قريباً' : '◷ Coming Soon'}</option>
-                        </select>
-                      </Field>
-                      <Field label={lang === 'ar' ? 'الترتيب' : 'Order'}>
-                        <input type="number" value={s.order} onChange={(e) => updateAd(s.id, { order: Number(e.target.value) || 0 })} className="adm-input" />
-                      </Field>
-                      <div className="md:col-span-2">
-                        <Field label={lang === 'ar' ? 'مرتبط بعنصر من قاعدة البيانات' : 'Linked Item (from database)'}>
-                          <select
-                            value={s.linkedItemId || ''}
-                            onChange={(e) => updateAd(s.id, { linkedItemId: e.target.value || null })}
-                            className="adm-input"
-                            dir={lang === 'ar' ? 'rtl' : 'ltr'}
-                          >
-                            <option value="" className="bg-[#1a0a2e]">{lang === 'ar' ? '— لا يوجد رابط (قريباً) —' : '— No link (coming soon) —'}</option>
-                            {KIND_ORDER.map((kind) => {
-                              const list = items.filter((i) => i.kind === kind);
-                              if (list.length === 0) return null;
-                              return (
-                                <optgroup key={kind} label={KIND_LABELS[kind][lang]} className="bg-[#1a0a2e]">
-                                  {list.map((it) => (
-                                    <option key={it.id} value={it.id} className="bg-[#1a0a2e]">
-                                      {lang === 'ar' ? (it.titleAr || it.id) : (it.titleEn || it.id)}
-                                    </option>
-                                  ))}
-                                </optgroup>
-                              );
-                            })}
-                          </select>
-                        </Field>
+                        {/* Fields */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <Field label={lang === 'ar' ? 'العنوان (عربي)' : 'Title (Arabic)'}>
+                            <input value={s.titleAr} onChange={(e) => updateAd(s.id, { titleAr: e.target.value })} dir="rtl" className="adm-input" />
+                          </Field>
+                          <Field label={lang === 'ar' ? 'العنوان (إنجليزي)' : 'Title (English)'}>
+                            <input value={s.titleEn} onChange={(e) => updateAd(s.id, { titleEn: e.target.value })} dir="ltr" className="adm-input" />
+                          </Field>
+                          <Field label={lang === 'ar' ? 'الوصف القصير (عربي)' : 'Tagline (Arabic)'}>
+                            <input value={s.taglineAr} onChange={(e) => updateAd(s.id, { taglineAr: e.target.value })} dir="rtl" className="adm-input" />
+                          </Field>
+                          <Field label={lang === 'ar' ? 'الوصف القصير (إنجليزي)' : 'Tagline (English)'}>
+                            <input value={s.taglineEn} onChange={(e) => updateAd(s.id, { taglineEn: e.target.value })} dir="ltr" className="adm-input" />
+                          </Field>
+                          <Field label={lang === 'ar' ? 'الحالة' : 'Status'}>
+                            <select value={s.status} onChange={(e) => updateAd(s.id, { status: e.target.value as AdStatus })} className="adm-input" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+                              <option value="available" className="bg-[#1a0a2e]">{lang === 'ar' ? '✦ متاح الآن' : '✦ Available'}</option>
+                              <option value="coming-soon" className="bg-[#1a0a2e]">{lang === 'ar' ? '◷ قريباً' : '◷ Coming Soon'}</option>
+                            </select>
+                          </Field>
+                          <Field label={lang === 'ar' ? 'الترتيب' : 'Order'}>
+                            <input type="number" value={s.order} onChange={(e) => updateAd(s.id, { order: Number(e.target.value) || 0 })} className="adm-input" />
+                          </Field>
+                          <div className="md:col-span-2">
+                            <Field label={lang === 'ar' ? 'مرتبط بعنصر من قاعدة البيانات' : 'Linked Item (from database)'}>
+                              <select value={s.linkedItemId || ''} onChange={(e) => updateAd(s.id, { linkedItemId: e.target.value || null })} className="adm-input" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+                                <option value="" className="bg-[#1a0a2e]">{lang === 'ar' ? '— لا يوجد رابط (قريباً) —' : '— No link (coming soon) —'}</option>
+                                {KIND_ORDER.map((kind) => {
+                                  const list = items.filter((i) => i.kind === kind);
+                                  if (list.length === 0) return null;
+                                  return (
+                                    <optgroup key={kind} label={KIND_LABELS[kind][lang]} className="bg-[#1a0a2e]">
+                                      {list.map((it) => (
+                                        <option key={it.id} value={it.id} className="bg-[#1a0a2e]">
+                                          {lang === 'ar' ? (it.titleAr || it.id) : (it.titleEn || it.id)}
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  );
+                                })}
+                              </select>
+                            </Field>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap mt-3 pt-3 border-t border-[rgba(255,255,255,0.06)]">
+                        <button onClick={() => handleSaveAd(s)} className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90">
+                          {lang === 'ar' ? 'حفظ' : 'Save'}
+                        </button>
+                        <button onClick={() => handleDeleteAd(s.id)} className="bg-[rgba(255,80,80,0.15)] border border-[rgba(255,80,80,0.3)] text-[#ffb0b0] font-semibold py-2 px-4 rounded-lg text-sm hover:bg-[rgba(255,80,80,0.25)]">
+                          {lang === 'ar' ? 'حذف' : 'Delete'}
+                        </button>
+                        {adSavedId === s.id && <span className="text-[hsl(var(--g300))] text-sm font-semibold">{t('admin.saved')}</span>}
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap mt-3 pt-3 border-t border-[rgba(255,255,255,0.06)]">
-                    <button onClick={() => handleSaveAd(s)} className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90">
-                      {lang === 'ar' ? 'حفظ' : 'Save'}
-                    </button>
-                    <button onClick={() => handleDeleteAd(s.id)} className="bg-[rgba(255,80,80,0.15)] border border-[rgba(255,80,80,0.3)] text-[#ffb0b0] font-semibold py-2 px-4 rounded-lg text-sm hover:bg-[rgba(255,80,80,0.25)]">
-                      {lang === 'ar' ? 'حذف' : 'Delete'}
-                    </button>
-                    {adSavedId === s.id && <span className="text-[hsl(var(--g300))] text-sm font-semibold">{t('admin.saved')}</span>}
-                  </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -702,132 +733,151 @@ export default function Admin() {
               <div className="flex flex-col gap-4">
                 {list.map((it) => {
                   const pct = discountPercent(it);
+                  const open = expandedItems.has(it.id);
                   return (
-                    <div key={it.id} className="bg-[rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                        <Field label={lang === 'ar' ? 'العنوان (عربي)' : 'Title (Arabic)'}>
-                          <input value={it.titleAr} onChange={(e) => updateItem(it.id, { titleAr: e.target.value })} dir="rtl" className="adm-input" />
-                        </Field>
-                        <Field label={lang === 'ar' ? 'العنوان (إنجليزي)' : 'Title (English)'}>
-                          <input value={it.titleEn} onChange={(e) => updateItem(it.id, { titleEn: e.target.value })} dir="ltr" className="adm-input" />
-                        </Field>
-                        <Field label={lang === 'ar' ? 'الوصف (عربي)' : 'Description (Arabic)'}>
-                          <textarea value={it.descAr} onChange={(e) => updateItem(it.id, { descAr: e.target.value })} dir="rtl" rows={2} className="adm-input" />
-                        </Field>
-                        <Field label={lang === 'ar' ? 'الوصف (إنجليزي)' : 'Description (English)'}>
-                          <textarea value={it.descEn} onChange={(e) => updateItem(it.id, { descEn: e.target.value })} dir="ltr" rows={2} className="adm-input" />
-                        </Field>
-                        <Field label={lang === 'ar' ? 'أيقونة (إيموجي)' : 'Icon (emoji)'}>
-                          <input value={it.icon} onChange={(e) => updateItem(it.id, { icon: e.target.value })} dir="ltr" className="adm-input" />
-                        </Field>
-                        <Field label={lang === 'ar' ? 'الترتيب' : 'Order'}>
-                          <input type="number" value={it.order} onChange={(e) => updateItem(it.id, { order: Number(e.target.value) || 0 })} className="adm-input" />
-                        </Field>
-                        <Field label={lang === 'ar' ? 'السعر الأصلي ($)' : 'Original Price (USD)'}>
-                          <PriceInputUSD
-                            jodValue={it.originalPriceJod}
-                            onChangeJod={(jod) => updateItem(it.id, { originalPriceJod: jod ?? 0 })}
-                            allowEmpty={false}
-                          />
-                        </Field>
-                        <Field label={lang === 'ar' ? 'سعر الخصم ($) — اختياري' : 'Discount Price (USD) — optional'}>
-                          <PriceInputUSD
-                            jodValue={it.discountPriceJod}
-                            onChangeJod={(jod) => updateItem(it.id, { discountPriceJod: jod })}
-                            allowEmpty={true}
-                            placeholder={lang === 'ar' ? 'لا يوجد خصم' : 'No discount'}
-                          />
-                        </Field>
-                        <Field label={lang === 'ar' ? '🔒 رابط تلجرام — الاشتراك العادي' : '🔒 Telegram Link — Standard'}>
-                          <input
-                            value={it.telegramStandardLink ?? it.telegramLink ?? ''}
-                            onChange={(e) => updateItem(it.id, { telegramStandardLink: e.target.value, telegramLink: e.target.value })}
-                            dir="ltr"
-                            placeholder="https://t.me/channel_standard"
-                            className="adm-input"
-                          />
-                        </Field>
-
-                        <Field label={lang === 'ar' ? '👑 رابط تلجرام — اشتراك VIP (يظهر بعد الدفع)' : '👑 Telegram Link — VIP (shown after payment)'}>
-                          <input
-                            value={it.telegramVipLink ?? ''}
-                            onChange={(e) => updateItem(it.id, { telegramVipLink: e.target.value })}
-                            dir="ltr"
-                            placeholder="https://t.me/channel_vip"
-                            className="adm-input"
-                          />
-                        </Field>
-
-                        {/* ── VIP Pricing ── */}
-                        <Field label={lang === 'ar' ? '👑 سعر VIP ($) — اختياري' : '👑 VIP Price (USD) — optional'}>
-                          <PriceInputUSD
-                            jodValue={it.vipPriceJod ?? null}
-                            onChangeJod={(jod) => updateItem(it.id, { vipPriceJod: jod })}
-                            allowEmpty={true}
-                            placeholder={lang === 'ar' ? 'لا يوجد سعر VIP' : 'No VIP price'}
-                          />
-                        </Field>
-
-                        <Field label={lang === 'ar' ? '👑 تفعيل خيار VIP للعملاء' : '👑 Enable VIP Option for Customers'}>
-                          <label className="flex items-center gap-3 cursor-pointer mt-1">
-                            <span className="relative inline-flex items-center shrink-0">
-                              <input
-                                type="checkbox"
-                                checked={it.vipEnabled ?? false}
-                                onChange={(e) => updateItem(it.id, { vipEnabled: e.target.checked })}
-                                className="sr-only"
-                              />
-                              <span className={`w-10 h-5 rounded-full transition-colors ${it.vipEnabled ? 'bg-[hsl(var(--g500))]' : 'bg-[rgba(255,255,255,0.18)]'}`}>
-                                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ${it.vipEnabled ? 'left-[22px]' : 'left-0.5'}`} />
-                              </span>
-                            </span>
-                            <span className="text-[rgba(255,255,255,0.7)] text-sm">
-                              {it.vipEnabled
-                                ? (lang === 'ar' ? 'مفعّل — سعر VIP ظاهر للعملاء' : 'Enabled — VIP price shown to customers')
-                                : (lang === 'ar' ? 'معطّل — سعر VIP مخفي' : 'Disabled — VIP price hidden')}
-                            </span>
-                          </label>
-                        </Field>
-                      </div>
-
-                      {/* ── Direct product link ── */}
-                      <div className="mt-4 mb-2">
-                        <p className="text-[rgba(255,255,255,0.45)] text-[0.7rem] font-semibold mb-1.5">
-                          {lang === 'ar' ? '🔗 الرابط المباشر لهذه المادة' : '🔗 Direct link to this product'}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <input
-                            readOnly
-                            dir="ltr"
-                            value={`https://dohasoulcare.com/product?id=${it.id}`}
-                            className="flex-1 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded-lg px-3 py-1.5 text-[rgba(255,255,255,0.55)] text-xs font-mono outline-none select-all cursor-text"
-                            onFocus={(e) => e.target.select()}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => navigator.clipboard?.writeText(`https://dohasoulcare.com/product?id=${it.id}`)}
-                            className="shrink-0 bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.14)] text-[rgba(255,255,255,0.65)] text-xs font-bold py-1.5 px-3 rounded-lg hover:bg-[rgba(255,255,255,0.14)] transition-colors cursor-pointer"
-                          >
-                            {lang === 'ar' ? 'نسخ' : 'Copy'}
-                          </button>
+                    <div key={it.id} className="bg-[rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.08)] rounded-xl overflow-hidden">
+                      {/* ── Accordion Header ── */}
+                      <button
+                        type="button"
+                        onClick={() => toggleItem(it.id)}
+                        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-start hover:bg-[rgba(255,255,255,0.04)] transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="text-xl shrink-0">{it.icon || '📦'}</span>
+                          <div className="min-w-0">
+                            <p className="text-white font-bold text-sm truncate">
+                              {lang === 'ar' ? (it.titleAr || it.titleEn || it.id) : (it.titleEn || it.titleAr || it.id)}
+                            </p>
+                            <p className="text-[rgba(255,255,255,0.45)] text-xs">
+                              {it.originalPriceJod ? `${it.originalPriceJod} JOD` : '—'}
+                              {pct !== null && <span className="ms-2 text-[hsl(var(--g300))] font-bold">{pct}% off</span>}
+                              {savedKey === it.id && <span className="ms-2 text-[hsl(var(--g400))] font-bold">✓ {t('admin.saved')}</span>}
+                            </p>
+                          </div>
                         </div>
-                      </div>
+                        <span className={`shrink-0 text-[rgba(255,255,255,0.5)] text-lg transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+                          ▾
+                        </span>
+                      </button>
 
-                      {pct !== null && (
-                        <div className="mb-3 text-[hsl(var(--g300))] text-xs font-bold">
-                          {lang === 'ar' ? `خصم ${pct}%` : `${pct}% off`}
+                      {/* ── Accordion Body ── */}
+                      {open && (
+                        <div className="px-4 pb-4 border-t border-[rgba(255,255,255,0.06)]">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 mt-3">
+                            <Field label={lang === 'ar' ? 'العنوان (عربي)' : 'Title (Arabic)'}>
+                              <input value={it.titleAr} onChange={(e) => updateItem(it.id, { titleAr: e.target.value })} dir="rtl" className="adm-input" />
+                            </Field>
+                            <Field label={lang === 'ar' ? 'العنوان (إنجليزي)' : 'Title (English)'}>
+                              <input value={it.titleEn} onChange={(e) => updateItem(it.id, { titleEn: e.target.value })} dir="ltr" className="adm-input" />
+                            </Field>
+                            <Field label={lang === 'ar' ? 'الوصف (عربي)' : 'Description (Arabic)'}>
+                              <textarea value={it.descAr} onChange={(e) => updateItem(it.id, { descAr: e.target.value })} dir="rtl" rows={2} className="adm-input" />
+                            </Field>
+                            <Field label={lang === 'ar' ? 'الوصف (إنجليزي)' : 'Description (English)'}>
+                              <textarea value={it.descEn} onChange={(e) => updateItem(it.id, { descEn: e.target.value })} dir="ltr" rows={2} className="adm-input" />
+                            </Field>
+                            <Field label={lang === 'ar' ? 'أيقونة (إيموجي)' : 'Icon (emoji)'}>
+                              <input value={it.icon} onChange={(e) => updateItem(it.id, { icon: e.target.value })} dir="ltr" className="adm-input" />
+                            </Field>
+                            <Field label={lang === 'ar' ? 'الترتيب' : 'Order'}>
+                              <input type="number" value={it.order} onChange={(e) => updateItem(it.id, { order: Number(e.target.value) || 0 })} className="adm-input" />
+                            </Field>
+                            <Field label={lang === 'ar' ? 'السعر الأصلي ($)' : 'Original Price (USD)'}>
+                              <PriceInputUSD
+                                jodValue={it.originalPriceJod}
+                                onChangeJod={(jod) => updateItem(it.id, { originalPriceJod: jod ?? 0 })}
+                                allowEmpty={false}
+                              />
+                            </Field>
+                            <Field label={lang === 'ar' ? 'سعر الخصم ($) — اختياري' : 'Discount Price (USD) — optional'}>
+                              <PriceInputUSD
+                                jodValue={it.discountPriceJod}
+                                onChangeJod={(jod) => updateItem(it.id, { discountPriceJod: jod })}
+                                allowEmpty={true}
+                                placeholder={lang === 'ar' ? 'لا يوجد خصم' : 'No discount'}
+                              />
+                            </Field>
+                            <Field label={lang === 'ar' ? '🔒 رابط تلجرام — الاشتراك العادي' : '🔒 Telegram Link — Standard'}>
+                              <input
+                                value={it.telegramStandardLink ?? it.telegramLink ?? ''}
+                                onChange={(e) => updateItem(it.id, { telegramStandardLink: e.target.value, telegramLink: e.target.value })}
+                                dir="ltr"
+                                placeholder="https://t.me/channel_standard"
+                                className="adm-input"
+                              />
+                            </Field>
+                            <Field label={lang === 'ar' ? '👑 رابط تلجرام — اشتراك VIP (يظهر بعد الدفع)' : '👑 Telegram Link — VIP (shown after payment)'}>
+                              <input
+                                value={it.telegramVipLink ?? ''}
+                                onChange={(e) => updateItem(it.id, { telegramVipLink: e.target.value })}
+                                dir="ltr"
+                                placeholder="https://t.me/channel_vip"
+                                className="adm-input"
+                              />
+                            </Field>
+                            <Field label={lang === 'ar' ? '👑 سعر VIP ($) — اختياري' : '👑 VIP Price (USD) — optional'}>
+                              <PriceInputUSD
+                                jodValue={it.vipPriceJod ?? null}
+                                onChangeJod={(jod) => updateItem(it.id, { vipPriceJod: jod })}
+                                allowEmpty={true}
+                                placeholder={lang === 'ar' ? 'لا يوجد سعر VIP' : 'No VIP price'}
+                              />
+                            </Field>
+                            <Field label={lang === 'ar' ? '👑 تفعيل خيار VIP للعملاء' : '👑 Enable VIP Option for Customers'}>
+                              <label className="flex items-center gap-3 cursor-pointer mt-1">
+                                <span className="relative inline-flex items-center shrink-0">
+                                  <input
+                                    type="checkbox"
+                                    checked={it.vipEnabled ?? false}
+                                    onChange={(e) => updateItem(it.id, { vipEnabled: e.target.checked })}
+                                    className="sr-only"
+                                  />
+                                  <span className={`w-10 h-5 rounded-full transition-colors ${it.vipEnabled ? 'bg-[hsl(var(--g500))]' : 'bg-[rgba(255,255,255,0.18)]'}`}>
+                                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ${it.vipEnabled ? 'left-[22px]' : 'left-0.5'}`} />
+                                  </span>
+                                </span>
+                                <span className="text-[rgba(255,255,255,0.7)] text-sm">
+                                  {it.vipEnabled
+                                    ? (lang === 'ar' ? 'مفعّل — سعر VIP ظاهر للعملاء' : 'Enabled — VIP price shown to customers')
+                                    : (lang === 'ar' ? 'معطّل — سعر VIP مخفي' : 'Disabled — VIP price hidden')}
+                                </span>
+                              </label>
+                            </Field>
+                          </div>
+
+                          {/* Direct link */}
+                          <div className="mt-2 mb-3">
+                            <p className="text-[rgba(255,255,255,0.45)] text-[0.7rem] font-semibold mb-1.5">
+                              {lang === 'ar' ? '🔗 الرابط المباشر لهذه المادة' : '🔗 Direct link to this product'}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <input
+                                readOnly dir="ltr"
+                                value={`https://dohasoulcare.com/product?id=${it.id}`}
+                                className="flex-1 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded-lg px-3 py-1.5 text-[rgba(255,255,255,0.55)] text-xs font-mono outline-none select-all cursor-text"
+                                onFocus={(e) => e.target.select()}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => navigator.clipboard?.writeText(`https://dohasoulcare.com/product?id=${it.id}`)}
+                                className="shrink-0 bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.14)] text-[rgba(255,255,255,0.65)] text-xs font-bold py-1.5 px-3 rounded-lg hover:bg-[rgba(255,255,255,0.14)] transition-colors cursor-pointer"
+                              >
+                                {lang === 'ar' ? 'نسخ' : 'Copy'}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button onClick={() => handleSaveItem(it)} className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90">
+                              {lang === 'ar' ? 'حفظ' : 'Save'}
+                            </button>
+                            <button onClick={() => handleDelete(it.id)} className="bg-[rgba(255,80,80,0.15)] border border-[rgba(255,80,80,0.3)] text-[#ffb0b0] font-semibold py-2 px-4 rounded-lg text-sm hover:bg-[rgba(255,80,80,0.25)]">
+                              {lang === 'ar' ? 'حذف' : 'Delete'}
+                            </button>
+                            {savedKey === it.id && <span className="text-[hsl(var(--g300))] text-sm font-semibold">{t('admin.saved')}</span>}
+                          </div>
                         </div>
                       )}
-
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button onClick={() => handleSaveItem(it)} className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90">
-                          {lang === 'ar' ? 'حفظ' : 'Save'}
-                        </button>
-                        <button onClick={() => handleDelete(it.id)} className="bg-[rgba(255,80,80,0.15)] border border-[rgba(255,80,80,0.3)] text-[#ffb0b0] font-semibold py-2 px-4 rounded-lg text-sm hover:bg-[rgba(255,80,80,0.25)]">
-                          {lang === 'ar' ? 'حذف' : 'Delete'}
-                        </button>
-                        {savedKey === it.id && <span className="text-[hsl(var(--g300))] text-sm font-semibold">{t('admin.saved')}</span>}
-                      </div>
                     </div>
                   );
                 })}
