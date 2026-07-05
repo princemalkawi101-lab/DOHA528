@@ -1,9 +1,11 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
 import { collection, getDocs, orderBy, query as fsQuery } from 'firebase/firestore';
+import { updateProfile } from 'firebase/auth';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useApp, RATES } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
-import { db } from '@/lib/firebase';
+import { db, storage, auth } from '@/lib/firebase';
 import {
   Item,
   ItemKind,
@@ -69,6 +71,8 @@ export default function Admin() {
   const [subscriberView, setSubscriberView] = useState<'course' | 'workshop' | null>(null);
   const [adSliderCfg, setAdSliderCfg] = useState<AdSliderConfig>({ enabled: true });
   const [adSliderCfgSaving, setAdSliderCfgSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!loading && !user) setLocation('/login');
@@ -244,6 +248,39 @@ export default function Admin() {
     setAdSliderCfgSaving(false);
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !auth.currentUser) return;
+    setAvatarUploading(true);
+    try {
+      const canvas = document.createElement('canvas');
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = reject;
+        img.src = URL.createObjectURL(file);
+      });
+      const MAX = 256;
+      const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.85));
+      const path = `profile-pictures/${auth.currentUser.uid}.jpg`;
+      const fileRef = storageRef(storage, path);
+      await uploadBytes(fileRef, blob, { contentType: 'image/jpeg' });
+      const photoURL = await getDownloadURL(fileRef);
+      await updateProfile(auth.currentUser, { photoURL });
+      // Force React to pick up the new photoURL
+      window.dispatchEvent(new Event('profile-updated'));
+    } catch (err) {
+      alert(lang === 'ar' ? 'تعذّر رفع الصورة، حاول مرة أخرى.' : 'Photo upload failed, please try again.');
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
   const [importing, setImporting] = useState(false);
   const [importStatus, setImportStatus] = useState<string>('');
 
@@ -280,11 +317,54 @@ export default function Admin() {
     <div className="min-h-[calc(100dvh-68px)] mt-[68px] px-4 py-10 bg-gradient-to-br from-[#1a0a2e] via-[#2a1444] to-[#1a0a2e]">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-white text-3xl font-black">{t('admin.title')}</h1>
-            <p className="text-[rgba(255,255,255,0.6)] text-sm mt-1">
-              {t('admin.welcome')} {user.displayName || user.email}
-            </p>
+          <div className="flex items-center gap-4">
+            {/* Profile picture */}
+            <div className="relative shrink-0 group">
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[rgba(212,160,23,0.6)] bg-[rgba(255,255,255,0.08)] flex items-center justify-center">
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt="profile" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-white text-2xl font-black select-none">
+                    {(user.displayName || user.email || 'A')[0].toUpperCase()}
+                  </span>
+                )}
+              </div>
+              {/* Upload overlay */}
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={avatarUploading}
+                title={lang === 'ar' ? 'تغيير الصورة' : 'Change photo'}
+                className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-wait"
+              >
+                {avatarUploading ? (
+                  <span className="text-white text-xs animate-pulse">…</span>
+                ) : (
+                  <span className="text-white text-lg">📷</span>
+                )}
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
+            </div>
+            <div>
+              <h1 className="text-white text-3xl font-black">{t('admin.title')}</h1>
+              <p className="text-[rgba(255,255,255,0.6)] text-sm mt-1">
+                {t('admin.welcome')} {user.displayName || user.email}
+              </p>
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={avatarUploading}
+                className="text-[hsl(var(--g400))] text-xs mt-1 hover:underline disabled:opacity-50"
+              >
+                {avatarUploading
+                  ? (lang === 'ar' ? 'جاري الرفع…' : 'Uploading…')
+                  : (lang === 'ar' ? 'تغيير الصورة الشخصية' : 'Change profile photo')}
+              </button>
+            </div>
           </div>
           <div className="flex gap-2">
             <Link href="/" className="bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.15)] text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-[rgba(255,255,255,0.12)]">{t('admin.viewSite')}</Link>
