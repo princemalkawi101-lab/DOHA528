@@ -58,12 +58,29 @@ export function Courses() {
             const title = lang === 'ar' ? it.titleAr : it.titleEn;
             const desc = lang === 'ar' ? it.descAr : it.descEn;
             return (
-              <div key={it.id} className="bg-[hsl(var(--card))] border border-[rgba(90,45,145,0.1)] rounded-[20px] p-9 transition-all hover:-translate-y-1.5 hover:shadow-[0_20px_50px_rgba(90,45,145,0.15)] relative overflow-hidden flex flex-col">
-                {pct !== null && (
-                  <div className="absolute top-4 end-4 bg-[hsl(var(--g500))] text-[hsl(var(--p900))] text-[0.7rem] font-black py-1 px-2.5 rounded-full">
-                    {lang === 'ar' ? `خصم ${pct}%` : `${pct}% OFF`}
+              <div key={it.id} className="bg-[hsl(var(--card))] border border-[rgba(90,45,145,0.1)] rounded-[20px] overflow-hidden transition-all hover:-translate-y-1.5 hover:shadow-[0_20px_50px_rgba(90,45,145,0.15)] relative flex flex-col">
+                {/* Cover image */}
+                {it.imageUrl ? (
+                  <div className="w-full aspect-[16/7] overflow-hidden relative">
+                    <img src={it.imageUrl} alt={title} className="w-full h-full object-cover" />
+                    {pct !== null && (
+                      <div className="absolute top-3 end-3 bg-[hsl(var(--g500))] text-[hsl(var(--p900))] text-[0.7rem] font-black py-1 px-2.5 rounded-full shadow">
+                        {lang === 'ar' ? `خصم ${pct}%` : `${pct}% OFF`}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="w-full aspect-[16/7] bg-gradient-to-br from-[hsl(var(--p900))] to-[hsl(var(--p600))] flex items-center justify-center relative overflow-hidden">
+                    <span className="text-5xl opacity-40 select-none">{it.icon}</span>
+                    {pct !== null && (
+                      <div className="absolute top-3 end-3 bg-[hsl(var(--g500))] text-[hsl(var(--p900))] text-[0.7rem] font-black py-1 px-2.5 rounded-full shadow">
+                        {lang === 'ar' ? `خصم ${pct}%` : `${pct}% OFF`}
+                      </div>
+                    )}
                   </div>
                 )}
+
+                <div className="p-7 flex flex-col flex-1">
                 <div className="text-[2rem] text-[hsl(var(--g500))] mb-4">{it.icon}</div>
                 <h3 className="text-[1.15rem] font-bold text-[hsl(var(--p900))] mb-3">{title}</h3>
                 <CourseDescription desc={desc} lang={lang} />
@@ -88,6 +105,7 @@ export function Courses() {
                 >
                   {t('cart.addBtn')}
                 </button>
+                </div>{/* end p-7 */}
               </div>
             );
           })}

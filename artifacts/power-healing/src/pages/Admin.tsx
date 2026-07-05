@@ -99,6 +99,7 @@ export default function Admin() {
   const [expandedAds, setExpandedAds] = useState<Set<string>>(new Set());
   const toggleItem = (id: string) => setExpandedItems((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAd = (id: string) => setExpandedAds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const [itemImgUploading, setItemImgUploading] = useState<string | null>(null);
   const [aboutImageUrl, setAboutImageUrl] = useState<string>('');
   const [aboutImgUploading, setAboutImgUploading] = useState(false);
   const [aboutImgSaved, setAboutImgSaved] = useState(false);
@@ -238,6 +239,35 @@ export default function Admin() {
     } catch (e) {
       console.error(e);
       alert(lang === 'ar' ? 'تعذّر التهيئة.' : 'Seeding failed.');
+    }
+  };
+
+  const handleItemImageUpload = async (id: string, file: File) => {
+    setItemImgUploading(id);
+    try {
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const MAX = 1200;
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+          canvas.toBlob((b) => b ? resolve(b) : reject(new Error('canvas toBlob failed')), 'image/jpeg', 0.88);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+        img.src = url;
+      });
+      const imgUrl = await uploadToImgBB(blob);
+      updateItem(id, { imageUrl: imgUrl });
+    } catch (e) {
+      console.error('item image upload failed', e);
+      alert(lang === 'ar' ? 'تعذّر تحميل الصورة، حاول مرة أخرى.' : 'Image upload failed, please try again.');
+    } finally {
+      setItemImgUploading(null);
     }
   };
 
@@ -763,6 +793,59 @@ export default function Admin() {
                       {/* ── Accordion Body ── */}
                       {open && (
                         <div className="px-4 pb-4 border-t border-[rgba(255,255,255,0.06)]">
+
+                          {/* ── Cover Image ── */}
+                          <div className="mt-3 mb-4 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4 pb-4 border-b border-[rgba(255,255,255,0.06)]">
+                            <div>
+                              <div className="w-full aspect-video rounded-lg overflow-hidden bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.1)] mb-2">
+                                {it.imageUrl ? (
+                                  <img src={it.imageUrl} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-[rgba(255,255,255,0.35)]">
+                                    <span className="text-2xl">{it.icon || '🖼'}</span>
+                                    <span className="text-[0.65rem]">{lang === 'ar' ? 'لا توجد صورة' : 'No cover image'}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <label className="block">
+                                <span className="block text-[rgba(255,255,255,0.6)] text-[0.72rem] font-semibold mb-1">
+                                  {lang === 'ar' ? '🖼 صورة الغلاف' : '🖼 Cover Image'}
+                                </span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) handleItemImageUpload(it.id, f);
+                                    e.target.value = '';
+                                  }}
+                                  className="block w-full text-[rgba(255,255,255,0.7)] text-[0.72rem] file:bg-[hsl(var(--g500))] file:text-[hsl(var(--p900))] file:font-bold file:border-0 file:px-2 file:py-1 file:rounded file:cursor-pointer file:me-2"
+                                />
+                                {itemImgUploading === it.id && (
+                                  <span className="text-[hsl(var(--g300))] text-[0.7rem] mt-1 block animate-pulse">
+                                    {lang === 'ar' ? '⏳ جاري الرفع إلى ImgBB…' : '⏳ Uploading to ImgBB…'}
+                                  </span>
+                                )}
+                              </label>
+                            </div>
+                            <div className="flex flex-col gap-2 justify-start pt-6">
+                              <p className="text-[rgba(255,255,255,0.55)] text-xs leading-relaxed">
+                                {lang === 'ar'
+                                  ? 'ارفعي صورة غلاف للدورة لتظهر على البطاقة في الصفحة الرئيسية. سيتم رفعها تلقائياً إلى ImgBB وحفظ الرابط.'
+                                  : 'Upload a cover image for this course. It will appear on the card on the home page. The URL is saved to ImgBB automatically.'}
+                              </p>
+                              {it.imageUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateItem(it.id, { imageUrl: '' })}
+                                  className="self-start text-[0.72rem] text-[#ffb0b0] hover:underline mt-1"
+                                >
+                                  {lang === 'ar' ? '✕ إزالة الصورة' : '✕ Remove image'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 mt-3">
                             <Field label={lang === 'ar' ? 'العنوان (عربي)' : 'Title (Arabic)'}>
                               <input value={it.titleAr} onChange={(e) => updateItem(it.id, { titleAr: e.target.value })} dir="rtl" className="adm-input" />

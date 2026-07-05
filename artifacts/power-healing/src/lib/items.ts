@@ -29,6 +29,7 @@ export type Item = {
   telegramStandardLink?: string;
   telegramVipLink?: string;
   order: number;
+  imageUrl?: string;
 };
 
 const COL = 'items';
@@ -83,6 +84,7 @@ export function newItemTemplate(kind: ItemKind, order: number): Item {
     telegramStandardLink: '',
     telegramVipLink: '',
     order,
+    imageUrl: '',
   };
 }
 
