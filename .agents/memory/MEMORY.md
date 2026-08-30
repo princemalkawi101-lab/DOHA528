@@ -1,0 +1,1 @@
+- [Imported artifact workflow registration](imported-artifact-workflows.md) — imported artifact files may exist without a registered managed workflow; verify registry before restarting.

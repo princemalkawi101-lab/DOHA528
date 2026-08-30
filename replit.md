@@ -1,27 +1,25 @@
-# Workspace
+# Power Healing
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+Arabic RTL wellness and e-commerce website for DOHA — مساحة الشفاء. The React app lives in `artifacts/power-healing` inside the existing pnpm workspace.
 
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
+- **Node.js version**: 20
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Frontend**: React 19 + Vite 7
+- **Styling**: Tailwind CSS 4
+- **Routing**: Wouter
+- **External services used by the source**: Firebase and PayPal
 
 ## Key Commands
 
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/api-server run dev` — run API server locally
+- `pnpm install --frozen-lockfile` — install the locked workspace dependencies
+- `PORT=23900 BASE_PATH=/ pnpm --filter @workspace/power-healing run dev` — run the site in Replit
+- `pnpm --filter @workspace/power-healing run typecheck` — typecheck the site
+- `pnpm --filter @workspace/power-healing run build` — build the production site
 
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+The configured Replit workflow is **Power Healing Web** and serves the app at the root preview path.
