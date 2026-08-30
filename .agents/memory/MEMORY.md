@@ -1,2 +1,3 @@
 - [Imported artifact workflow registration](imported-artifact-workflows.md) — imported artifact files may exist without a registered managed workflow; verify registry before restarting.
 - [Firestore category integrity](firestore-category-integrity.md) — category membership and item writes must share transactions so concurrent deletes cannot orphan content.
+- [GitHub OAuth Git sync](github-oauth-git-sync.md) — connector OAuth may authorize REST API access without authenticating the local git credential helper.
