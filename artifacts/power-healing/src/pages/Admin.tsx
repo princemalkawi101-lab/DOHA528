@@ -5,7 +5,14 @@ import { updateProfile } from 'firebase/auth';
 import { useApp, RATES } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
 import { db, auth } from '@/lib/firebase';
-import { fetchSiteSettings, saveSiteSettings } from '@/lib/siteSettings';
+import { AboutContent, Certificate, DEFAULT_ABOUT_CONTENT, DEFAULT_CERTIFICATES, fetchSiteSettings, saveSiteSettings } from '@/lib/siteSettings';
+import {
+  ContentCategory,
+  deleteContentCategory,
+  fetchContentCategories,
+  newContentCategoryTemplate,
+  saveContentCategory,
+} from '@/lib/contentCategories';
 import {
   Item,
   ItemKind,
@@ -82,7 +89,11 @@ export default function Admin() {
   const [bookings, setBookings] = useState<Array<Record<string, any>>>([]);
   const [loadingItems, setLoadingItems] = useState(true);
   const [savedKey, setSavedKey] = useState<string | null>(null);
-  const [activeKindTab, setActiveKindTab] = useState<ItemKind>('course');
+  const [activeKindTab, setActiveKindTab] = useState<ItemKind | string>('course');
+  const [contentCategories, setContentCategories] = useState<ContentCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [categorySavedId, setCategorySavedId] = useState<string | null>(null);
+  const [categoryFeedback, setCategoryFeedback] = useState<string>('');
   const [adSlides, setAdSlides] = useState<AdSlide[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
   const [adSavedId, setAdSavedId] = useState<string | null>(null);
@@ -103,6 +114,10 @@ export default function Admin() {
   const [aboutImageUrl, setAboutImageUrl] = useState<string>('');
   const [aboutImgUploading, setAboutImgUploading] = useState(false);
   const [aboutImgSaved, setAboutImgSaved] = useState(false);
+  const [aboutContent, setAboutContent] = useState<AboutContent>(DEFAULT_ABOUT_CONTENT);
+  const [certificates, setCertificates] = useState<Certificate[]>(DEFAULT_CERTIFICATES);
+  const [settingsSaving, setSettingsSaving] = useState<'about' | 'certificates' | null>(null);
+  const [settingsFeedback, setSettingsFeedback] = useState<string>('');
 
   // ── These MUST stay above early returns to obey Rules of Hooks ──
   const [importing, setImporting] = useState(false);
@@ -124,7 +139,11 @@ export default function Admin() {
   }, [adminTab, loadingReviews, reviews.length]);
 
   useEffect(() => {
-    fetchSiteSettings().then((s) => { if (s.aboutImageUrl) setAboutImageUrl(s.aboutImageUrl); });
+    fetchSiteSettings().then((s) => {
+      if (s.aboutImageUrl) setAboutImageUrl(s.aboutImageUrl);
+      setAboutContent({ ...DEFAULT_ABOUT_CONTENT, ...(s.about || {}) });
+      setCertificates(s.certificates === undefined ? DEFAULT_CERTIFICATES : s.certificates);
+    });
   }, []);
 
   useEffect(() => {
@@ -133,6 +152,9 @@ export default function Admin() {
       setItems(list);
       setLoadingItems(false);
     });
+    fetchContentCategories()
+      .then(setContentCategories)
+      .finally(() => setLoadingCategories(false));
     (async () => {
       try {
         const snap = await getDocs(fsQuery(collection(db, 'bookings'), orderBy('createdAt', 'desc')));
@@ -187,10 +209,106 @@ export default function Admin() {
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
-  const handleAdd = (kind: ItemKind) => {
+  const handleAdd = (tab: ItemKind | string) => {
+    const category = contentCategories.find((entry) => entry.id === tab);
+    const kind: ItemKind = category ? 'course' : tab as ItemKind;
     const fresh = newItemTemplate(kind, items.length);
+    if (category) fresh.categoryId = category.id;
     setItems((prev) => [...prev, fresh]);
-    setActiveKindTab(kind);
+    setActiveKindTab(tab);
+  };
+
+  const activeContentTabLabel = () => {
+    const category = contentCategories.find((entry) => entry.id === activeKindTab);
+    if (category) {
+      return lang === 'ar'
+        ? (category.titleAr || category.titleEn || 'فئة جديدة')
+        : (category.titleEn || category.titleAr || 'New Category');
+    }
+    return KIND_LABELS[activeKindTab as ItemKind]?.[lang] || activeKindTab;
+  };
+
+  const updateCategory = (id: string, patch: Partial<ContentCategory>) => {
+    setContentCategories((prev) => prev.map((category) => category.id === id ? { ...category, ...patch } : category));
+  };
+
+  const handleAddCategory = () => {
+    const fresh = newContentCategoryTemplate(contentCategories.length);
+    setContentCategories((prev) => [...prev, fresh]);
+  };
+
+  const handleSaveCategory = async (category: ContentCategory) => {
+    try {
+      await saveContentCategory(category);
+      setCategorySavedId(category.id);
+      setCategoryFeedback('');
+      setTimeout(() => setCategorySavedId(null), 1800);
+    } catch {
+      setCategoryFeedback(lang === 'ar' ? 'تعذّر حفظ الفئة، حاول مرة أخرى.' : 'Could not save the category. Please try again.');
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    const linked = items.some((item) => item.categoryId === id);
+    if (linked) {
+      setCategoryFeedback(lang === 'ar' ? 'لا يمكن حذف الفئة لأنها مرتبطة بعناصر محتوى. انقل العناصر أو أزل ارتباطها أولاً.' : 'This category cannot be deleted because it has linked content. Move or unassign those items first.');
+      return;
+    }
+    if (!confirm(lang === 'ar' ? 'حذف هذه الفئة؟' : 'Delete this category?')) return;
+    try {
+      await deleteContentCategory(id);
+      setContentCategories((prev) => prev.filter((category) => category.id !== id));
+      if (activeKindTab === id) setActiveKindTab('course');
+      setCategoryFeedback('');
+    } catch (error) {
+      const blocked = error instanceof Error && error.message === 'CATEGORY_HAS_ITEMS';
+      setCategoryFeedback(blocked
+        ? (lang === 'ar' ? 'لا يمكن حذف الفئة لأنها مرتبطة بعناصر محتوى.' : 'This category cannot be deleted because it has linked content.')
+        : (lang === 'ar' ? 'تعذّر حذف الفئة، حاول مرة أخرى.' : 'Could not delete the category. Please try again.'));
+    }
+  };
+
+  const updateAboutContent = (field: keyof AboutContent, value: string) => {
+    setAboutContent((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveAbout = async () => {
+    setSettingsSaving('about');
+    try {
+      await saveSiteSettings({ about: aboutContent });
+      setSettingsFeedback(lang === 'ar' ? '✅ تم حفظ محتوى «من أنا».' : '✅ About content saved.');
+    } catch {
+      setSettingsFeedback(lang === 'ar' ? 'تعذّر حفظ محتوى «من أنا».' : 'Could not save About content.');
+    } finally {
+      setSettingsSaving(null);
+    }
+  };
+
+  const updateCertificate = (id: string, patch: Partial<Certificate>) => {
+    setCertificates((prev) => prev.map((certificate) => certificate.id === id ? { ...certificate, ...patch } : certificate));
+  };
+
+  const handleSaveCertificates = async () => {
+    setSettingsSaving('certificates');
+    try {
+      await saveSiteSettings({ certificates });
+      setSettingsFeedback(lang === 'ar' ? '✅ تم حفظ الشهادات.' : '✅ Certificates saved.');
+    } catch {
+      setSettingsFeedback(lang === 'ar' ? 'تعذّر حفظ الشهادات.' : 'Could not save certificates.');
+    } finally {
+      setSettingsSaving(null);
+    }
+  };
+
+  const handleAddCertificate = () => {
+    setCertificates((prev) => [...prev, {
+      id: `certificate-${Date.now()}`,
+      titleAr: '',
+      titleEn: '',
+      order: prev.length,
+      active: true,
+    }]);
+    setSettingsFeedback(lang === 'ar' ? 'تمت إضافة شهادة جديدة محلياً — احفظ التغييرات.' : 'New certificate added locally — save your changes.');
   };
 
   // ───── Ad slide handlers ─────
@@ -717,6 +835,45 @@ export default function Admin() {
 
         {/* ── Products Tab ── */}
         {adminTab === 'products' && <>
+        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+            <h2 className="text-white text-lg font-black">{lang === 'ar' ? '🗂️ إدارة فئات المحتوى المخصصة' : '🗂️ Custom Content Categories'}</h2>
+            <button onClick={handleAddCategory} className="bg-[hsl(var(--g500))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90">
+              + {lang === 'ar' ? 'فئة جديدة' : 'New Category'}
+            </button>
+          </div>
+          <p className="text-[rgba(255,255,255,0.55)] text-sm mb-4">
+            {lang === 'ar' ? 'أنشئي فئات مرنة للمحتوى، ثم اربطي العناصر بها من محرر العنصر.' : 'Create flexible content categories, then assign items to them in the item editor.'}
+          </p>
+          {categoryFeedback && <p className="mb-3 text-[#ffb0b0] text-sm font-semibold">{categoryFeedback}</p>}
+          {loadingCategories ? <p className="text-[rgba(255,255,255,0.5)] text-sm">{lang === 'ar' ? 'جاري التحميل…' : 'Loading…'}</p> : contentCategories.length === 0 ? (
+            <p className="text-[rgba(255,255,255,0.4)] text-sm italic">{lang === 'ar' ? 'لا توجد فئات مخصصة بعد.' : 'No custom categories yet.'}</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {contentCategories.map((category) => (
+                <div key={category.id} className="bg-[rgba(0,0,0,0.22)] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Field label={lang === 'ar' ? 'العنوان (عربي)' : 'Title (Arabic)'}><input value={category.titleAr} onChange={(e) => updateCategory(category.id, { titleAr: e.target.value })} dir="rtl" className="adm-input" /></Field>
+                    <Field label={lang === 'ar' ? 'العنوان (إنجليزي)' : 'Title (English)'}><input value={category.titleEn} onChange={(e) => updateCategory(category.id, { titleEn: e.target.value })} dir="ltr" className="adm-input" /></Field>
+                    <Field label={lang === 'ar' ? 'الوصف (عربي)' : 'Description (Arabic)'}><textarea value={category.descriptionAr || ''} onChange={(e) => updateCategory(category.id, { descriptionAr: e.target.value })} dir="rtl" rows={2} className="adm-input" /></Field>
+                    <Field label={lang === 'ar' ? 'الوصف (إنجليزي)' : 'Description (English)'}><textarea value={category.descriptionEn || ''} onChange={(e) => updateCategory(category.id, { descriptionEn: e.target.value })} dir="ltr" rows={2} className="adm-input" /></Field>
+                    <Field label={lang === 'ar' ? 'الأيقونة' : 'Icon'}><input value={category.icon || ''} onChange={(e) => updateCategory(category.id, { icon: e.target.value })} className="adm-input" /></Field>
+                    <Field label={lang === 'ar' ? 'الترتيب' : 'Order'}><input type="number" value={category.order} onChange={(e) => updateCategory(category.id, { order: Number(e.target.value) || 0 })} className="adm-input" /></Field>
+                  </div>
+                  <div className="flex items-center gap-3 mt-3">
+                    <label className="flex items-center gap-2 text-[rgba(255,255,255,0.75)] text-sm cursor-pointer">
+                      <input type="checkbox" checked={category.active} onChange={(e) => updateCategory(category.id, { active: e.target.checked })} />
+                      {category.active ? (lang === 'ar' ? 'مفعّلة' : 'Active') : (lang === 'ar' ? 'مخفية' : 'Hidden')}
+                    </label>
+                    <button onClick={() => handleSaveCategory(category)} className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm">{lang === 'ar' ? 'حفظ' : 'Save'}</button>
+                    <button onClick={() => handleDeleteCategory(category.id)} className="bg-[rgba(255,80,80,0.15)] border border-[rgba(255,80,80,0.3)] text-[#ffb0b0] font-semibold py-2 px-4 rounded-lg text-sm">{lang === 'ar' ? 'حذف' : 'Delete'}</button>
+                    {categorySavedId === category.id && <span className="text-[hsl(var(--g300))] text-sm font-semibold">{t('admin.saved')}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
         {/* ───── Items manager — categorized tabs ───── */}
         <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
@@ -725,14 +882,14 @@ export default function Admin() {
               <span className="ms-2 text-[rgba(255,255,255,0.45)] text-xs font-medium">({items.length})</span>
             </h2>
             <button onClick={() => handleAdd(activeKindTab)} className="bg-[hsl(var(--g500))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90">
-              + {lang === 'ar' ? `إضافة في ${KIND_LABELS[activeKindTab][lang]}` : `Add to ${KIND_LABELS[activeKindTab][lang]}`}
+              + {lang === 'ar' ? `إضافة في ${activeContentTabLabel()}` : `Add to ${activeContentTabLabel()}`}
             </button>
           </div>
 
           {/* Category tabs */}
           <div className="flex flex-wrap gap-2 mb-5 pb-3 border-b border-[rgba(255,255,255,0.08)]">
             {KIND_ORDER.map((kind) => {
-              const count = items.filter((i) => i.kind === kind).length;
+              const count = items.filter((i) => i.kind === kind && !i.categoryId).length;
               const active = activeKindTab === kind;
               return (
                 <button
@@ -749,10 +906,19 @@ export default function Admin() {
                 </button>
               );
             })}
+            {contentCategories.map((category) => {
+              const count = items.filter((item) => item.categoryId === category.id).length;
+              const active = activeKindTab === category.id;
+              return <button key={category.id} onClick={() => setActiveKindTab(category.id)} className={`text-sm font-semibold py-2 px-3 rounded-lg border transition-colors ${active ? 'bg-[hsl(var(--g500))] text-[hsl(var(--p900))] border-[hsl(var(--g500))]' : 'bg-[rgba(255,255,255,0.04)] text-[rgba(255,255,255,0.75)] border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.08)]'}`}>
+                {category.icon || '✦'} {lang === 'ar' ? category.titleAr : category.titleEn}<span className={`ms-1.5 text-[0.7rem] font-black ${active ? 'opacity-70' : 'opacity-50'}`}>({count})</span>
+              </button>;
+            })}
           </div>
 
           {(() => {
-            const list = items.filter((i) => i.kind === activeKindTab);
+            const list = contentCategories.some((category) => category.id === activeKindTab)
+              ? items.filter((item) => item.categoryId === activeKindTab)
+              : items.filter((item) => item.kind === activeKindTab && !item.categoryId);
             if (loadingItems) {
               return <p className="text-[rgba(255,255,255,0.5)] text-sm">{lang === 'ar' ? 'جاري التحميل…' : 'Loading…'}</p>;
             }
@@ -864,6 +1030,24 @@ export default function Admin() {
                             </Field>
                             <Field label={lang === 'ar' ? 'الترتيب' : 'Order'}>
                               <input type="number" value={it.order} onChange={(e) => updateItem(it.id, { order: Number(e.target.value) || 0 })} className="adm-input" />
+                            </Field>
+                            <Field label={lang === 'ar' ? 'الفئة المخصصة' : 'Custom Category'}>
+                              <select value={it.categoryId || ''} onChange={(e) => updateItem(it.id, { categoryId: e.target.value || null })} className="adm-input">
+                                <option value="" className="bg-[#1a0a2e]">{lang === 'ar' ? '— بدون فئة مخصصة —' : '— No custom category —'}</option>
+                                {contentCategories.map((category) => <option key={category.id} value={category.id} className="bg-[#1a0a2e]">{lang === 'ar' ? category.titleAr || category.id : category.titleEn || category.id}</option>)}
+                              </select>
+                            </Field>
+                            <Field label={lang === 'ar' ? 'نوع المدخل' : 'Entry Type'}>
+                              <select value={it.contentType || 'material'} onChange={(e) => updateItem(it.id, { contentType: e.target.value as 'material' | 'lesson' })} className="adm-input">
+                                <option value="material" className="bg-[#1a0a2e]">{lang === 'ar' ? 'مادة' : 'Material'}</option>
+                                <option value="lesson" className="bg-[#1a0a2e]">{lang === 'ar' ? 'درس' : 'Lesson'}</option>
+                              </select>
+                            </Field>
+                            <Field label={lang === 'ar' ? 'الظهور' : 'Visibility'}>
+                              <label className="flex items-center gap-2 text-[rgba(255,255,255,0.75)] text-sm cursor-pointer mt-2">
+                                <input type="checkbox" checked={it.active ?? true} onChange={(e) => updateItem(it.id, { active: e.target.checked })} />
+                                {(it.active ?? true) ? (lang === 'ar' ? 'ظاهر للعملاء' : 'Visible to customers') : (lang === 'ar' ? 'مخفي عن العملاء' : 'Hidden from customers')}
+                              </label>
                             </Field>
                             <Field label={lang === 'ar' ? 'السعر الأصلي ($)' : 'Original Price (USD)'}>
                               <PriceInputUSD
@@ -1137,6 +1321,57 @@ export default function Admin() {
             className="hidden"
             onChange={handleAboutImageUpload}
           />
+        </section>
+
+        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+            <h2 className="text-white text-lg font-black">{lang === 'ar' ? '✍️ محتوى قسم «من أنا»' : '✍️ About Me Content'}</h2>
+            <button onClick={handleSaveAbout} disabled={settingsSaving === 'about'} className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm disabled:opacity-50">
+              {settingsSaving === 'about' ? (lang === 'ar' ? 'جاري الحفظ…' : 'Saving…') : (lang === 'ar' ? 'حفظ محتوى «من أنا»' : 'Save About Content')}
+            </button>
+          </div>
+          <p className="text-[rgba(255,255,255,0.55)] text-sm mb-4">{lang === 'ar' ? 'عدّلي النصوص بالعربية والإنجليزية ثم احفظي التغييرات.' : 'Edit both Arabic and English copy, then save your changes.'}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {([
+              ['badgeAr', 'الشارة (عربي)', 'Badge (Arabic)', false], ['badgeEn', 'الشارة (إنجليزي)', 'Badge (English)', false],
+              ['labelAr', 'التسمية (عربي)', 'Label (Arabic)', false], ['labelEn', 'التسمية (إنجليزي)', 'Label (English)', false],
+              ['titleAr', 'العنوان (عربي)', 'Title (Arabic)', false], ['titleEn', 'العنوان (إنجليزي)', 'Title (English)', false],
+              ['paragraph1Ar', 'الفقرة الأولى (عربي)', 'Paragraph 1 (Arabic)', true], ['paragraph1En', 'الفقرة الأولى (إنجليزي)', 'Paragraph 1 (English)', true],
+              ['paragraph2Ar', 'الفقرة الثانية (عربي)', 'Paragraph 2 (Arabic)', true], ['paragraph2En', 'الفقرة الثانية (إنجليزي)', 'Paragraph 2 (English)', true],
+              ['paragraph3Ar', 'الفقرة الثالثة (عربي)', 'Paragraph 3 (Arabic)', true], ['paragraph3En', 'الفقرة الثالثة (إنجليزي)', 'Paragraph 3 (English)', true],
+              ['certificatesTitleAr', 'عنوان الشهادات (عربي)', 'Certificates heading (Arabic)', false], ['certificatesTitleEn', 'عنوان الشهادات (إنجليزي)', 'Certificates heading (English)', false],
+              ['ctaAr', 'زر الدعوة (عربي)', 'CTA (Arabic)', false], ['ctaEn', 'زر الدعوة (إنجليزي)', 'CTA (English)', false],
+            ] as Array<[keyof AboutContent, string, string, boolean]>).map(([field, ar, en, textarea]) => (
+              <Field key={field} label={lang === 'ar' ? ar : en}>
+                {textarea ? <textarea value={aboutContent[field]} onChange={(e) => updateAboutContent(field, e.target.value)} dir={field.endsWith('Ar') ? 'rtl' : 'ltr'} rows={3} className="adm-input" /> : <input value={aboutContent[field]} onChange={(e) => updateAboutContent(field, e.target.value)} dir={field.endsWith('Ar') ? 'rtl' : 'ltr'} className="adm-input" />}
+              </Field>
+            ))}
+          </div>
+          {settingsFeedback && <p className={`mt-4 text-sm font-semibold ${settingsFeedback.startsWith('✅') || settingsFeedback.startsWith('تم') ? 'text-[hsl(var(--g300))]' : 'text-[#ffb0b0]'}`}>{settingsFeedback}</p>}
+        </section>
+
+        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <h2 className="text-white text-lg font-black">{lang === 'ar' ? '🏅 إدارة الشهادات' : '🏅 Certificates Manager'}</h2>
+            <div className="flex gap-2">
+              <button onClick={handleAddCertificate} className="bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.15)] text-white font-bold py-2 px-4 rounded-lg text-sm">+ {lang === 'ar' ? 'شهادة جديدة' : 'New Certificate'}</button>
+              <button onClick={handleSaveCertificates} disabled={settingsSaving === 'certificates'} className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm disabled:opacity-50">{settingsSaving === 'certificates' ? (lang === 'ar' ? 'جاري الحفظ…' : 'Saving…') : (lang === 'ar' ? 'حفظ الشهادات' : 'Save Certificates')}</button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-3">
+            {certificates.map((certificate) => (
+              <div key={certificate.id} className="bg-[rgba(0,0,0,0.22)] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Field label={lang === 'ar' ? 'العنوان (عربي)' : 'Title (Arabic)'}><input value={certificate.titleAr} onChange={(e) => updateCertificate(certificate.id, { titleAr: e.target.value })} dir="rtl" className="adm-input" /></Field>
+                  <Field label={lang === 'ar' ? 'العنوان (إنجليزي)' : 'Title (English)'}><input value={certificate.titleEn} onChange={(e) => updateCertificate(certificate.id, { titleEn: e.target.value })} dir="ltr" className="adm-input" /></Field>
+                  <Field label={lang === 'ar' ? 'الترتيب' : 'Order'}><input type="number" value={certificate.order} onChange={(e) => updateCertificate(certificate.id, { order: Number(e.target.value) || 0 })} className="adm-input" /></Field>
+                  <label className="flex items-center gap-2 text-[rgba(255,255,255,0.75)] text-sm cursor-pointer self-end pb-2"><input type="checkbox" checked={certificate.active} onChange={(e) => updateCertificate(certificate.id, { active: e.target.checked })} />{certificate.active ? (lang === 'ar' ? 'مفعّلة' : 'Active') : (lang === 'ar' ? 'مخفية' : 'Hidden')}</label>
+                </div>
+                <button onClick={() => { setCertificates((prev) => prev.filter((entry) => entry.id !== certificate.id)); setSettingsFeedback(lang === 'ar' ? 'تم حذف الشهادة محلياً — احفظ التغييرات.' : 'Certificate deleted locally — save your changes.'); }} className="mt-3 bg-[rgba(255,80,80,0.15)] border border-[rgba(255,80,80,0.3)] text-[#ffb0b0] font-semibold py-2 px-4 rounded-lg text-sm">{lang === 'ar' ? 'حذف' : 'Delete'}</button>
+              </div>
+            ))}
+          </div>
+          {settingsFeedback && <p className={`mt-4 text-sm font-semibold ${settingsFeedback.startsWith('✅') || settingsFeedback.startsWith('تم') ? 'text-[hsl(var(--g300))]' : 'text-[#ffb0b0]'}`}>{settingsFeedback}</p>}
         </section>
 
         {/* ── Admin Profile ── */}

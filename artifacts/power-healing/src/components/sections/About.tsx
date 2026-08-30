@@ -1,16 +1,31 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '@/lib/store';
-import { fetchSiteSettings } from '@/lib/siteSettings';
+import {
+  DEFAULT_ABOUT_CONTENT,
+  DEFAULT_CERTIFICATES,
+  subscribeSiteSettings,
+  type AboutContent,
+  type Certificate,
+} from '@/lib/siteSettings';
 
 export function About() {
   const { t, lang } = useApp();
   const [aboutImageUrl, setAboutImageUrl] = useState<string>('/img/doha-profile.jpg');
+  const [about, setAbout] = useState<AboutContent>(DEFAULT_ABOUT_CONTENT);
+  const [certificates, setCertificates] = useState<Certificate[]>(DEFAULT_CERTIFICATES);
 
   useEffect(() => {
-    fetchSiteSettings().then((s) => {
+    return subscribeSiteSettings((s) => {
       if (s.aboutImageUrl) setAboutImageUrl(s.aboutImageUrl);
+      setAbout({ ...DEFAULT_ABOUT_CONTENT, ...(s.about || {}) });
+      setCertificates(s.certificates === undefined ? DEFAULT_CERTIFICATES : s.certificates);
     });
   }, []);
+
+  const localized = (ar: string, en: string) => (lang === 'ar' ? ar : (en || ar));
+  const visibleCertificates = certificates
+    .filter((certificate) => certificate.active)
+    .sort((a, b) => a.order - b.order);
 
   const handleBookClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -63,33 +78,41 @@ export function About() {
             className="absolute -bottom-4 left-1/2 -translate-x-1/2 font-bold text-[0.85rem] py-2.5 px-6 rounded-full whitespace-nowrap shadow-[0_4px_20px_rgba(212,160,23,0.4)]"
             style={{ backgroundColor: 'hsl(var(--g500))', color: 'hsl(var(--p900))' }}
           >
-            {t('about.badge')}
+            {localized(about.badgeAr, about.badgeEn)}
           </div>
         </div>
 
         <div>
-          <span className="section-label">{t('about.label')}</span>
-          <h2 className="section-title">{t('about.title')}</h2>
+          <span className="section-label">{localized(about.labelAr, about.labelEn)}</span>
+          <h2 className="section-title">{localized(about.titleAr, about.titleEn)}</h2>
           <p className="text-[hsl(var(--muted-foreground))] text-[1.02rem] mb-5 leading-[2.05] tracking-[0.005em]">
-            {t('about.p1')}
+            {localized(about.paragraph1Ar, about.paragraph1En)}
           </p>
           <p className="text-[hsl(var(--muted-foreground))] text-[1.02rem] mb-5 leading-[2.05] tracking-[0.005em]">
-            {t('about.p2')}
+            {localized(about.paragraph2Ar, about.paragraph2En)}
           </p>
           <p className="text-[hsl(var(--p800))] text-[1.05rem] mb-6 leading-[2] font-semibold italic">
-            {t('about.p3')}
+            {localized(about.paragraph3Ar, about.paragraph3En)}
           </p>
 
           <div className={`bg-[hsl(var(--muted))] py-5 px-6 rounded-xl my-6 ${lang === 'ar' ? 'border-r-4' : 'border-l-4'} border-[hsl(var(--g500))]`}>
-            <p className="text-[0.98rem] font-bold text-[hsl(var(--p800))] mb-3">{t('about.certsTitle')}</p>
+            <p className="text-[0.98rem] font-bold text-[hsl(var(--p800))] mb-3">
+              {localized(about.certificatesTitleAr, about.certificatesTitleEn)}
+            </p>
             <ul className="list-none flex flex-col gap-2">
-              <li className="text-[hsl(var(--muted-foreground))] text-[0.94rem]">✦ {t('about.cert1')}</li>
-              <li className="text-[hsl(var(--muted-foreground))] text-[0.94rem]">✦ {t('about.cert2')}</li>
-              <li className="text-[hsl(var(--muted-foreground))] text-[0.94rem]">✦ {t('about.cert3')}</li>
-              <li className="text-[hsl(var(--muted-foreground))] text-[0.94rem]">✦ {t('about.cert4')}</li>
-              <li className="text-[hsl(var(--muted-foreground))] text-[0.94rem]">✦ {t('about.cert5')}</li>
-              <li className="text-[hsl(var(--muted-foreground))] text-[0.94rem]">✦ {t('about.cert6')}</li>
-              <li className="text-[hsl(var(--p800))] text-[0.94rem] font-bold mt-1">✨ {t('about.cert7')}</li>
+              {visibleCertificates.map((certificate, index) => (
+                <li
+                  key={certificate.id}
+                  className={`text-[0.94rem] ${
+                    index === visibleCertificates.length - 1
+                      ? 'text-[hsl(var(--p800))] font-bold mt-1'
+                      : 'text-[hsl(var(--muted-foreground))]'
+                  }`}
+                >
+                  {index === visibleCertificates.length - 1 ? '✨' : '✦'}{' '}
+                  {localized(certificate.titleAr, certificate.titleEn)}
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -99,7 +122,7 @@ export function About() {
             style={{ backgroundColor: 'hsl(var(--g500))', color: 'hsl(var(--p900))' }}
             className="inline-block font-bold text-base py-3.5 px-8 rounded-full transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(212,160,23,0.35)] border-0 cursor-pointer"
           >
-            {t('about.cta')}
+            {localized(about.ctaAr, about.ctaEn)}
           </a>
         </div>
       </div>

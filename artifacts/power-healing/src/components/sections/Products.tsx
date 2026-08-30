@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useApp } from '@/lib/store';
 import { Item, fetchItems, effectivePrice, discountPercent } from '@/lib/items';
+import { ContentCategory, fetchContentCategories } from '@/lib/contentCategories';
 
 const DESC_LIMIT = 180;
 
@@ -24,9 +25,10 @@ function CourseDescription({ desc, lang }: { desc: string; lang: string }) {
   );
 }
 
-type TabKey = 'all' | 'course' | 'workshop' | 'recorded' | 'individual-online' | 'vip';
+type StandardTabKey = 'course' | 'workshop' | 'recorded' | 'individual-online' | 'vip';
+type TabKey = StandardTabKey | `custom:${string}`;
 
-const TABS: { key: TabKey; labelAr: string; labelEn: string }[] = [
+const TABS: { key: StandardTabKey; labelAr: string; labelEn: string }[] = [
   { key: 'course', labelAr: 'الكورسات', labelEn: 'Courses' },
   { key: 'workshop', labelAr: 'الورشات', labelEn: 'Workshops' },
   { key: 'recorded', labelAr: 'الجلسات المسجلة', labelEn: 'Recorded' },
@@ -37,6 +39,9 @@ const TABS: { key: TabKey; labelAr: string; labelEn: string }[] = [
 function readTabFromHash(): TabKey {
   if (typeof window === 'undefined') return 'course';
   const h = window.location.hash;
+  if (h.startsWith('#products-category-')) {
+    return `custom:${decodeURIComponent(h.slice('#products-category-'.length))}`;
+  }
   const m = h.match(/^#products(?:-(course|workshop|recorded|individual-online|vip))?$/);
   if (m && m[1]) return m[1] as TabKey;
   return 'course';
@@ -50,7 +55,7 @@ const KIND_LABEL: Record<string, { ar: string; en: string }> = {
   vip:                 { ar: '👑 VIP',            en: '👑 VIP' },
 };
 
-function ProductCard({ it }: { it: Item }) {
+function ProductCard({ it, category }: { it: Item; category?: ContentCategory }) {
   const { t, lang, formatPrice, addToCart } = useApp();
   const [, navigate] = useLocation();
   const hasVip = !!(it.vipEnabled && it.vipPriceJod && it.vipPriceJod > 0);
@@ -61,7 +66,9 @@ function ProductCard({ it }: { it: Item }) {
   const title = lang === 'ar' ? it.titleAr : it.titleEn;
   const desc = lang === 'ar' ? it.descAr : it.descEn;
   const isIndividual = it.kind === 'individual-online';
-  const kl = KIND_LABEL[it.kind] ?? { ar: it.kind, en: it.kind };
+  const kl = category
+    ? { ar: category.titleAr || category.titleEn, en: category.titleEn || category.titleAr }
+    : (KIND_LABEL[it.kind] ?? { ar: it.kind, en: it.kind });
 
   const activePrice = tier === 'vip' && hasVip ? (it.vipPriceJod as number) : eff;
   const isVip = tier === 'vip' && hasVip;
@@ -94,6 +101,13 @@ function ProductCard({ it }: { it: Item }) {
         <span className="inline-block bg-[rgba(90,45,145,0.08)] text-[hsl(var(--p700))] text-[0.65rem] font-bold py-0.5 px-2 rounded-full border border-[rgba(90,45,145,0.15)]">
           {lang === 'ar' ? kl.ar : kl.en}
         </span>
+        {category && (
+          <span className="inline-block bg-[rgba(212,160,23,0.12)] text-[hsl(var(--g600))] text-[0.65rem] font-bold py-0.5 px-2 rounded-full border border-[rgba(212,160,23,0.25)]">
+            {it.contentType === 'lesson'
+              ? (lang === 'ar' ? 'درس' : 'Lesson')
+              : (lang === 'ar' ? 'مادة' : 'Material')}
+          </span>
+        )}
         {isIndividual && (
           <span className="inline-block bg-[rgba(212,160,23,0.15)] text-[hsl(var(--g600))] text-[0.65rem] font-bold py-0.5 px-2 rounded-full border border-[rgba(212,160,23,0.3)]">
             Zoom
@@ -182,10 +196,12 @@ function ProductCard({ it }: { it: Item }) {
 export function Products() {
   const { lang } = useApp();
   const [items, setItems] = useState<Item[] | null>(null);
+  const [categories, setCategories] = useState<ContentCategory[]>([]);
   const [tab, setTab] = useState<TabKey>('course');
 
   useEffect(() => {
     fetchItems().then(setItems).catch(() => setItems([]));
+    fetchContentCategories().then(setCategories).catch(() => setCategories([]));
   }, []);
 
   useEffect(() => {
@@ -204,23 +220,37 @@ export function Products() {
   }, []);
 
   const filtered = useMemo(() => {
-    const all = (items || []).filter(
-      (i) => i.kind === 'course' || i.kind === 'workshop' || i.kind === 'recorded' || i.kind === 'individual-online' || i.kind === 'vip',
-    );
-    if (tab === 'all') return all;
-    return all.filter((i) => i.kind === tab);
+    const all = (items || []).filter((item) => item.active !== false);
+    if (tab.startsWith('custom:')) {
+      return all.filter((item) => item.categoryId === tab.slice('custom:'.length));
+    }
+    return all.filter((item) => !item.categoryId && item.kind === tab);
   }, [items, tab]);
 
-  const counts = useMemo(() => {
-    const base = { all: 0, course: 0, workshop: 0, recorded: 0, 'individual-online': 0, vip: 0 } as Record<TabKey, number>;
-    (items || []).forEach((i) => {
-      if (i.kind === 'course' || i.kind === 'workshop' || i.kind === 'recorded' || i.kind === 'individual-online' || i.kind === 'vip') {
-        base.all++;
-        base[i.kind as TabKey]++;
-      }
-    });
-    return base;
-  }, [items]);
+  const visibleCategories = useMemo(
+    () => categories.filter((category) => category.active).sort((a, b) => a.order - b.order),
+    [categories],
+  );
+
+  const tabs = useMemo(
+    () => [
+      ...TABS,
+      ...visibleCategories.map((category) => ({
+        key: `custom:${category.id}` as TabKey,
+        labelAr: `${category.icon || '✦'} ${category.titleAr}`,
+        labelEn: `${category.icon || '✦'} ${category.titleEn || category.titleAr}`,
+      })),
+    ],
+    [visibleCategories],
+  );
+
+  const countForTab = (key: TabKey) => {
+    const activeItems = (items || []).filter((item) => item.active !== false);
+    if (key.startsWith('custom:')) {
+      return activeItems.filter((item) => item.categoryId === key.slice('custom:'.length)).length;
+    }
+    return activeItems.filter((item) => !item.categoryId && item.kind === key).length;
+  };
 
   const loading = items === null;
 
@@ -238,7 +268,7 @@ export function Products() {
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-10 sticky top-[68px] z-30 bg-white/85 backdrop-blur py-3 -mx-3 px-3 rounded-xl">
-          {TABS.map((tb) => {
+          {tabs.map((tb) => {
             const active = tab === tb.key;
             const label = lang === 'ar' ? tb.labelAr : tb.labelEn;
             return (
@@ -246,7 +276,9 @@ export function Products() {
                 key={tb.key}
                 onClick={() => {
                   setTab(tb.key);
-                  const newHash = tb.key === 'all' ? '#products' : `#products-${tb.key}`;
+                  const newHash = tb.key.startsWith('custom:')
+                    ? `#products-category-${encodeURIComponent(tb.key.slice('custom:'.length))}`
+                    : `#products-${tb.key}`;
                   if (window.location.hash !== newHash) {
                     history.replaceState(null, '', newHash);
                   }
@@ -266,7 +298,7 @@ export function Products() {
                     active ? 'bg-white/25 text-white' : 'bg-[rgba(90,45,145,0.1)] text-[hsl(var(--p700))]'
                   }`}
                 >
-                  {counts[tb.key]}
+                  {countForTab(tb.key)}
                 </span>
               </button>
             );
@@ -285,7 +317,13 @@ export function Products() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((it) => <ProductCard key={it.id} it={it} />)}
+            {filtered.map((it) => (
+              <ProductCard
+                key={it.id}
+                it={it}
+                category={it.categoryId ? categories.find((entry) => entry.id === it.categoryId) : undefined}
+              />
+            ))}
           </div>
         )}
       </div>
