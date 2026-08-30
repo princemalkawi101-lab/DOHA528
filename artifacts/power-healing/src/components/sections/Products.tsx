@@ -97,6 +97,12 @@ function ProductCard({ it, category }: { it: Item; category?: ContentCategory })
         </div>
       )}
 
+      {it.imageUrl && (
+        <div className="-mx-6 -mt-6 mb-4 aspect-[16/7] overflow-hidden">
+          <img src={it.imageUrl} alt={title} className="w-full h-full object-cover" />
+        </div>
+      )}
+
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <span className="inline-block bg-[rgba(90,45,145,0.08)] text-[hsl(var(--p700))] text-[0.65rem] font-bold py-0.5 px-2 rounded-full border border-[rgba(90,45,145,0.15)]">
           {lang === 'ar' ? kl.ar : kl.en}

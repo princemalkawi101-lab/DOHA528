@@ -2,9 +2,10 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
 import { collection, getDocs, orderBy, query as fsQuery } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useApp, RATES } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
-import { db, auth } from '@/lib/firebase';
+import { db, auth, storage } from '@/lib/firebase';
 import { AboutContent, Certificate, DEFAULT_ABOUT_CONTENT, DEFAULT_CERTIFICATES, fetchSiteSettings, saveSiteSettings } from '@/lib/siteSettings';
 import {
   ContentCategory,
@@ -363,6 +364,9 @@ export default function Admin() {
   const handleItemImageUpload = async (id: string, file: File) => {
     setItemImgUploading(id);
     try {
+      const item = items.find((entry) => entry.id === id);
+      if (!item) throw new Error('ITEM_NOT_FOUND');
+      if (!file.type.startsWith('image/')) throw new Error('INVALID_IMAGE_TYPE');
       const blob = await new Promise<Blob>((resolve, reject) => {
         const img = new Image();
         const url = URL.createObjectURL(file);
@@ -379,11 +383,36 @@ export default function Admin() {
         img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
         img.src = url;
       });
-      const imgUrl = await uploadToImgBB(blob);
-      updateItem(id, { imageUrl: imgUrl });
+      const imageRef = ref(storage, `course-covers/${id}/${Date.now()}.jpg`);
+      const snapshot = await uploadBytes(imageRef, blob, {
+        contentType: 'image/jpeg',
+        cacheControl: 'public,max-age=31536000,immutable',
+      });
+      const imageUrl = await getDownloadURL(snapshot.ref);
+      const updatedItem = { ...item, imageUrl };
+      await saveItem(updatedItem);
+      setItems((prev) => prev.map((entry) => entry.id === id ? updatedItem : entry));
+      setSavedKey(id);
+      setTimeout(() => setSavedKey(null), 1800);
     } catch (e) {
       console.error('item image upload failed', e);
       alert(lang === 'ar' ? 'تعذّر تحميل الصورة، حاول مرة أخرى.' : 'Image upload failed, please try again.');
+    } finally {
+      setItemImgUploading(null);
+    }
+  };
+
+  const handleItemImageRemove = async (item: Item) => {
+    setItemImgUploading(item.id);
+    try {
+      const updatedItem = { ...item, imageUrl: '' };
+      await saveItem(updatedItem);
+      setItems((prev) => prev.map((entry) => entry.id === item.id ? updatedItem : entry));
+      setSavedKey(item.id);
+      setTimeout(() => setSavedKey(null), 1800);
+    } catch (e) {
+      console.error('item image removal failed', e);
+      alert(lang === 'ar' ? 'تعذّر إزالة الصورة، حاول مرة أخرى.' : 'Image removal failed, please try again.');
     } finally {
       setItemImgUploading(null);
     }
@@ -980,6 +1009,7 @@ export default function Admin() {
                                 <input
                                   type="file"
                                   accept="image/*"
+                                  disabled={itemImgUploading === it.id}
                                   onChange={(e) => {
                                     const f = e.target.files?.[0];
                                     if (f) handleItemImageUpload(it.id, f);
@@ -989,7 +1019,7 @@ export default function Admin() {
                                 />
                                 {itemImgUploading === it.id && (
                                   <span className="text-[hsl(var(--g300))] text-[0.7rem] mt-1 block animate-pulse">
-                                    {lang === 'ar' ? '⏳ جاري الرفع إلى ImgBB…' : '⏳ Uploading to ImgBB…'}
+                                    {lang === 'ar' ? '⏳ جاري رفع الصورة وحفظها…' : '⏳ Uploading and saving image…'}
                                   </span>
                                 )}
                               </label>
@@ -997,16 +1027,19 @@ export default function Admin() {
                             <div className="flex flex-col gap-2 justify-start pt-6">
                               <p className="text-[rgba(255,255,255,0.55)] text-xs leading-relaxed">
                                 {lang === 'ar'
-                                  ? 'ارفعي صورة غلاف للدورة لتظهر على البطاقة في الصفحة الرئيسية. سيتم رفعها تلقائياً إلى ImgBB وحفظ الرابط.'
-                                  : 'Upload a cover image for this course. It will appear on the card on the home page. The URL is saved to ImgBB automatically.'}
+                                  ? 'ارفعي صورة غلاف للدورة لتظهر على البطاقة في الصفحة الرئيسية. سيتم رفعها وحفظ الرابط تلقائياً.'
+                                  : 'Upload a cover image for this course. It will appear on the card on the home page and be saved automatically.'}
                               </p>
                               {it.imageUrl && (
                                 <button
                                   type="button"
-                                  onClick={() => updateItem(it.id, { imageUrl: '' })}
+                                  onClick={() => handleItemImageRemove(it)}
+                                  disabled={itemImgUploading === it.id}
                                   className="self-start text-[0.72rem] text-[#ffb0b0] hover:underline mt-1"
                                 >
-                                  {lang === 'ar' ? '✕ إزالة الصورة' : '✕ Remove image'}
+                                  {itemImgUploading === it.id
+                                    ? (lang === 'ar' ? '⏳ جاري الإزالة…' : '⏳ Removing…')
+                                    : (lang === 'ar' ? '✕ إزالة الصورة' : '✕ Remove image')}
                                 </button>
                               )}
                             </div>
