@@ -1,3 +1,7 @@
 {
-  "outputDirectory": "artifacts/power-healing/dist/public"
+  "outputDirectory": "artifacts/power-healing/dist/public",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
