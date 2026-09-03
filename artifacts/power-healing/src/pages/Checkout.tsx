@@ -24,6 +24,35 @@ const JOD_TO_USD = Number(import.meta.env.VITE_PAYPAL_JOD_TO_USD) || 1.41;
 const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) || '').replace(/\/+$/, '');
 const apiUrl = (path: string) => `${API_BASE}${path}`;
 
+type ApiResponse = {
+  id?: unknown;
+  captureStatus?: unknown;
+  error?: unknown;
+  code?: unknown;
+  debugId?: unknown;
+  requestId?: unknown;
+  [key: string]: unknown;
+};
+
+async function readApiResponse(response: Response): Promise<ApiResponse> {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    const body: unknown = JSON.parse(text);
+    if (body && typeof body === 'object') return body as ApiResponse;
+  } catch {
+    // Keep a bounded preview for console diagnostics when the API returns
+    // HTML/text (for example, if the frontend is pointed at the wrong host).
+  }
+
+  return { error: 'Unexpected non-JSON response from payment API', rawPreview: text.slice(0, 240) };
+}
+
+function getApiErrorMessage(body: ApiResponse, fallback: string): string {
+  return typeof body.error === 'string' && body.error ? body.error : fallback;
+}
+
 export default function Checkout() {
   const { t, lang, cart, cartTotal, formatPrice, changeQty, removeItem, clearCart } = useApp();
   const { user, loading } = useAuth();
@@ -159,6 +188,15 @@ export default function Checkout() {
             </div>
           </div>
 
+          <div
+            role="alert"
+            className="mb-5 rounded-xl border border-[rgba(212,160,23,0.35)] bg-[rgba(212,160,23,0.1)] px-4 py-3 text-sm leading-relaxed text-[hsl(var(--g300))]"
+          >
+            {lang === 'ar'
+              ? 'يفضل فتح الرابط في متصفح خارجي (Chrome أو Safari) لضمان إتمام عملية الدفع عبر PayPal بنجاح'
+              : 'For a successful PayPal payment, please open the link in an external browser (Chrome or Safari).'}
+          </div>
+
           {error && (
             <div className="mb-4 bg-[rgba(255,80,80,0.1)] border border-[rgba(255,80,80,0.3)] text-[#ff9999] text-sm rounded-xl px-4 py-3">{error}</div>
           )}
@@ -173,38 +211,62 @@ export default function Checkout() {
                     forceReRender={[cartTotal, cart.length]}
                     createOrder={async () => {
                       setError('');
-                      const res = await fetch(apiUrl('/api/paypal/create-order'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          cart: cart.map((c) => ({
-                            titleEn: c.titleEn || c.nameKey,
-                            titleAr: c.titleAr || c.nameKey,
-                            nameKey: c.nameKey,
-                            jod: c.jod,
-                            qty: c.qty,
-                          })),
-                        }),
-                      });
-                      if (!res.ok) {
-                        const data = await res.json().catch(() => ({}));
-                        throw new Error(data.error || 'create-order failed');
+                      try {
+                        const res = await fetch(apiUrl('/api/paypal/create-order'), {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            cart: cart.map((c) => ({
+                              titleEn: c.titleEn || c.nameKey,
+                              titleAr: c.titleAr || c.nameKey,
+                              nameKey: c.nameKey,
+                              jod: c.jod,
+                              qty: c.qty,
+                            })),
+                          }),
+                        });
+                        const data = await readApiResponse(res);
+                        if (!res.ok || typeof data.id !== 'string' || !data.id) {
+                          console.error('[PayPal] create-order failed', {
+                            status: res.status,
+                            code: data.code,
+                            requestId: data.requestId,
+                            debugId: data.debugId,
+                            details: data.details,
+                            rawPreview: data.rawPreview,
+                          });
+                          throw new Error(getApiErrorMessage(data, 'PayPal order creation failed'));
+                        }
+                        return data.id;
+                      } catch (err) {
+                        console.error('[PayPal] create-order request failed', err);
+                        throw err;
                       }
-                      const data = await res.json();
-                      return data.id as string;
                     }}
                     onApprove={async (data) => {
                       setProcessing(true);
+                      let captureCompleted = false;
                       try {
                         const res = await fetch(apiUrl('/api/paypal/capture-order'), {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ orderId: data.orderID }),
                         });
-                        const result = await res.json();
+                        const result = await readApiResponse(res);
                         if (!res.ok || result.captureStatus !== 'COMPLETED') {
-                          throw new Error(result.error || 'Payment not completed');
+                          console.error('[PayPal] capture-order failed', {
+                            status: res.status,
+                            orderId: data.orderID,
+                            code: result.code,
+                            requestId: result.requestId,
+                            debugId: result.debugId,
+                            details: result.details,
+                            rawPreview: result.rawPreview,
+                            captureStatus: result.captureStatus,
+                          });
+                          throw new Error(getApiErrorMessage(result, 'Payment not completed'));
                         }
+                        captureCompleted = true;
                         sessionStorage.setItem('dh_last_purchase', JSON.stringify(cart));
                         sessionStorage.setItem('dh_last_payment', JSON.stringify({
                           provider: 'paypal',
@@ -216,27 +278,40 @@ export default function Checkout() {
                         clearCart();
                         setLocation('/payment-success');
                       } catch (err: any) {
+                        console.error('[PayPal] payment flow failed', {
+                          orderId: data.orderID,
+                          captureCompleted,
+                          error: err,
+                        });
                         setError(
-                          lang === 'ar'
+                          captureCompleted && lang === 'ar'
                             ? 'تم الدفع لكن حدث خطأ في تسجيل الطلب. تواصل معنا مع رقم الطلب.'
-                            : 'Payment captured but order recording failed. Please contact support with your order ID.',
+                            : captureCompleted
+                              ? 'Payment captured but order recording failed. Please contact support with your order ID.'
+                              : lang === 'ar'
+                                ? 'تعذّر إتمام الدفع عبر PayPal. يرجى المحاولة مرة أخرى أو فتح الرابط في متصفح خارجي.'
+                                : 'PayPal payment could not be completed. Please try again or open the link in an external browser.',
                         );
                         setProcessing(false);
                       }
                     }}
-                    onError={() => {
+                    onError={(paypalError) => {
+                      console.error('[PayPal] SDK error', paypalError);
                       setError(
                         lang === 'ar'
                           ? 'حدث خطأ أثناء الدفع. يرجى المحاولة مرة أخرى.'
                           : 'A payment error occurred. Please try again.',
                       );
+                      setProcessing(false);
                     }}
-                    onCancel={() => {
+                    onCancel={(cancelData) => {
+                      console.info('[PayPal] checkout cancelled', cancelData);
                       setError(
                         lang === 'ar'
                           ? 'تم إلغاء عملية الدفع.'
                           : 'Payment was cancelled.',
                       );
+                      setProcessing(false);
                     }}
                   />
                 </PayPalScriptProvider>
