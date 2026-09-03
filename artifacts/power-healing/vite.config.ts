@@ -8,9 +8,14 @@ const rawPort = process.env.PORT;
 const port = rawPort ? Number(rawPort) : 3000;
 
 const basePath = process.env.BASE_PATH ?? "/";
+const paypalClientId =
+  process.env.VITE_PAYPAL_CLIENT_ID ?? process.env.PAYPAL_CLIENT_ID;
 
 export default defineConfig({
   base: basePath,
+  define: {
+    "process.env.PAYPAL_CLIENT_ID": JSON.stringify(paypalClientId),
+  },
   plugins: [
     react(),
     tailwindcss(),

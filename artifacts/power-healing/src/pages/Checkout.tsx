@@ -9,11 +9,13 @@ import { useApp } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
 import { savePurchase } from '@/lib/purchases';
 
-// PayPal client config is read at build time from Vite env vars.
-// Required:  VITE_PAYPAL_CLIENT_ID  (PayPal REST app client id, public — safe to ship)
+// PayPal client config is read at build time.
+// VITE_PAYPAL_CLIENT_ID takes priority; PAYPAL_CLIENT_ID is the Vercel fallback.
 // Optional:  VITE_PAYPAL_CURRENCY   (defaults to "USD")
 // Optional:  VITE_PAYPAL_JOD_TO_USD (defaults to 1.41)
-const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID as string | undefined;
+const PAYPAL_CLIENT_ID =
+  (import.meta.env.VITE_PAYPAL_CLIENT_ID as string | undefined) ||
+  (typeof process !== 'undefined' ? process.env.PAYPAL_CLIENT_ID : undefined);
 const PAYPAL_CURRENCY = (import.meta.env.VITE_PAYPAL_CURRENCY as string | undefined) || 'USD';
 const JOD_TO_USD = Number(import.meta.env.VITE_PAYPAL_JOD_TO_USD) || 1.41;
 
@@ -223,15 +225,6 @@ export default function Checkout() {
               <div className="text-white text-sm font-semibold truncate">{user.displayName || user.email}</div>
               <div className="text-[rgba(255,255,255,0.4)] text-xs truncate" dir="ltr">{user.email}</div>
             </div>
-          </div>
-
-          <div
-            role="alert"
-            className="mb-5 rounded-xl border border-[rgba(212,160,23,0.35)] bg-[rgba(212,160,23,0.1)] px-4 py-3 text-sm leading-relaxed text-[hsl(var(--g300))]"
-          >
-            {lang === 'ar'
-              ? 'يفضل فتح الرابط في متصفح خارجي (Chrome أو Safari) لضمان إتمام عملية الدفع عبر PayPal بنجاح'
-              : 'For a successful PayPal payment, please open the link in an external browser (Chrome or Safari).'}
           </div>
 
           {error && (
