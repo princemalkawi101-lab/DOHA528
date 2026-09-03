@@ -29,6 +29,9 @@ type ApiResponse = {
   captureStatus?: unknown;
   error?: unknown;
   code?: unknown;
+  paypalErrorName?: unknown;
+  paypalStatus?: unknown;
+  paypalOperation?: unknown;
   debugId?: unknown;
   requestId?: unknown;
   [key: string]: unknown;
@@ -51,6 +54,40 @@ async function readApiResponse(response: Response): Promise<ApiResponse> {
 
 function getApiErrorMessage(body: ApiResponse, fallback: string): string {
   return typeof body.error === 'string' && body.error ? body.error : fallback;
+}
+
+function formatPayPalDiagnostic(body: ApiResponse, fallback: string, lang: string): string {
+  const providerCode = typeof body.paypalErrorName === 'string' ? body.paypalErrorName : '';
+  const providerStatus = typeof body.paypalStatus === 'number' ? String(body.paypalStatus) : '';
+  const requestId = typeof body.requestId === 'string' ? body.requestId : '';
+  const debugId = typeof body.debugId === 'string' ? body.debugId : '';
+  const details = Array.isArray(body.details)
+    ? body.details
+        .map((detail) => {
+          if (!detail || typeof detail !== 'object') return '';
+          const value = detail as Record<string, unknown>;
+          return [
+            typeof value.issue === 'string' ? value.issue : '',
+            typeof value.description === 'string' ? value.description : '',
+            typeof value.field === 'string' ? `field=${value.field}` : '',
+            typeof value.value === 'string' ? `value=${value.value}` : '',
+            typeof value.location === 'string' ? `location=${value.location}` : '',
+          ].filter(Boolean).join(' — ');
+        })
+        .filter(Boolean)
+        .join('\n')
+    : '';
+
+  const lines = [
+    `${lang === 'ar' ? 'خطأ PayPal' : 'PayPal error'}: ${getApiErrorMessage(body, fallback)}`,
+    providerCode && `${lang === 'ar' ? 'رمز PayPal' : 'PayPal code'}: ${providerCode}`,
+    providerStatus && `${lang === 'ar' ? 'حالة PayPal' : 'PayPal status'}: ${providerStatus}`,
+    details && `${lang === 'ar' ? 'تفاصيل PayPal' : 'PayPal details'}: ${details}`,
+    debugId && `${lang === 'ar' ? 'معرّف PayPal التشخيصي' : 'PayPal debug ID'}: ${debugId}`,
+    requestId && `${lang === 'ar' ? 'رقم تتبع الطلب' : 'Request ID'}: ${requestId}`,
+  ];
+
+  return lines.filter(Boolean).join('\n');
 }
 
 export default function Checkout() {
@@ -230,11 +267,15 @@ export default function Checkout() {
                           console.error('[PayPal] create-order failed', {
                             status: res.status,
                             code: data.code,
+                            paypalErrorName: data.paypalErrorName,
+                            paypalStatus: data.paypalStatus,
+                            paypalOperation: data.paypalOperation,
                             requestId: data.requestId,
                             debugId: data.debugId,
                             details: data.details,
                             rawPreview: data.rawPreview,
                           });
+                          setError(formatPayPalDiagnostic(data, 'PayPal order creation failed', lang));
                           throw new Error(getApiErrorMessage(data, 'PayPal order creation failed'));
                         }
                         return data.id;
@@ -246,6 +287,7 @@ export default function Checkout() {
                     onApprove={async (data) => {
                       setProcessing(true);
                       let captureCompleted = false;
+                      let paymentErrorMessage = '';
                       try {
                         const res = await fetch(apiUrl('/api/paypal/capture-order'), {
                           method: 'POST',
@@ -258,12 +300,17 @@ export default function Checkout() {
                             status: res.status,
                             orderId: data.orderID,
                             code: result.code,
+                            paypalErrorName: result.paypalErrorName,
+                            paypalStatus: result.paypalStatus,
+                            paypalOperation: result.paypalOperation,
                             requestId: result.requestId,
                             debugId: result.debugId,
                             details: result.details,
                             rawPreview: result.rawPreview,
                             captureStatus: result.captureStatus,
                           });
+                          paymentErrorMessage = formatPayPalDiagnostic(result, 'Payment not completed', lang);
+                          setError(paymentErrorMessage);
                           throw new Error(getApiErrorMessage(result, 'Payment not completed'));
                         }
                         captureCompleted = true;
@@ -288,9 +335,11 @@ export default function Checkout() {
                             ? 'تم الدفع لكن حدث خطأ في تسجيل الطلب. تواصل معنا مع رقم الطلب.'
                             : captureCompleted
                               ? 'Payment captured but order recording failed. Please contact support with your order ID.'
+                              : paymentErrorMessage
+                                ? paymentErrorMessage
                               : lang === 'ar'
-                                ? 'تعذّر إتمام الدفع عبر PayPal. يرجى المحاولة مرة أخرى أو فتح الرابط في متصفح خارجي.'
-                                : 'PayPal payment could not be completed. Please try again or open the link in an external browser.',
+                                  ? 'تعذّر إتمام الدفع عبر PayPal. يرجى المحاولة مرة أخرى أو فتح الرابط في متصفح خارجي.'
+                                  : 'PayPal payment could not be completed. Please try again or open the link in an external browser.',
                         );
                         setProcessing(false);
                       }

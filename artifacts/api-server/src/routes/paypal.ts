@@ -62,6 +62,7 @@ function getSafeDetails(details: PayPalErrorDetail[]) {
     ...(detail.description ? { description: detail.description } : {}),
     ...(detail.field ? { field: detail.field } : {}),
     ...(detail.value ? { value: detail.value } : {}),
+    ...(detail.location ? { location: detail.location } : {}),
   }));
 }
 
@@ -107,6 +108,9 @@ function sendPayPalError(
     res.status(502).json({
       error: error.message,
       code: errorCode,
+      paypalErrorName: error.providerName,
+      paypalStatus: error.status,
+      paypalOperation: error.operation,
       ...(error.debugId ? { debugId: error.debugId } : {}),
       ...(error.details.length > 0
         ? { details: getSafeDetails(error.details) }

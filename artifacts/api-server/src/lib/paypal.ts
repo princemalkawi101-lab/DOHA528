@@ -6,6 +6,7 @@ export type PayPalErrorDetail = {
   description?: string;
   field?: string;
   value?: string;
+  location?: string;
 };
 
 type PayPalResponseBody = {
@@ -76,6 +77,7 @@ function normalizeDetails(details: unknown): PayPalErrorDetail[] {
         : {}),
       ...(typeof value.field === "string" ? { field: value.field } : {}),
       ...(typeof value.value === "string" ? { value: value.value } : {}),
+      ...(typeof value.location === "string" ? { location: value.location } : {}),
     }];
   });
 }
