@@ -9,11 +9,14 @@ const port = rawPort ? Number(rawPort) : 3000;
 
 const basePath = process.env.BASE_PATH ?? "/";
 const paypalClientId =
-  process.env.VITE_PAYPAL_CLIENT_ID ?? process.env.PAYPAL_CLIENT_ID;
+  process.env.VITE_PAYPAL_CLIENT_ID?.trim() ||
+  process.env.PAYPAL_CLIENT_ID?.trim() ||
+  "";
 
 export default defineConfig({
   base: basePath,
   define: {
+    "import.meta.env.VITE_PAYPAL_CLIENT_ID": JSON.stringify(paypalClientId),
     "process.env.PAYPAL_CLIENT_ID": JSON.stringify(paypalClientId),
   },
   plugins: [

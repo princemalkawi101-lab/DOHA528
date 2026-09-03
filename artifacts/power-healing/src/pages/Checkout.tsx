@@ -9,13 +9,14 @@ import { useApp } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
 import { savePurchase } from '@/lib/purchases';
 
-// PayPal client config is read at build time.
+// PayPal client config is read at build time and injected by vite.config.ts.
 // VITE_PAYPAL_CLIENT_ID takes priority; PAYPAL_CLIENT_ID is the Vercel fallback.
 // Optional:  VITE_PAYPAL_CURRENCY   (defaults to "USD")
 // Optional:  VITE_PAYPAL_JOD_TO_USD (defaults to 1.41)
 const PAYPAL_CLIENT_ID =
-  (import.meta.env.VITE_PAYPAL_CLIENT_ID as string | undefined) ||
-  (typeof process !== 'undefined' ? process.env.PAYPAL_CLIENT_ID : undefined);
+  (import.meta.env.VITE_PAYPAL_CLIENT_ID as string | undefined)?.trim() ||
+  (typeof process !== 'undefined' ? process.env.PAYPAL_CLIENT_ID?.trim() : undefined) ||
+  '';
 const PAYPAL_CURRENCY = (import.meta.env.VITE_PAYPAL_CURRENCY as string | undefined) || 'USD';
 const JOD_TO_USD = Number(import.meta.env.VITE_PAYPAL_JOD_TO_USD) || 1.41;
 
