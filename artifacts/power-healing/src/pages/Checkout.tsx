@@ -19,6 +19,14 @@ const PAYPAL_CLIENT_ID =
   '';
 const PAYPAL_CURRENCY = (import.meta.env.VITE_PAYPAL_CURRENCY as string | undefined) || 'USD';
 const JOD_TO_USD = Number(import.meta.env.VITE_PAYPAL_JOD_TO_USD) || 1.41;
+const PAYPAL_SCRIPT_OPTIONS: ReactPayPalScriptOptions | null = PAYPAL_CLIENT_ID
+  ? {
+      clientId: PAYPAL_CLIENT_ID,
+      currency: PAYPAL_CURRENCY,
+      intent: 'capture',
+      components: 'buttons',
+    }
+  : null;
 
 // Base URL for the backend API. When deployed on a different origin (Netlify),
 // set VITE_API_URL to the full origin of the api-server, e.g.
@@ -111,16 +119,6 @@ export default function Checkout() {
       setLocation('/login');
     }
   }, [loading, user, setLocation]);
-
-  const scriptOptions: ReactPayPalScriptOptions | null = useMemo(() => {
-    if (!PAYPAL_CLIENT_ID) return null;
-    return {
-      clientId: PAYPAL_CLIENT_ID,
-      currency: PAYPAL_CURRENCY,
-      intent: 'capture',
-      components: 'buttons',
-    };
-  }, []);
 
   const usdTotal = useMemo(() => {
     return (cartTotal * JOD_TO_USD).toFixed(2);
@@ -232,10 +230,10 @@ export default function Checkout() {
             <div className="mb-4 bg-[rgba(255,80,80,0.1)] border border-[rgba(255,80,80,0.3)] text-[#ff9999] text-sm rounded-xl px-4 py-3">{error}</div>
           )}
 
-          {scriptOptions ? (
+          {PAYPAL_SCRIPT_OPTIONS ? (
             <>
               <div className="bg-white rounded-xl p-3">
-                <PayPalScriptProvider options={scriptOptions}>
+                <PayPalScriptProvider options={PAYPAL_SCRIPT_OPTIONS}>
                   <PayPalButtons
                     disabled={processing || cart.length === 0}
                     style={{ layout: 'vertical', shape: 'rect', label: 'paypal' }}
