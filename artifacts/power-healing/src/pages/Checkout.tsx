@@ -338,10 +338,11 @@ export default function Checkout() {
                     }}
                     onError={(paypalError) => {
                       console.error('[PayPal] SDK error', paypalError);
-                      setError(
-                        lang === 'ar'
+                      setError((currentError) =>
+                        currentError ||
+                        (lang === 'ar'
                           ? 'حدث خطأ أثناء الدفع. يرجى المحاولة مرة أخرى.'
-                          : 'A payment error occurred. Please try again.',
+                          : 'A payment error occurred. Please try again.'),
                       );
                       setProcessing(false);
                     }}
