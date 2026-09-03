@@ -2,3 +2,4 @@
 - [Firestore category integrity](firestore-category-integrity.md) — category membership and item writes must share transactions so concurrent deletes cannot orphan content.
 - [GitHub OAuth Git sync](github-oauth-git-sync.md) — connector OAuth may authorize REST API access without authenticating the local git credential helper.
 - [PayPal credential environments](paypal-credential-environments.md) — PayPal Client ID and Secret must come from the same Live or Sandbox REST app.
+- [Vercel static API functions](vercel-static-api-functions.md) — static artifact output does not execute frontend public files as Serverless Functions; production handlers belong in root api/.
