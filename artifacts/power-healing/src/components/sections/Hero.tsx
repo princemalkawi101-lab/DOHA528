@@ -183,7 +183,7 @@ export function Hero() {
   return (
     <section
       id="hero"
-      className="relative h-[100dvh] min-h-[600px] overflow-hidden flex items-center"
+      className="relative min-h-[100dvh] overflow-hidden pt-[68px]"
       onTouchStart={heroSwipe.onTouchStart}
       onTouchEnd={heroSwipe.onTouchEnd}
     >
@@ -206,7 +206,7 @@ export function Hero() {
       {/* Independent Ad Slider + Logo (NOT affected by hero transition) */}
       {/* Hidden entirely for customers when master toggle is OFF; admin still sees it (faded) so they can manage. */}
       <div
-        className={`absolute top-[80px] left-1/2 -translate-x-1/2 z-30 w-[92%] max-w-[640px] flex flex-col items-center pointer-events-auto ${
+        className={`relative z-30 w-[92%] max-w-[640px] mx-auto mt-3 flex flex-col items-center pointer-events-auto ${
           !adSliderEnabled && !isAdmin ? 'hidden' : ''
         }`}
       >
@@ -316,7 +316,7 @@ export function Hero() {
       </div>
 
       {/* Hero text panel — transitions with slide change, but ad slider above is independent */}
-      <div className={`relative z-20 w-full max-w-[1200px] mx-auto pt-[340px] sm:pt-[360px] px-6 sm:px-8 transition-all duration-600 ease-out ${isTransitioning ? 'opacity-0 translate-y-5' : 'opacity-100 translate-y-0'}`}>
+      <div className={`relative z-20 w-full max-w-[1200px] mx-auto mt-5 px-6 sm:px-8 pb-12 transition-all duration-600 ease-out ${isTransitioning ? 'opacity-0 translate-y-5' : 'opacity-100 translate-y-0'}`}>
         <div
           className="inline-block text-[0.85rem] py-1.5 px-4 rounded-full mb-6"
           style={{
@@ -347,21 +347,23 @@ export function Hero() {
             {t('hero.cta1')}
           </a>
         </div>
-      </div>
 
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-2.5 z-30">
-        {SLIDES.map((_, idx) => (
-          <button
-            key={idx}
-            onClick={() => goToSlide(idx)}
-            className={`w-2.5 h-2.5 rounded-full border-2 border-[rgba(255,255,255,0.6)] cursor-pointer transition-all p-0 ${currentSlide === idx ? 'bg-[hsl(var(--g400))] border-[hsl(var(--g400))] scale-125' : 'bg-transparent'}`}
-          />
-        ))}
-      </div>
-
-      <div className="absolute bottom-[2.2rem] left-8 flex gap-2 z-30">
-        <button onClick={nextSlide} className="w-10 h-10 rounded-full border border-[rgba(255,255,255,0.35)] bg-[rgba(255,255,255,0.08)] text-white text-[1.4rem] flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.2)]">›</button>
-        <button onClick={prevSlide} className="w-10 h-10 rounded-full border border-[rgba(255,255,255,0.35)] bg-[rgba(255,255,255,0.08)] text-white text-[1.4rem] flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.2)]">‹</button>
+        <div className="mt-7 flex items-center justify-center gap-6 sm:justify-start" dir="ltr">
+          <div className="flex items-center gap-2.5" aria-label={lang === 'ar' ? 'اختيار الشريحة' : 'Choose slide'}>
+            {SLIDES.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => goToSlide(idx)}
+                aria-label={`${lang === 'ar' ? 'الشريحة' : 'Slide'} ${idx + 1}`}
+                className={`w-2.5 h-2.5 rounded-full border-2 border-[rgba(255,255,255,0.6)] cursor-pointer transition-all p-0 ${currentSlide === idx ? 'bg-[hsl(var(--g400))] border-[hsl(var(--g400))] scale-125' : 'bg-transparent'}`}
+              />
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={nextSlide} aria-label={lang === 'ar' ? 'الشريحة التالية' : 'Next slide'} className="w-10 h-10 rounded-full border border-[rgba(255,255,255,0.35)] bg-[rgba(255,255,255,0.08)] text-white text-[1.4rem] flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.2)]">›</button>
+            <button onClick={prevSlide} aria-label={lang === 'ar' ? 'الشريحة السابقة' : 'Previous slide'} className="w-10 h-10 rounded-full border border-[rgba(255,255,255,0.35)] bg-[rgba(255,255,255,0.08)] text-white text-[1.4rem] flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.2)]">‹</button>
+          </div>
+        </div>
       </div>
     </section>
   );
