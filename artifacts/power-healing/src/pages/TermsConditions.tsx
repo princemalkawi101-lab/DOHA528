@@ -1,6 +1,6 @@
 import { Link } from 'wouter';
 import { useApp } from '@/lib/store';
-import { LogoSVG } from '@/components/icons';
+import { MasahaLogo } from '@/components/icons';
 
 export default function TermsConditions() {
   const { lang } = useApp();
@@ -9,7 +9,7 @@ export default function TermsConditions() {
     <div className="min-h-screen bg-gradient-to-br from-[#1a0a2e] via-[#2a1444] to-[#1a0a2e] pt-[68px]">
       <div className="max-w-3xl mx-auto px-6 py-16">
         <div className="flex justify-center mb-10">
-          <LogoSVG width="140" height="37" />
+          <MasahaLogo width={104} height={104} />
         </div>
 
         <div className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-8 md:p-12">

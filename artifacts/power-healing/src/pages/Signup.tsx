@@ -2,7 +2,7 @@ import { useState, FormEvent } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useApp } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
-import { LogoSVG } from '@/components/icons';
+import { MasahaLogo } from '@/components/icons';
 import { PasswordField } from '@/components/ui/PasswordField';
 
 export default function Signup() {
@@ -40,7 +40,7 @@ export default function Signup() {
     <div className="min-h-[calc(100dvh-68px)] mt-[68px] flex items-center justify-center px-4 py-10 bg-gradient-to-br from-[#1a0a2e] via-[#2a1444] to-[#1a0a2e]">
       <div className="w-full max-w-md bg-[rgba(30,14,56,0.75)] backdrop-blur-md border border-[rgba(212,160,23,0.25)] rounded-2xl p-8 shadow-[0_16px_50px_rgba(0,0,0,0.5)]">
         <div className="flex justify-center mb-6">
-          <LogoSVG width="160" height="42" />
+          <MasahaLogo width={112} height={112} />
         </div>
         <h1 className="text-white text-2xl font-black text-center mb-2">{t('auth.signupTitle')}</h1>
         <p className="text-[rgba(255,255,255,0.6)] text-sm text-center mb-6">{t('auth.signupSub')}</p>

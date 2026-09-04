@@ -1,6 +1,6 @@
 import { Link } from 'wouter';
 import { useApp } from '@/lib/store';
-import { LogoSVG } from '@/components/icons';
+import { MasahaLogo } from '@/components/icons';
 
 export function Footer() {
   const { t, lang } = useApp();
@@ -10,7 +10,7 @@ export function Footer() {
       <div className="max-w-[1100px] mx-auto px-8 py-10">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 flex-wrap">
           <div className="flex items-center gap-2">
-            <LogoSVG width="160" height="42" opacity="0.8" />
+            <MasahaLogo width={88} height={88} opacity="0.8" />
           </div>
 
           <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2" aria-label="Legal links">

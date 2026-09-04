@@ -23,7 +23,7 @@ export const TRANSLATIONS: Record<string, Record<Language, string>> = {
   "hero.title0":  { ar: "استعد توازنك،", en: "Restore Your Balance," },
   "hero.title20": { ar: "وانعم بالسلام الحقيقي.", en: "And Embrace True Peace." },
   "hero.sub0":    { ar: "مساحة هادئة وآمنة للشفاء بالطاقة، واستعادة العافية الجسدية والروحية. مع ضحى، تبدأ رحلتك نحو نسخة أكثر انسجاماً من نفسك.", en: "A calm and safe space for energy healing and restoring physical and spiritual wellbeing. With Doha, your journey toward a more harmonious self begins." },
-  "hero.badge1":  { ar: "الشفاء بالطاقة", en: "Energy Healing" },
+  "hero.badge1":  { ar: "مساحة ن", en: "Masaha N" },
   "hero.title1":  { ar: "أطلق طاقتك الداخلية،", en: "Unleash Your Inner Energy," },
   "hero.title21": { ar: "وانسجم مع كونك.", en: "And Align With Your Universe." },
   "hero.sub1":    { ar: "من خلال تقنيات الريكي وتوازن الشاكرات، نساعدك على إزالة الانسدادات وتدفق الطاقة الحيوية بشكل طبيعي.", en: "Through Reiki techniques and chakra balancing, we help you remove blockages and allow vital energy to flow naturally." },

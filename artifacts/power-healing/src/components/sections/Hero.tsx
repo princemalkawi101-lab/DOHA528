@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
-import { WatermarkSVG, LogoSVG } from '@/components/icons';
+import { MasahaLogo } from '@/components/icons';
 import { fetchItems, Item } from '@/lib/items';
 import {
   fetchAdSlides,
@@ -199,7 +199,7 @@ export function Hero() {
 
       <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
         <div className="opacity-[0.06] blur-[1px]">
-          <WatermarkSVG />
+          <img src="/img/masaha-n-logo.png" alt="" aria-hidden="true" className="w-[520px] h-[520px] object-contain" />
         </div>
       </div>
 
@@ -310,8 +310,8 @@ export function Hero() {
         </div>
 
         {/* Logo below the ad slider — proportionate, no frame */}
-        <div className="mt-4 opacity-95 drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
-          <LogoSVG width="220" height="58" />
+        <div className="mt-3 opacity-95 drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
+          <MasahaLogo width={148} height={148} />
         </div>
       </div>
 

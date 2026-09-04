@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useApp } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
-import { LogoSVG } from '@/components/icons';
+import { MasahaLogo } from '@/components/icons';
 
 export function Navbar() {
   const { lang, toggleLang, t, cart, cartCount, cartTotal, changeQty, removeItem, clearCart, formatPrice, currency, setCurrency } = useApp();
@@ -84,7 +84,9 @@ export function Navbar() {
           }}
           className="flex items-center gap-2 text-white text-[1.1rem] font-bold whitespace-nowrap"
         >
-          <LogoSVG width="160" height="42" />
+          <span className="relative flex items-center justify-center w-[76px] h-[64px] -my-1.5">
+            <MasahaLogo width={82} height={82} />
+          </span>
         </a>
 
         <div className="flex items-center gap-2.5 shrink-0">

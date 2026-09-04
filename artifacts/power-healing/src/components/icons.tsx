@@ -65,6 +65,22 @@ export function LogoSVG({ className = "", width = "160", height = "42", opacity 
   );
 }
 
+export function MasahaLogo({ className = "", width = "78", height = "78", opacity = "1" }: { className?: string, width?: string | number, height?: string | number, opacity?: string }) {
+  return (
+    <span
+      className={`relative inline-flex items-center justify-center shrink-0 ${className}`}
+      style={{ width, height, opacity: parseFloat(opacity) }}
+    >
+      <span className="absolute inset-[18%] rounded-full bg-[rgba(212,160,23,0.22)] blur-xl" aria-hidden="true" />
+      <img
+        src="/img/masaha-n-logo.png"
+        alt="مساحة ن"
+        className="relative w-full h-full object-contain drop-shadow-[0_0_10px_rgba(212,160,23,0.38)]"
+      />
+    </span>
+  );
+}
+
 export function WatermarkSVG() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 90" fill="none" width="600" height="159">
