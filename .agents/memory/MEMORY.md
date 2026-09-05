@@ -3,4 +3,5 @@
 - [Firestore list validation budget](firestore-list-validation-budget.md) — validating every map in a bounded list can hit the 1,000-expression rules limit; test the maximum-size payload.
 - [GitHub OAuth Git sync](github-oauth-git-sync.md) — connector OAuth may authorize REST API access without authenticating the local git credential helper.
 - [PayPal credential environments](paypal-credential-environments.md) — PayPal Client ID and Secret must come from the same Live or Sandbox REST app.
+- [Legacy administrator verification](legacy-admin-verification.md) — do not require Firebase email verification for the legacy admin fallback before provisioning its admin claim.
 - [Vercel static API functions](vercel-static-api-functions.md) — static artifact output does not execute frontend public files as Serverless Functions; production handlers belong in root api/.
