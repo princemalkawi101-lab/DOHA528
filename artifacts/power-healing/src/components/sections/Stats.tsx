@@ -19,11 +19,16 @@ export function Stats() {
   const { t, lang } = useApp();
   const sectionRef = useRef<HTMLElement>(null);
   const [hasStarted, setHasStarted] = useState(false);
-  const [values, setValues] = useState<number[]>(() => STATS.map(() => 0));
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const section = sectionRef.current;
     if (!section) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      setHasStarted(true);
+      return;
+    }
 
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
@@ -39,15 +44,20 @@ export function Stats() {
   useEffect(() => {
     if (!hasStarted) return;
 
-    const duration = 1400;
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      setProgress(1);
+      return;
+    }
+
+    const duration = 1650;
     const startedAt = performance.now();
     let frameId = 0;
 
     const animate = (now: number) => {
-      const progress = Math.min((now - startedAt) / duration, 1);
-      const easedProgress = 1 - Math.pow(1 - progress, 3);
-      setValues(STATS.map((stat) => Math.round(stat.value * easedProgress)));
-      if (progress < 1) frameId = requestAnimationFrame(animate);
+      const nextProgress = Math.min((now - startedAt) / duration, 1);
+      setProgress(nextProgress);
+      if (nextProgress < 1) frameId = requestAnimationFrame(animate);
     };
 
     frameId = requestAnimationFrame(animate);
@@ -55,29 +65,44 @@ export function Stats() {
   }, [hasStarted]);
 
   const formatValue = (stat: Stat, value: number) => {
-    const formatted = new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US').format(value);
+    const formatted = new Intl.NumberFormat(
+      lang === 'ar' ? 'ar-EG' : 'en-US',
+      { useGrouping: lang !== 'ar' },
+    ).format(value);
     return `${stat.prefix ?? ''}${formatted}${stat.suffix ?? ''}`;
+  };
+
+  const animatedValue = (stat: Stat, index: number) => {
+    const delay = index * 0.045;
+    const itemProgress = Math.max(0, Math.min(1, (progress - delay) / (1 - delay)));
+    const easedProgress = 1 - Math.pow(1 - itemProgress, 3);
+    return Math.round(stat.value * easedProgress);
   };
 
   return (
     <section
       ref={sectionRef}
       id="stats"
-      className="bg-gradient-to-br from-[hsl(var(--p800))] to-[hsl(var(--p700))] flex justify-center items-center flex-wrap py-10 px-8"
+      className="bg-gradient-to-br from-[hsl(var(--p800))] to-[hsl(var(--p700))] py-10 px-5 sm:px-8"
     >
-      {STATS.map((stat, index) => (
-        <div key={stat.labelKey} className="contents">
-          <div className="flex flex-col items-center py-2 px-12 md:px-6">
-            <span className="text-3xl font-black text-[hsl(var(--g300))] leading-none tabular-nums">
-              {formatValue(stat, values[index])}
+      <div className="mx-auto grid w-full max-w-[900px] grid-cols-2 gap-y-7 md:grid-cols-4 md:gap-y-0">
+        {STATS.map((stat, index) => (
+          <div key={stat.labelKey} className="relative flex min-w-0 flex-col items-center px-3 py-2 sm:px-6">
+            <span
+              className="inline-flex min-w-[7ch] justify-center text-center text-3xl font-black text-[hsl(var(--g300))] leading-none tabular-nums"
+              aria-label={formatValue(stat, stat.value)}
+            >
+              {formatValue(stat, animatedValue(stat, index))}
             </span>
-            <span className="text-[rgba(255,255,255,0.75)] text-[0.9rem] mt-1">{t(stat.labelKey)}</span>
+            <span className="mt-1 whitespace-nowrap text-[0.9rem] text-[rgba(255,255,255,0.75)]">
+              {t(stat.labelKey)}
+            </span>
+            {index < STATS.length - 1 && (
+              <div className="absolute top-1/2 left-0 hidden h-[50px] w-px -translate-y-1/2 bg-[rgba(212,160,23,0.25)] md:block" />
+            )}
           </div>
-          {index < STATS.length - 1 && (
-            <div className="w-px h-[50px] bg-[rgba(212,160,23,0.25)] hidden md:block" />
-          )}
-        </div>
-      ))}
+        ))}
+      </div>
     </section>
   );
 }
