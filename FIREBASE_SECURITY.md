@@ -6,9 +6,9 @@ in `firebase.json`.
 ## Administrator identity
 
 Writes to site content and settings require an authenticated Firebase user whose
-ID token contains the custom claim `admin: true`. For continuity, the existing
-`admin@dohahealing.com` account is also accepted only when Firebase marks its
-email as verified.
+ID token contains the custom claim `admin: true`. For continuity, the exact
+existing `admin@dohahealing.com` account is also accepted until that account
+receives the claim; this prevents locking the established administrator out.
 
 Provision the custom claim from a trusted server or Firebase Admin SDK, then have
 the administrator sign out and back in so Firebase issues a fresh ID token.

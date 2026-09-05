@@ -69,9 +69,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await sendPasswordResetEmail(auth, email);
   };
 
-  const isVerifiedAdminEmail = !!user?.emailVerified
-    && ADMIN_EMAILS.includes((user.email || '').toLowerCase());
-  const isAdmin = !!user && (hasAdminClaim || isVerifiedAdminEmail);
+  const isLegacyAdminEmail = ADMIN_EMAILS.includes((user?.email || '').toLowerCase());
+  const isAdmin = !!user && (hasAdminClaim || isLegacyAdminEmail);
 
   return (
     <AuthContext.Provider value={{ user, loading, isAdmin, login, signup, logout, resetPassword }}>

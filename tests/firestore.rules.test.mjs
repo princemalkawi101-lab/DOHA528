@@ -37,6 +37,12 @@ try {
   const regularDb = testEnv
     .authenticatedContext('regular-user', { email: 'person@example.com' })
     .firestore();
+  const legacyAdminDb = testEnv
+    .authenticatedContext('legacy-admin-user', {
+      email: 'admin@dohahealing.com',
+      email_verified: false,
+    })
+    .firestore();
   const publicDb = testEnv.unauthenticatedContext().firestore();
   const settingsRef = doc(adminDb, 'siteSettings', 'config');
 
@@ -50,6 +56,11 @@ try {
   }));
 
   await assertSucceeds(getDoc(doc(publicDb, 'siteSettings', 'config')));
+  await assertSucceeds(setDoc(doc(legacyAdminDb, 'items', 'legacy-admin-check'), {
+    titleAr: 'تحقق الأدمن',
+    titleEn: 'Admin check',
+    order: 0,
+  }));
 
   await assertFails(setDoc(
     doc(regularDb, 'siteSettings', 'config'),

@@ -6,16 +6,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Prefer the Firebase Admin custom claim. The verified e-mail fallback keeps
-    // the existing administrator account working until that claim is provisioned.
+    // Prefer the Firebase Admin custom claim. The exact legacy e-mail fallback
+    // keeps the established administrator account working until it receives one.
     function isAdmin() {
       return isSignedIn()
         && (
           request.auth.token.get('admin', false) == true
-          || (
-            request.auth.token.get('email_verified', false) == true
-            && request.auth.token.get('email', '') == 'admin@dohahealing.com'
-          )
+          || request.auth.token.get('email', '') == 'admin@dohahealing.com'
         );
     }
 
