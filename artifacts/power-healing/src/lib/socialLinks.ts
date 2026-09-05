@@ -137,7 +137,7 @@ export function normalizeSocialDestination(platform: SocialPlatform, rawDestinat
 export function sanitizeSocialLinks(value: unknown): SocialLink[] {
   if (!Array.isArray(value)) return [];
 
-  return value.slice(0, 30).flatMap((entry, index) => {
+  return value.slice(0, 5).flatMap((entry, index) => {
     if (!entry || typeof entry !== 'object') return [];
     const candidate = entry as Partial<SocialLink>;
     if (

@@ -1,0 +1,156 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Prefer the Firebase Admin custom claim. The verified e-mail fallback keeps
+    // the existing administrator account working until that claim is provisioned.
+    function isAdmin() {
+      return isSignedIn()
+        && (
+          request.auth.token.get('admin', false) == true
+          || (
+            request.auth.token.get('email_verified', false) == true
+            && request.auth.token.get('email', '') == 'admin@dohahealing.com'
+          )
+        );
+    }
+
+    function validSocialLink(link) {
+      return link is map
+        && link.keys().hasOnly([
+          'id', 'platform', 'labelAr', 'labelEn',
+          'destination', 'order', 'active'
+        ])
+        && link.keys().hasAll([
+          'id', 'platform', 'labelAr', 'labelEn',
+          'destination', 'order', 'active'
+        ])
+        && link.id is string && link.id.size() > 0 && link.id.size() <= 120
+        && link.platform in [
+          'instagram', 'facebook', 'telegram', 'whatsapp', 'youtube',
+          'tiktok', 'x', 'linkedin', 'snapchat', 'website', 'custom'
+        ]
+        && link.labelAr is string && link.labelAr.size() <= 120
+        && link.labelEn is string && link.labelEn.size() <= 120
+        && link.destination is string
+        && link.destination.size() > 0 && link.destination.size() <= 2048
+        && link.destination.matches('https://[^\\s]+')
+        && link.order is int && link.order >= 0
+        && link.active is bool;
+    }
+
+    function validSocialLinks(links) {
+      return links is list && links.size() <= 5
+        && (links.size() <= 0 || validSocialLink(links[0]))
+        && (links.size() <= 1 || validSocialLink(links[1]))
+        && (links.size() <= 2 || validSocialLink(links[2]))
+        && (links.size() <= 3 || validSocialLink(links[3]))
+        && (links.size() <= 4 || validSocialLink(links[4]));
+    }
+
+    function validSiteSettingsWrite() {
+      let next = request.resource.data;
+      let oldRevision = resource == null ? 0 : resource.data.get('socialLinksRevision', 0);
+      let socialLinksChanged = resource == null
+        ? next.keys().hasAny(['socialLinks'])
+        : next.diff(resource.data).affectedKeys().hasAny(['socialLinks']);
+      let revisionChanged = resource == null
+        ? next.keys().hasAny(['socialLinksRevision'])
+        : next.diff(resource.data).affectedKeys().hasAny(['socialLinksRevision']);
+      return (!next.keys().hasAny(['socialLinks']) || validSocialLinks(next.socialLinks))
+        && (!next.keys().hasAny(['socialLinksRevision'])
+          || (next.socialLinksRevision is int && next.socialLinksRevision >= 0))
+        && (
+          (!socialLinksChanged && !revisionChanged)
+          || (
+            socialLinksChanged
+            && revisionChanged
+            && next.socialLinksRevision == oldRevision + 1
+          )
+        );
+    }
+
+    function validPublicSubmission() {
+      return request.resource.data.createdAt == request.time
+        && request.resource.data.status == 'pending';
+    }
+
+    match /siteSettings/config {
+      allow read: if true;
+      allow create, update: if isAdmin() && validSiteSettingsWrite();
+      allow delete: if isAdmin();
+    }
+
+    match /items/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /contentCategories/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /adSlides/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /reviews/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /settings/adSlider {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /bookings/{bookingId} {
+      allow create: if validPublicSubmission()
+        && request.resource.data.keys().hasAll([
+          'itemId', 'itemTitleAr', 'itemTitleEn', 'buyerUid', 'buyerEmail',
+          'name', 'description', 'whatsappCountryCode', 'whatsappNumber',
+          'status', 'createdAt'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 200
+        && request.resource.data.whatsappNumber is string
+        && request.resource.data.whatsappNumber.size() <= 40
+        && (
+          request.resource.data.buyerUid == null
+          || (isSignedIn() && request.resource.data.buyerUid == request.auth.uid)
+        );
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /purchases/{purchaseId} {
+      allow create: if validPublicSubmission()
+        && request.resource.data.keys().hasAll([
+          'userId', 'userEmail', 'userName', 'itemId', 'itemTitleAr',
+          'itemTitleEn', 'itemKind', 'paidJod', 'status', 'createdAt'
+        ])
+        && request.resource.data.itemKind in [
+          'course', 'workshop', 'recorded', 'individual-online'
+        ]
+        && request.resource.data.paidJod is number
+        && request.resource.data.paidJod >= 0
+        && (
+          request.resource.data.userId == null
+          || (isSignedIn() && request.resource.data.userId == request.auth.uid)
+        );
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

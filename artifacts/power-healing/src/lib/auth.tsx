@@ -27,11 +27,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasAdminClaim, setHasAdminClaim] = useState(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
-      setLoading(false);
+      if (!u) {
+        setHasAdminClaim(false);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const token = await u.getIdTokenResult();
+        setHasAdminClaim(token.claims.admin === true);
+      } catch {
+        setHasAdminClaim(false);
+      } finally {
+        setLoading(false);
+      }
     });
     return () => unsub();
   }, []);
@@ -55,7 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await sendPasswordResetEmail(auth, email);
   };
 
-  const isAdmin = !!user && ADMIN_EMAILS.includes((user.email || '').toLowerCase());
+  const isVerifiedAdminEmail = !!user?.emailVerified
+    && ADMIN_EMAILS.includes((user.email || '').toLowerCase());
+  const isAdmin = !!user && (hasAdminClaim || isVerifiedAdminEmail);
 
   return (
     <AuthContext.Provider value={{ user, loading, isAdmin, login, signup, logout, resetPassword }}>
