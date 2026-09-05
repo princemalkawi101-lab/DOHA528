@@ -1,6 +1,7 @@
-import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, runTransaction, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { TRANSLATIONS } from './translations';
+import { SocialLink } from './socialLinks';
 
 const SETTINGS_DOC = doc(db, 'siteSettings', 'config');
 
@@ -8,6 +9,8 @@ export interface SiteSettings {
   aboutImageUrl?: string;
   about?: AboutContent;
   certificates?: Certificate[];
+  socialLinks?: SocialLink[];
+  socialLinksRevision?: number;
 }
 
 export interface AboutContent {
@@ -88,4 +91,28 @@ export function subscribeSiteSettings(
 
 export async function saveSiteSettings(patch: Partial<SiteSettings>): Promise<void> {
   await setDoc(SETTINGS_DOC, patch, { merge: true });
+}
+
+export const SOCIAL_LINKS_CONFLICT = 'SOCIAL_LINKS_CONFLICT';
+
+export async function saveSocialLinksWithRevision(
+  socialLinks: SocialLink[],
+  expectedRevision: number,
+): Promise<number> {
+  let nextRevision = expectedRevision + 1;
+
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(SETTINGS_DOC);
+    const storedRevision = snapshot.exists() ? snapshot.data().socialLinksRevision : 0;
+    const currentRevision = Number.isInteger(storedRevision) && storedRevision >= 0 ? storedRevision : 0;
+
+    if (currentRevision !== expectedRevision) {
+      throw new Error(SOCIAL_LINKS_CONFLICT);
+    }
+
+    nextRevision = currentRevision + 1;
+    transaction.set(SETTINGS_DOC, { socialLinks, socialLinksRevision: nextRevision }, { merge: true });
+  });
+
+  return nextRevision;
 }

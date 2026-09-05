@@ -6,7 +6,26 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useApp, RATES } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
 import { db, auth, storage } from '@/lib/firebase';
-import { AboutContent, Certificate, DEFAULT_ABOUT_CONTENT, DEFAULT_CERTIFICATES, fetchSiteSettings, saveSiteSettings } from '@/lib/siteSettings';
+import {
+  AboutContent,
+  Certificate,
+  DEFAULT_ABOUT_CONTENT,
+  DEFAULT_CERTIFICATES,
+  fetchSiteSettings,
+  saveSiteSettings,
+  saveSocialLinksWithRevision,
+  SOCIAL_LINKS_CONFLICT,
+} from '@/lib/siteSettings';
+import {
+  normalizeSocialDestination,
+  newSocialLinkTemplate,
+  platformDefaults,
+  sanitizeSocialLinks,
+  SOCIAL_PLATFORM_OPTIONS,
+  SocialLink,
+  SocialPlatform,
+} from '@/lib/socialLinks';
+import { SocialPlatformIcon } from '@/components/SocialPlatformIcon';
 import {
   ContentCategory,
   deleteContentCategory,
@@ -117,8 +136,11 @@ export default function Admin() {
   const [aboutImgSaved, setAboutImgSaved] = useState(false);
   const [aboutContent, setAboutContent] = useState<AboutContent>(DEFAULT_ABOUT_CONTENT);
   const [certificates, setCertificates] = useState<Certificate[]>(DEFAULT_CERTIFICATES);
-  const [settingsSaving, setSettingsSaving] = useState<'about' | 'certificates' | null>(null);
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
+  const [socialLinksRevision, setSocialLinksRevision] = useState(0);
+  const [settingsSaving, setSettingsSaving] = useState<'about' | 'certificates' | 'socialLinks' | null>(null);
   const [settingsFeedback, setSettingsFeedback] = useState<string>('');
+  const [socialFeedback, setSocialFeedback] = useState<string>('');
 
   // ── These MUST stay above early returns to obey Rules of Hooks ──
   const [importing, setImporting] = useState(false);
@@ -144,6 +166,8 @@ export default function Admin() {
       if (s.aboutImageUrl) setAboutImageUrl(s.aboutImageUrl);
       setAboutContent({ ...DEFAULT_ABOUT_CONTENT, ...(s.about || {}) });
       setCertificates(s.certificates === undefined ? DEFAULT_CERTIFICATES : s.certificates);
+      setSocialLinks(sanitizeSocialLinks(s.socialLinks));
+      setSocialLinksRevision(Number.isInteger(s.socialLinksRevision) && (s.socialLinksRevision ?? 0) >= 0 ? s.socialLinksRevision! : 0);
     });
   }, []);
 
@@ -310,6 +334,88 @@ export default function Admin() {
       active: true,
     }]);
     setSettingsFeedback(lang === 'ar' ? 'تمت إضافة شهادة جديدة محلياً — احفظ التغييرات.' : 'New certificate added locally — save your changes.');
+  };
+
+  const updateSocialLink = (id: string, patch: Partial<SocialLink>) => {
+    setSocialLinks((prev) => prev.map((link) => link.id === id ? { ...link, ...patch } : link));
+    setSocialFeedback('');
+  };
+
+  const handleAddSocialLink = () => {
+    setSocialLinks((prev) => [...prev, newSocialLinkTemplate(prev.length)]);
+    setSocialFeedback(lang === 'ar' ? 'تمت إضافة منصة جديدة — أدخل البيانات ثم احفظ.' : 'New platform added — enter its details, then save.');
+  };
+
+  const handleSocialPlatformChange = (link: SocialLink, platform: SocialPlatform) => {
+    const previousDefaults = platformDefaults(link.platform);
+    const nextDefaults = platformDefaults(platform);
+    updateSocialLink(link.id, {
+      platform,
+      labelAr: !link.labelAr.trim() || link.labelAr === previousDefaults.labelAr ? nextDefaults.labelAr : link.labelAr,
+      labelEn: !link.labelEn.trim() || link.labelEn === previousDefaults.labelEn ? nextDefaults.labelEn : link.labelEn,
+    });
+  };
+
+  const moveSocialLink = (id: string, direction: -1 | 1) => {
+    setSocialLinks((prev) => {
+      const currentIndex = prev.findIndex((link) => link.id === id);
+      const nextIndex = currentIndex + direction;
+      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= prev.length) return prev;
+      const reordered = [...prev];
+      [reordered[currentIndex], reordered[nextIndex]] = [reordered[nextIndex], reordered[currentIndex]];
+      return reordered.map((link, index) => ({ ...link, order: index }));
+    });
+    setSocialFeedback(lang === 'ar' ? 'تم تعديل الترتيب — احفظ التغييرات.' : 'Order changed — save your changes.');
+  };
+
+  const handleDeleteSocialLink = (id: string) => {
+    if (!confirm(lang === 'ar' ? 'حذف منصة التواصل هذه؟' : 'Delete this social platform?')) return;
+    setSocialLinks((prev) => prev
+      .filter((link) => link.id !== id)
+      .map((link, index) => ({ ...link, order: index })));
+    setSocialFeedback(lang === 'ar' ? 'تم حذف المنصة محليًا — احفظ التغييرات.' : 'Platform deleted locally — save your changes.');
+  };
+
+  const handleSaveSocialLinks = async () => {
+    const prepared = socialLinks.map((link, index) => ({
+      ...link,
+      labelAr: link.labelAr.trim(),
+      labelEn: link.labelEn.trim(),
+      destination: link.destination.trim(),
+      order: index,
+    }));
+    const invalidLink = prepared.find((link) => (
+      !link.labelAr
+      || !link.labelEn
+      || !normalizeSocialDestination(link.platform, link.destination)
+    ));
+
+    if (invalidLink) {
+      const label = lang === 'ar'
+        ? (invalidLink.labelAr || platformDefaults(invalidLink.platform).labelAr)
+        : (invalidLink.labelEn || platformDefaults(invalidLink.platform).labelEn);
+      setSocialFeedback(lang === 'ar'
+        ? `تحقق من اسم ورابط منصة «${label}».`
+        : `Check the name and destination for “${label}”.`);
+      return;
+    }
+
+    setSettingsSaving('socialLinks');
+    try {
+      const nextRevision = await saveSocialLinksWithRevision(prepared, socialLinksRevision);
+      setSocialLinks(prepared);
+      setSocialLinksRevision(nextRevision);
+      setSocialFeedback(lang === 'ar' ? '✅ تم حفظ روابط التواصل وتحديث الفوتر.' : '✅ Social links saved and footer updated.');
+    } catch (error) {
+      const conflict = error instanceof Error && error.message === SOCIAL_LINKS_CONFLICT;
+      setSocialFeedback(conflict
+        ? (lang === 'ar'
+          ? 'تم تعديل روابط التواصل من جلسة أخرى. حدّثي الصفحة قبل الحفظ حتى لا تفقدي التغييرات الجديدة.'
+          : 'Social links changed in another session. Refresh before saving to avoid losing newer changes.')
+        : (lang === 'ar' ? 'تعذّر حفظ روابط التواصل، حاول مرة أخرى.' : 'Could not save social links. Please try again.'));
+    } finally {
+      setSettingsSaving(null);
+    }
   };
 
   // ───── Ad slide handlers ─────
@@ -1405,6 +1511,136 @@ export default function Admin() {
             ))}
           </div>
           {settingsFeedback && <p className={`mt-4 text-sm font-semibold ${settingsFeedback.startsWith('✅') || settingsFeedback.startsWith('تم') ? 'text-[hsl(var(--g300))]' : 'text-[#ffb0b0]'}`}>{settingsFeedback}</p>}
+        </section>
+
+        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+            <div>
+              <h2 className="text-white text-lg font-black">
+                {lang === 'ar' ? '🔗 إدارة منصات التواصل الاجتماعي' : '🔗 Social Media Manager'}
+              </h2>
+              <p className="text-[rgba(255,255,255,0.55)] text-sm mt-1">
+                {lang === 'ar'
+                  ? 'أضيفي أو عدّلي أو اخفي أي منصة، ثم احفظي لتظهر التغييرات مباشرة في أسفل الموقع.'
+                  : 'Add, edit, hide, or reorder any platform, then save to update the site footer instantly.'}
+              </p>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={handleAddSocialLink}
+                className="bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.15)] text-white font-bold py-2 px-4 rounded-lg text-sm"
+              >
+                + {lang === 'ar' ? 'إضافة منصة' : 'Add Platform'}
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSocialLinks}
+                disabled={settingsSaving === 'socialLinks'}
+                className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm disabled:opacity-50"
+              >
+                {settingsSaving === 'socialLinks'
+                  ? (lang === 'ar' ? 'جاري الحفظ…' : 'Saving…')
+                  : (lang === 'ar' ? 'حفظ روابط التواصل' : 'Save Social Links')}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-4">
+            {socialLinks.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-[rgba(212,160,23,0.3)] bg-[rgba(0,0,0,0.15)] px-5 py-8 text-center">
+                <p className="text-[rgba(255,255,255,0.58)] text-sm">
+                  {lang === 'ar'
+                    ? 'لا توجد منصات مضافة حاليًا. اضغطي «إضافة منصة» للبدء.'
+                    : 'No platforms have been added yet. Select “Add Platform” to begin.'}
+                </p>
+              </div>
+            ) : socialLinks.map((link, index) => {
+              const previewHref = normalizeSocialDestination(link.platform, link.destination);
+              return (
+                <div key={link.id} className="rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(0,0,0,0.22)] p-4">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[rgba(212,160,23,0.3)] bg-[rgba(212,160,23,0.1)] text-[hsl(var(--g300))]">
+                        <SocialPlatformIcon platform={link.platform} className="text-lg" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-white">
+                          {lang === 'ar' ? (link.labelAr || 'منصة جديدة') : (link.labelEn || 'New Platform')}
+                        </p>
+                        <p className={`text-xs ${link.active ? 'text-[#7cf2a3]' : 'text-[rgba(255,255,255,0.4)]'}`}>
+                          {link.active
+                            ? (lang === 'ar' ? 'ظاهرة في الموقع' : 'Visible on site')
+                            : (lang === 'ar' ? 'مخفية من الموقع' : 'Hidden from site')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button type="button" onClick={() => moveSocialLink(link.id, -1)} disabled={index === 0} aria-label={lang === 'ar' ? 'تحريك للأعلى' : 'Move up'} className="h-9 w-9 rounded-lg border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.06)] text-white disabled:opacity-25">↑</button>
+                      <button type="button" onClick={() => moveSocialLink(link.id, 1)} disabled={index === socialLinks.length - 1} aria-label={lang === 'ar' ? 'تحريك للأسفل' : 'Move down'} className="h-9 w-9 rounded-lg border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.06)] text-white disabled:opacity-25">↓</button>
+                      <button type="button" onClick={() => handleDeleteSocialLink(link.id)} aria-label={lang === 'ar' ? 'حذف المنصة' : 'Delete platform'} className="h-9 rounded-lg border border-[rgba(255,80,80,0.32)] bg-[rgba(255,80,80,0.13)] px-3 text-xs font-bold text-[#ffb0b0]">
+                        {lang === 'ar' ? 'حذف' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <Field label={lang === 'ar' ? 'المنصة' : 'Platform'}>
+                      <select value={link.platform} onChange={(e) => handleSocialPlatformChange(link, e.target.value as SocialPlatform)} className="adm-input">
+                        {SOCIAL_PLATFORM_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {lang === 'ar' ? option.labelAr : option.labelEn}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label={lang === 'ar' ? 'الرابط أو الرقم/اسم المستخدم' : 'Link, phone number, or username'}>
+                      <input
+                        value={link.destination}
+                        onChange={(e) => updateSocialLink(link.id, { destination: e.target.value })}
+                        dir="ltr"
+                        placeholder={link.platform === 'whatsapp' ? '+9627XXXXXXXX' : link.platform === 'telegram' ? '@username' : 'https://…'}
+                        className="adm-input"
+                      />
+                      {link.platform === 'whatsapp' && (
+                        <p className="mt-1 text-[0.68rem] text-[rgba(255,255,255,0.42)]">
+                          {lang === 'ar' ? 'أدخلي رمز الدولة، مثال: +962791234567' : 'Include the country code, for example: +962791234567'}
+                        </p>
+                      )}
+                    </Field>
+                    <Field label={lang === 'ar' ? 'الاسم بالعربية' : 'Arabic Name'}>
+                      <input value={link.labelAr} onChange={(e) => updateSocialLink(link.id, { labelAr: e.target.value })} dir="rtl" className="adm-input" />
+                    </Field>
+                    <Field label={lang === 'ar' ? 'الاسم بالإنجليزية' : 'English Name'}>
+                      <input value={link.labelEn} onChange={(e) => updateSocialLink(link.id, { labelEn: e.target.value })} dir="ltr" className="adm-input" />
+                    </Field>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[rgba(255,255,255,0.75)]">
+                      <input type="checkbox" checked={link.active} onChange={(e) => updateSocialLink(link.id, { active: e.target.checked })} />
+                      {link.active ? (lang === 'ar' ? 'مفعّلة' : 'Active') : (lang === 'ar' ? 'مخفية' : 'Hidden')}
+                    </label>
+                    {previewHref ? (
+                      <a href={previewHref} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-[hsl(var(--g300))] hover:underline" dir="ltr">
+                        {lang === 'ar' ? 'فتح الرابط للتأكد ↗' : 'Open link to verify ↗'}
+                      </a>
+                    ) : link.destination ? (
+                      <span className="text-xs font-semibold text-[#ffb0b0]">
+                        {lang === 'ar' ? 'الرابط غير مكتمل أو غير صحيح' : 'Destination is incomplete or invalid'}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {socialFeedback && (
+            <p className={`mt-4 text-sm font-semibold ${socialFeedback.startsWith('✅') || socialFeedback.startsWith('تم') ? 'text-[hsl(var(--g300))]' : 'text-[#ffb0b0]'}`}>
+              {socialFeedback}
+            </p>
+          )}
         </section>
 
         {/* ── Admin Profile ── */}
