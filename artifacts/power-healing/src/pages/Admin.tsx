@@ -1410,15 +1410,12 @@ export default function Admin() {
         {/* ── Settings Tab ── */}
         {adminTab === 'settings' && <>
         {/* ── About Me Image ── */}
-        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
-          <h2 className="text-white text-lg font-black mb-1">
-            {lang === 'ar' ? '🖼️ صورة "من أنا" في الصفحة الرئيسية' : '🖼️ About Me Photo (Home Page)'}
-          </h2>
-          <p className="text-[rgba(255,255,255,0.55)] text-sm mb-5">
-            {lang === 'ar'
-              ? 'هذه هي الصورة الظاهرة بجانب "دوحة ملكاوي" في قسم من أنا. ارفع صورة جديدة لتحديثها فوراً.'
-              : 'This is the profile photo shown next to "Doha Malkawi" in the About section. Upload a new image to update it instantly.'}
-          </p>
+        <SettingsAccordion
+          title={lang === 'ar' ? 'صورة «من أنا»' : 'About Me Photo'}
+          description={lang === 'ar' ? 'تغيير الصورة الظاهرة في الصفحة الرئيسية' : 'Change the photo shown on the home page'}
+          meta={aboutImageUrl ? (lang === 'ar' ? 'مضافة' : 'Added') : (lang === 'ar' ? 'بدون صورة' : 'No photo')}
+          icon="🖼️"
+        >
           <div className="flex items-start gap-6 flex-wrap">
             {/* Preview */}
             <div className="w-28 h-36 rounded-xl overflow-hidden border-2 border-[rgba(212,160,23,0.4)] shrink-0 bg-[rgba(255,255,255,0.05)] flex items-center justify-center">
@@ -1460,16 +1457,19 @@ export default function Admin() {
             className="hidden"
             onChange={handleAboutImageUpload}
           />
-        </section>
+        </SettingsAccordion>
 
-        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-            <h2 className="text-white text-lg font-black">{lang === 'ar' ? '✍️ محتوى قسم «من أنا»' : '✍️ About Me Content'}</h2>
+        <SettingsAccordion
+          title={lang === 'ar' ? 'محتوى قسم «من أنا»' : 'About Me Content'}
+          description={lang === 'ar' ? 'العناوين والفقرات بالعربية والإنجليزية' : 'Arabic and English titles and paragraphs'}
+          meta={lang === 'ar' ? '16 حقلًا' : '16 fields'}
+          icon="✍️"
+        >
+          <div className="flex items-center justify-end gap-3 mb-4 flex-wrap">
             <button onClick={handleSaveAbout} disabled={settingsSaving === 'about'} className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm disabled:opacity-50">
               {settingsSaving === 'about' ? (lang === 'ar' ? 'جاري الحفظ…' : 'Saving…') : (lang === 'ar' ? 'حفظ محتوى «من أنا»' : 'Save About Content')}
             </button>
           </div>
-          <p className="text-[rgba(255,255,255,0.55)] text-sm mb-4">{lang === 'ar' ? 'عدّلي النصوص بالعربية والإنجليزية ثم احفظي التغييرات.' : 'Edit both Arabic and English copy, then save your changes.'}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {([
               ['badgeAr', 'الشارة (عربي)', 'Badge (Arabic)', false], ['badgeEn', 'الشارة (إنجليزي)', 'Badge (English)', false],
@@ -1487,11 +1487,15 @@ export default function Admin() {
             ))}
           </div>
           {settingsFeedback && <p className={`mt-4 text-sm font-semibold ${settingsFeedback.startsWith('✅') || settingsFeedback.startsWith('تم') ? 'text-[hsl(var(--g300))]' : 'text-[#ffb0b0]'}`}>{settingsFeedback}</p>}
-        </section>
+        </SettingsAccordion>
 
-        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-            <h2 className="text-white text-lg font-black">{lang === 'ar' ? '🏅 إدارة الشهادات' : '🏅 Certificates Manager'}</h2>
+        <SettingsAccordion
+          title={lang === 'ar' ? 'إدارة الشهادات' : 'Certificates Manager'}
+          description={lang === 'ar' ? 'إضافة الشهادات وترتيبها وإخفاؤها' : 'Add, reorder, and hide certificates'}
+          meta={lang === 'ar' ? `${certificates.length} شهادات` : `${certificates.length} certificates`}
+          icon="🏅"
+        >
+          <div className="flex items-center justify-end gap-3 mb-4 flex-wrap">
             <div className="flex gap-2">
               <button onClick={handleAddCertificate} className="bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.15)] text-white font-bold py-2 px-4 rounded-lg text-sm">+ {lang === 'ar' ? 'شهادة جديدة' : 'New Certificate'}</button>
               <button onClick={handleSaveCertificates} disabled={settingsSaving === 'certificates'} className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm disabled:opacity-50">{settingsSaving === 'certificates' ? (lang === 'ar' ? 'جاري الحفظ…' : 'Saving…') : (lang === 'ar' ? 'حفظ الشهادات' : 'Save Certificates')}</button>
@@ -1511,20 +1515,15 @@ export default function Admin() {
             ))}
           </div>
           {settingsFeedback && <p className={`mt-4 text-sm font-semibold ${settingsFeedback.startsWith('✅') || settingsFeedback.startsWith('تم') ? 'text-[hsl(var(--g300))]' : 'text-[#ffb0b0]'}`}>{settingsFeedback}</p>}
-        </section>
+        </SettingsAccordion>
 
-        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-            <div>
-              <h2 className="text-white text-lg font-black">
-                {lang === 'ar' ? '🔗 إدارة منصات التواصل الاجتماعي' : '🔗 Social Media Manager'}
-              </h2>
-              <p className="text-[rgba(255,255,255,0.55)] text-sm mt-1">
-                {lang === 'ar'
-                  ? 'أضيفي أو عدّلي أو اخفي أي منصة، ثم احفظي لتظهر التغييرات مباشرة في أسفل الموقع.'
-                  : 'Add, edit, hide, or reorder any platform, then save to update the site footer instantly.'}
-              </p>
-            </div>
+        <SettingsAccordion
+          title={lang === 'ar' ? 'منصات التواصل الاجتماعي' : 'Social Media Manager'}
+          description={lang === 'ar' ? 'إضافة الروابط وترتيبها والتحكم بظهورها' : 'Add, reorder, and control visible links'}
+          meta={lang === 'ar' ? `${socialLinks.length} منصات` : `${socialLinks.length} platforms`}
+          icon="🔗"
+        >
+          <div className="flex items-center justify-end gap-3 mb-2 flex-wrap">
             <div className="flex gap-2 flex-wrap">
               <button
                 type="button"
@@ -1641,13 +1640,15 @@ export default function Admin() {
               {socialFeedback}
             </p>
           )}
-        </section>
+        </SettingsAccordion>
 
         {/* ── Admin Profile ── */}
-        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
-          <h2 className="text-white text-lg font-black mb-5">
-            {lang === 'ar' ? '👤 إعدادات الملف الشخصي' : '👤 Profile Settings'}
-          </h2>
+        <SettingsAccordion
+          title={lang === 'ar' ? 'إعدادات الملف الشخصي' : 'Profile Settings'}
+          description={lang === 'ar' ? 'الصورة والبيانات الشخصية لحساب الأدمن' : 'Admin profile photo and account details'}
+          meta={user.displayName || user.email || ''}
+          icon="👤"
+        >
           <div className="flex items-center gap-5 flex-wrap">
             <div className="relative w-16 h-16 shrink-0">
               {user.photoURL ? (
@@ -1678,14 +1679,17 @@ export default function Admin() {
               </button>
             </div>
           </div>
-        </section>
+        </SettingsAccordion>
 
-        <section className="bg-gradient-to-br from-[rgba(212,160,23,0.18)] to-[rgba(90,45,145,0.18)] border-2 border-[rgba(212,160,23,0.45)] rounded-2xl p-6 mb-6">
+        <SettingsAccordion
+          title={lang === 'ar' ? 'استيراد العناصر من الملف' : 'Import Items From File'}
+          description={lang === 'ar' ? 'أداة متقدمة لتعبئة قاعدة بيانات المنتجات' : 'Advanced tool for populating the product database'}
+          meta={lang === 'ar' ? `${SEED_ITEMS.length} عنصرًا` : `${SEED_ITEMS.length} items`}
+          icon="📥"
+          accent
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex-1 min-w-[200px]">
-              <h2 className="text-white text-lg font-black mb-1">
-                {lang === 'ar' ? '📥 استيراد العناصر من الملف' : '📥 Import Items From File'}
-              </h2>
               <p className="text-[rgba(255,255,255,0.75)] text-sm">
                 {lang === 'ar'
                   ? `تعبئة قاعدة البيانات بـ ${SEED_ITEMS.length} عنصر (8 كورسات + 11 ورشة + 6 جلسات مسجلة + 15 جلسة فردية) من ملف الدورات والكورسات. الأسعار محوّلة من الدولار إلى الدينار الأردني.`
@@ -1705,7 +1709,7 @@ export default function Admin() {
                 : lang === 'ar' ? `استيراد ${SEED_ITEMS.length} عنصر` : `Import ${SEED_ITEMS.length} Items`}
             </button>
           </div>
-        </section>
+        </SettingsAccordion>
         </>}
 
         {/* ── Reviews Tab ── */}
@@ -2187,6 +2191,51 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <label className="block text-[rgba(255,255,255,0.6)] text-[0.72rem] font-semibold mb-1">{label}</label>
       {children}
     </div>
+  );
+}
+
+function SettingsAccordion({
+  title,
+  description,
+  meta,
+  icon,
+  accent = false,
+  children,
+}: {
+  title: string;
+  description: string;
+  meta?: string;
+  icon: string;
+  accent?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className={`group mb-4 overflow-hidden rounded-2xl border shadow-[0_12px_35px_rgba(0,0,0,0.12)] transition-colors open:border-[rgba(212,160,23,0.45)] ${
+      accent
+        ? 'border-[rgba(212,160,23,0.38)] bg-gradient-to-br from-[rgba(212,160,23,0.15)] to-[rgba(90,45,145,0.18)]'
+        : 'border-[rgba(212,160,23,0.22)] bg-[rgba(30,14,56,0.75)]'
+    }`}>
+      <summary className="flex min-h-[84px] cursor-pointer list-none items-center gap-3 px-4 py-4 outline-none transition-colors hover:bg-[rgba(255,255,255,0.035)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[hsl(var(--g400))] [&::-webkit-details-marker]:hidden sm:px-5">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[rgba(212,160,23,0.22)] bg-[rgba(212,160,23,0.09)] text-xl">
+          {icon}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[0.98rem] font-black text-white sm:text-lg">{title}</span>
+          <span className="mt-0.5 block text-xs leading-5 text-[rgba(255,255,255,0.48)] sm:text-sm">{description}</span>
+        </span>
+        {meta && (
+          <span className="hidden max-w-[150px] truncate rounded-full border border-[rgba(212,160,23,0.18)] bg-[rgba(212,160,23,0.08)] px-2.5 py-1 text-[0.67rem] font-bold text-[hsl(var(--g300))] sm:block">
+            {meta}
+          </span>
+        )}
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.045)] text-lg text-[hsl(var(--g300))] transition-transform duration-300 group-open:rotate-180" aria-hidden="true">
+          ⌄
+        </span>
+      </summary>
+      <div className="border-t border-[rgba(255,255,255,0.075)] bg-[rgba(0,0,0,0.08)] p-4 sm:p-6">
+        {children}
+      </div>
+    </details>
   );
 }
 
