@@ -20,7 +20,7 @@ import {
   normalizeSocialDestination,
   newSocialLinkTemplate,
   platformDefaults,
-  sanitizeSocialLinks,
+  socialLinksOrDefaults,
   SOCIAL_PLATFORM_OPTIONS,
   SocialLink,
   SocialPlatform,
@@ -166,7 +166,7 @@ export default function Admin() {
       if (s.aboutImageUrl) setAboutImageUrl(s.aboutImageUrl);
       setAboutContent({ ...DEFAULT_ABOUT_CONTENT, ...(s.about || {}) });
       setCertificates(s.certificates === undefined ? DEFAULT_CERTIFICATES : s.certificates);
-      setSocialLinks(sanitizeSocialLinks(s.socialLinks));
+      setSocialLinks(socialLinksOrDefaults(s.socialLinks));
       setSocialLinksRevision(Number.isInteger(s.socialLinksRevision) && (s.socialLinksRevision ?? 0) >= 0 ? s.socialLinksRevision! : 0);
     });
   }, []);

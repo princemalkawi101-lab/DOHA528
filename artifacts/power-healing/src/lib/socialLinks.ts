@@ -39,6 +39,36 @@ export const SOCIAL_PLATFORM_OPTIONS: Array<{
   { value: 'custom', labelAr: 'منصة أخرى', labelEn: 'Other Platform' },
 ];
 
+export const DEFAULT_SOCIAL_LINKS: SocialLink[] = [
+  {
+    id: 'contact-instagram',
+    platform: 'instagram',
+    labelAr: 'إنستغرام',
+    labelEn: 'Instagram',
+    destination: 'https://www.instagram.com/doham528?igsh=OWQ0ODVjZmgzN2Qx',
+    order: 0,
+    active: true,
+  },
+  {
+    id: 'contact-telegram',
+    platform: 'telegram',
+    labelAr: 'تيليجرام',
+    labelEn: 'Telegram',
+    destination: 'https://t.me/dohamalkawi528',
+    order: 1,
+    active: true,
+  },
+  {
+    id: 'contact-whatsapp',
+    platform: 'whatsapp',
+    labelAr: 'واتساب',
+    labelEn: 'WhatsApp',
+    destination: 'https://wa.me/qr/MZLIT6ZFXNXQA1',
+    order: 2,
+    active: true,
+  },
+];
+
 const SOCIAL_PLATFORMS = new Set<SocialPlatform>(SOCIAL_PLATFORM_OPTIONS.map((option) => option.value));
 
 const PLATFORM_HOSTS: Partial<Record<SocialPlatform, string[]>> = {
@@ -117,6 +147,10 @@ export function normalizeSocialDestination(platform: SocialPlatform, rawDestinat
 
   if (platform === 'whatsapp') {
     if (!matchesHost(url.hostname, ['wa.me', 'whatsapp.com'])) return null;
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    if (pathParts[0]?.toLowerCase() === 'qr' && /^[a-zA-Z0-9_-]{6,100}$/.test(pathParts[1] ?? '')) {
+      return `https://wa.me/qr/${pathParts[1]}`;
+    }
     const pathDigits = url.pathname.replace(/\D/g, '');
     const queryDigits = (url.searchParams.get('phone') ?? '').replace(/\D/g, '');
     const digits = normalizeWhatsAppDigits(pathDigits || queryDigits);
@@ -159,4 +193,10 @@ export function sanitizeSocialLinks(value: unknown): SocialLink[] {
       active: candidate.active !== false,
     }];
   }).sort((a, b) => a.order - b.order);
+}
+
+export function socialLinksOrDefaults(value: unknown): SocialLink[] {
+  return value === undefined
+    ? DEFAULT_SOCIAL_LINKS.map((link) => ({ ...link }))
+    : sanitizeSocialLinks(value);
 }

@@ -1,25 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { useApp } from '@/lib/store';
 import { MasahaLogo } from '@/components/icons';
-import { SocialPlatformIcon } from '@/components/SocialPlatformIcon';
-import { subscribeSiteSettings } from '@/lib/siteSettings';
-import { normalizeSocialDestination, sanitizeSocialLinks, SocialLink } from '@/lib/socialLinks';
 
 export function Footer() {
   const { t, lang } = useApp();
-  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
-
-  useEffect(() => subscribeSiteSettings(
-    (settings) => setSocialLinks(sanitizeSocialLinks(settings.socialLinks)),
-    () => setSocialLinks([]),
-  ), []);
-
-  const visibleSocialLinks = useMemo(() => socialLinks
-    .filter((link) => link.active)
-    .sort((a, b) => a.order - b.order)
-    .map((link) => ({ ...link, href: normalizeSocialDestination(link.platform, link.destination) }))
-    .filter((link): link is SocialLink & { href: string } => Boolean(link.href)), [socialLinks]);
 
   return (
     <footer className="bg-[hsl(var(--p900))] border-t border-[rgba(212,160,23,0.15)]">
@@ -48,32 +32,6 @@ export function Footer() {
             {t('footer.copy')}
           </div>
         </div>
-
-        {visibleSocialLinks.length > 0 && (
-          <div className="mt-7 pt-6 border-t border-[rgba(255,255,255,0.07)] text-center">
-            <p className="text-[rgba(255,255,255,0.48)] text-xs font-semibold mb-4">
-              {lang === 'ar' ? 'تابعونا وتواصلوا معنا' : 'Follow and connect with us'}
-            </p>
-            <nav className="flex flex-wrap items-center justify-center gap-3" aria-label={lang === 'ar' ? 'حسابات التواصل الاجتماعي' : 'Social media accounts'}>
-              {visibleSocialLinks.map((link) => {
-                const label = lang === 'ar' ? (link.labelAr || link.labelEn) : (link.labelEn || link.labelAr);
-                return (
-                  <a
-                    key={link.id}
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={label}
-                    title={label}
-                    className="group inline-flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(212,160,23,0.28)] bg-[rgba(255,255,255,0.045)] text-[hsl(var(--g300))] transition-all duration-300 hover:-translate-y-1 hover:border-[hsl(var(--g400))] hover:bg-[rgba(212,160,23,0.13)] hover:shadow-[0_8px_24px_rgba(212,160,23,0.13)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--g400))]"
-                  >
-                    <SocialPlatformIcon platform={link.platform} className="text-[1.15rem] transition-transform duration-300 group-hover:scale-110" />
-                  </a>
-                );
-              })}
-            </nav>
-          </div>
-        )}
 
         {/* ───── Developer Credit ───── */}
         <div className="mt-6 pt-5 border-t border-[rgba(255,255,255,0.06)] text-center">
