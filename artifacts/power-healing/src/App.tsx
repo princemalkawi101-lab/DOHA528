@@ -14,6 +14,7 @@ import MyProfile from "@/pages/MyProfile";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsConditions from "@/pages/TermsConditions";
 import ProductPage from "@/pages/ProductPage";
+import CategoryPage from "@/pages/CategoryPage";
 import NotFound from "@/pages/not-found";
 
 function AppRoutes() {
@@ -38,6 +39,7 @@ function AppRoutes() {
           <Route path="/privacy-policy" component={PrivacyPolicy} />
           <Route path="/terms" component={TermsConditions} />
           <Route path="/product" component={ProductPage} />
+          <Route path="/category/:categoryId" component={CategoryPage} />
           <Route component={NotFound} />
         </Switch>
       </main>

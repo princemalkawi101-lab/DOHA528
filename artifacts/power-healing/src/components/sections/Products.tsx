@@ -31,8 +31,6 @@ function CourseDescription({ desc, lang }: { desc: string; lang: string }) {
 }
 
 type StandardTabKey = BuiltInContentKind;
-type TabKey = StandardTabKey | `custom:${string}`;
-
 const DEFAULT_CATEGORY_IMAGES: Record<StandardTabKey, string> = {
   course: `${import.meta.env.BASE_URL}assets/course-cover.jpg`,
   workshop: `${import.meta.env.BASE_URL}assets/workshop-cover.jpg`,
@@ -40,17 +38,6 @@ const DEFAULT_CATEGORY_IMAGES: Record<StandardTabKey, string> = {
   'individual-online': `${import.meta.env.BASE_URL}assets/individual-cover.jpg`,
   vip: `${import.meta.env.BASE_URL}assets/vip-cover.jpg`,
 };
-
-function readTabFromHash(): TabKey {
-  if (typeof window === 'undefined') return 'course';
-  const h = window.location.hash;
-  if (h.startsWith('#products-category-')) {
-    return `custom:${decodeURIComponent(h.slice('#products-category-'.length))}`;
-  }
-  const m = h.match(/^#products(?:-(course|workshop|recorded|individual-online|vip))?$/);
-  if (m && m[1]) return m[1] as TabKey;
-  return 'course';
-}
 
 const KIND_LABEL: Record<string, { ar: string; en: string }> = {
   course:              { ar: 'كورس',            en: 'Course' },
@@ -60,7 +47,7 @@ const KIND_LABEL: Record<string, { ar: string; en: string }> = {
   vip:                 { ar: '👑 VIP',            en: '👑 VIP' },
 };
 
-function ProductCard({ it, category }: { it: Item; category?: ContentCategory }) {
+export function ProductCard({ it, category }: { it: Item; category?: ContentCategory }) {
   const { t, lang, formatPrice, addToCart } = useApp();
   const [, navigate] = useLocation();
   const hasVip = !!(it.vipEnabled && it.vipPriceJod && it.vipPriceJod > 0);
@@ -95,7 +82,7 @@ function ProductCard({ it, category }: { it: Item; category?: ContentCategory })
   return (
     <div
       id={`item-${it.id}`}
-      className="group bg-white border border-[rgba(90,45,145,0.1)] rounded-[18px] p-6 transition-all hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(90,45,145,0.15)] shadow-[0_4px_12px_rgba(90,45,145,0.05)] relative overflow-hidden flex flex-col min-h-[340px] scroll-mt-28"
+      className="group bg-[#dff5e9] border border-[#9ed8bb] rounded-[18px] p-6 transition-all hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(18,112,76,0.18)] shadow-[0_4px_14px_rgba(18,112,76,0.10)] relative overflow-hidden flex flex-col min-h-[340px] scroll-mt-28"
     >
       {pct !== null && (
         <div className="absolute top-3 end-3 bg-[hsl(var(--g500))] text-[hsl(var(--p900))] text-[0.68rem] font-black py-1 px-2.5 rounded-full shadow-sm">
@@ -207,37 +194,14 @@ function ProductCard({ it, category }: { it: Item; category?: ContentCategory })
 
 export function Products() {
   const { lang } = useApp();
+  const [, navigate] = useLocation();
   const [items, setItems] = useState<Item[] | null>(null);
   const [categories, setCategories] = useState<ContentCategory[]>([]);
-  const [tab, setTab] = useState<TabKey>('course');
 
   useEffect(() => {
     fetchItems().then(setItems).catch(() => setItems([]));
     fetchContentCategories().then(setCategories).catch(() => setCategories([]));
   }, []);
-
-  useEffect(() => {
-    const syncFromHash = () => setTab(readTabFromHash());
-    const syncFromEvent = (e: Event) => {
-      const detail = (e as CustomEvent<TabKey>).detail;
-      if (detail) setTab(detail);
-    };
-    syncFromHash();
-    window.addEventListener('hashchange', syncFromHash);
-    window.addEventListener('products:set-tab', syncFromEvent as EventListener);
-    return () => {
-      window.removeEventListener('hashchange', syncFromHash);
-      window.removeEventListener('products:set-tab', syncFromEvent as EventListener);
-    };
-  }, []);
-
-  const filtered = useMemo(() => {
-    const all = (items || []).filter((item) => item.active !== false);
-    if (tab.startsWith('custom:')) {
-      return all.filter((item) => item.categoryId === tab.slice('custom:'.length));
-    }
-    return all.filter((item) => !item.categoryId && item.kind === tab);
-  }, [items, tab]);
 
   const visibleCategories = useMemo(
     () => mergeBuiltInContentCategories(categories).filter((category) => category.active),
@@ -246,7 +210,8 @@ export function Products() {
 
   const tabs = useMemo(
     () => visibleCategories.map((category) => ({
-      key: (category.builtInKind || `custom:${category.id}`) as TabKey,
+      key: category.id,
+      builtInKind: category.builtInKind,
       labelAr: category.titleAr,
       labelEn: category.titleEn || category.titleAr,
       descriptionAr: category.descriptionAr,
@@ -256,21 +221,13 @@ export function Products() {
     [visibleCategories],
   );
 
-  useEffect(() => {
-    if (tabs.length > 0 && !tabs.some((entry) => entry.key === tab)) {
-      setTab(tabs[0].key);
-    }
-  }, [tab, tabs]);
-
-  const countForTab = (key: TabKey) => {
+  const countForCategory = (categoryId: string, builtInKind?: BuiltInContentKind) => {
     const activeItems = (items || []).filter((item) => item.active !== false);
-    if (key.startsWith('custom:')) {
-      return activeItems.filter((item) => item.categoryId === key.slice('custom:'.length)).length;
+    if (builtInKind) {
+      return activeItems.filter((item) => !item.categoryId && item.kind === builtInKind).length;
     }
-    return activeItems.filter((item) => !item.categoryId && item.kind === key).length;
+    return activeItems.filter((item) => item.categoryId === categoryId).length;
   };
-
-  const loading = items === null;
 
   return (
     <section id="products" className="section bg-white scroll-mt-24">
@@ -287,7 +244,6 @@ export function Products() {
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 mb-16">
           {tabs.map((tb) => {
-            const active = tab === tb.key;
             const label = lang === 'ar' ? tb.labelAr : tb.labelEn;
             const description = lang === 'ar' ? tb.descriptionAr : tb.descriptionEn;
             const fallbackGradient = 'linear-gradient(135deg, hsl(var(--p600)), hsl(var(--p800)))';
@@ -295,29 +251,9 @@ export function Products() {
               <button
                 key={tb.key}
                 type="button"
-                aria-pressed={active}
                 data-testid={`button-category-${tb.key.replace(':', '-')}`}
-                onClick={() => {
-                  setTab(tb.key);
-                  const newHash = tb.key.startsWith('custom:')
-                    ? `#products-category-${encodeURIComponent(tb.key.slice('custom:'.length))}`
-                    : `#products-${tb.key}`;
-                  if (window.location.hash !== newHash) {
-                    history.replaceState(null, '', newHash);
-                  }
-                  setTimeout(() => {
-                    const el = document.getElementById('products-list');
-                    if (el) {
-                      const y = el.getBoundingClientRect().top + window.scrollY - 100;
-                      window.scrollTo({ top: y, behavior: 'smooth' });
-                    }
-                  }, 150);
-                }}
-                className={`group relative aspect-[4/5] sm:aspect-[4/5] overflow-hidden rounded-[24px] sm:rounded-[32px] transition-all duration-300 border-2 cursor-pointer text-start flex flex-col justify-end ${
-                  active
-                    ? 'border-[hsl(var(--g500))] shadow-[0_12px_24px_rgba(212,160,23,0.3)] scale-[1.02] z-10'
-                    : 'border-transparent shadow-[0_8px_20px_rgba(90,45,145,0.08)] hover:shadow-[0_12px_30px_rgba(90,45,145,0.15)] hover:-translate-y-1'
-                }`}
+                onClick={() => navigate(`/category/${encodeURIComponent(tb.key)}`)}
+                className="group relative aspect-[4/5] overflow-hidden rounded-[24px] sm:rounded-[32px] transition-all duration-300 border-2 border-transparent cursor-pointer text-start flex flex-col justify-end shadow-[0_8px_20px_rgba(90,45,145,0.08)] hover:shadow-[0_12px_30px_rgba(90,45,145,0.15)] hover:-translate-y-1"
               >
                 <div
                   className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
@@ -332,44 +268,17 @@ export function Products() {
                     </h3>
                     <span
                       className={`shrink-0 flex items-center justify-center min-w-[28px] h-[28px] rounded-full text-[0.75rem] font-black transition-colors ${
-                        active ? 'bg-[hsl(var(--g500))] text-[hsl(var(--p900))] shadow-[0_0_10px_rgba(212,160,23,0.5)]' : 'bg-white/20 text-white backdrop-blur'
+                        'bg-white/20 text-white backdrop-blur'
                       }`}
                     >
-                      {countForTab(tb.key)}
+                      {items === null ? '…' : countForCategory(tb.key, tb.builtInKind)}
                     </span>
                   </div>
                   {description && <p className="text-white/80 text-xs sm:text-sm line-clamp-2">{description}</p>}
-                  {active && (
-                    <div className="h-1 w-10 bg-[hsl(var(--g500))] rounded-full mt-1 transition-all" />
-                  )}
                 </div>
               </button>
             );
           })}
-        </div>
-
-        <div id="products-list" className="scroll-mt-32">
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-[hsl(var(--card))] border border-[rgba(90,45,145,0.08)] rounded-[18px] p-7 h-[320px] animate-pulse" />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-16 text-[hsl(var(--muted-foreground))]">
-              {lang === 'ar' ? 'لا توجد عناصر في هذا القسم حالياً.' : 'No items in this category yet.'}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filtered.map((it) => (
-                <ProductCard
-                  key={it.id}
-                  it={it}
-                  category={it.categoryId ? categories.find((entry) => entry.id === it.categoryId) : undefined}
-                />
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </section>
