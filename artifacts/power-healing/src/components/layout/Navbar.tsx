@@ -84,8 +84,8 @@ export function Navbar() {
           }}
           className="flex items-center gap-2 text-white text-[1.1rem] font-bold whitespace-nowrap"
         >
-          <span className="relative flex items-center justify-center w-[76px] h-[64px] -my-1.5">
-            <MasahaLogo width={82} height={82} />
+          <span className="relative flex h-[60px] w-[64px] shrink-0 items-center justify-center overflow-hidden">
+            <MasahaLogo width={56} height={56} />
           </span>
         </a>
 
