@@ -142,6 +142,7 @@ export default function Admin() {
   const toggleItem = (id: string) => setExpandedItems((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAd = (id: string) => setExpandedAds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [itemImgUploading, setItemImgUploading] = useState<string | null>(null);
+  const [articleImgUploading, setArticleImgUploading] = useState<string | null>(null);
   const [categoryImgUploading, setCategoryImgUploading] = useState<string | null>(null);
   const [aboutImageUrl, setAboutImageUrl] = useState<string>('');
   const [aboutImgUploading, setAboutImgUploading] = useState(false);
@@ -567,6 +568,63 @@ export default function Admin() {
       alert(lang === 'ar' ? 'تعذّر إزالة الصورة، حاول مرة أخرى.' : 'Image removal failed, please try again.');
     } finally {
       setItemImgUploading(null);
+    }
+  };
+
+  const handleArticleImageUpload = async (id: string, file: File) => {
+    setArticleImgUploading(id);
+    try {
+      const article = articles.find((entry) => entry.id === id);
+      if (!article) throw new Error('ARTICLE_NOT_FOUND');
+      if (!file.type.startsWith('image/')) throw new Error('INVALID_IMAGE_TYPE');
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const MAX = 1200;
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+          canvas.toBlob((b) => b ? resolve(b) : reject(new Error('canvas toBlob failed')), 'image/jpeg', 0.88);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+        img.src = url;
+      });
+      const imageRef = ref(storage, `article-images/${id}/${Date.now()}.jpg`);
+      const snapshot = await uploadBytes(imageRef, blob, {
+        contentType: 'image/jpeg',
+        cacheControl: 'public,max-age=31536000,immutable',
+      });
+      const imageUrl = await getDownloadURL(snapshot.ref);
+      const updatedArticle = { ...article, imageUrl };
+      await saveArticle(updatedArticle);
+      setArticles((prev) => prev.map((entry) => entry.id === id ? updatedArticle : entry));
+      setArticleSavedId(id);
+      setTimeout(() => setArticleSavedId(null), 1800);
+    } catch (e) {
+      console.error('article image upload failed', e);
+      alert(lang === 'ar' ? 'تعذّر تحميل الصورة، حاول مرة أخرى.' : 'Image upload failed, please try again.');
+    } finally {
+      setArticleImgUploading(null);
+    }
+  };
+
+  const handleArticleImageRemove = async (article: Article) => {
+    setArticleImgUploading(article.id);
+    try {
+      const updatedArticle = { ...article, imageUrl: '' };
+      await saveArticle(updatedArticle);
+      setArticles((prev) => prev.map((entry) => entry.id === article.id ? updatedArticle : entry));
+      setArticleSavedId(article.id);
+      setTimeout(() => setArticleSavedId(null), 1800);
+    } catch (e) {
+      console.error('article image removal failed', e);
+      alert(lang === 'ar' ? 'تعذّر إزالة الصورة، حاول مرة أخرى.' : 'Image removal failed, please try again.');
+    } finally {
+      setArticleImgUploading(null);
     }
   };
 
@@ -2089,9 +2147,16 @@ export default function Admin() {
                       onClick={() => toggleArticle(a.id)}
                       className="p-4 flex items-center justify-between cursor-pointer hover:bg-[rgba(255,255,255,0.02)]"
                     >
-                      <div className="flex flex-col">
-                        <span className="text-white font-bold">{a.titleAr || (lang === 'ar' ? 'بدون عنوان' : 'Untitled')}</span>
-                        <span className="text-[rgba(255,255,255,0.5)] text-xs mt-1">{a.categoryAr} - {a.dateAr}</span>
+                      <div className="flex items-center gap-3">
+                        {a.imageUrl && (
+                          <div className="w-12 h-12 rounded-lg bg-[rgba(0,0,0,0.3)] shrink-0 overflow-hidden border border-[rgba(255,255,255,0.1)]">
+                            <img src={a.imageUrl} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <div className="flex flex-col">
+                          <span className="text-white font-bold">{a.titleAr || (lang === 'ar' ? 'بدون عنوان' : 'Untitled')}</span>
+                          <span className="text-[rgba(255,255,255,0.5)] text-xs mt-1">{a.categoryAr} - {a.dateAr}</span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-3">
                         {!a.active && (
@@ -2152,6 +2217,54 @@ export default function Admin() {
                             <span className="text-xs font-bold text-[rgba(255,255,255,0.6)]">Full Content (English)</span>
                             <textarea className="adm-input min-h-[140px] resize-y" value={a.contentEn} onChange={(e) => setArticles(prev => prev.map(p => p.id === a.id ? {...p, contentEn: e.target.value} : p))} />
                           </label>
+                        </div>
+
+                        <div className="p-4 bg-[rgba(0,0,0,0.2)] rounded-xl border border-[rgba(255,255,255,0.05)]">
+                          <p className="text-xs font-bold text-[rgba(255,255,255,0.6)] mb-3">
+                            {lang === 'ar' ? 'صورة المقال' : 'Article Image'}
+                          </p>
+                          <div className="flex flex-col sm:flex-row gap-4">
+                            {a.imageUrl ? (
+                              <img src={a.imageUrl} alt="" className="w-full sm:w-48 h-32 object-cover rounded-lg border border-[rgba(255,255,255,0.1)]" />
+                            ) : (
+                              <div className="w-full sm:w-48 h-32 bg-[rgba(255,255,255,0.05)] rounded-lg border border-dashed border-[rgba(255,255,255,0.2)] flex items-center justify-center text-[rgba(255,255,255,0.3)] text-sm">
+                                {lang === 'ar' ? 'بدون صورة' : 'No image'}
+                              </div>
+                            )}
+                            <div className="flex flex-col justify-center gap-2 flex-1">
+                              <label className="block w-full">
+                                <span className="sr-only">{lang === 'ar' ? 'اختر صورة' : 'Choose image'}</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  disabled={articleImgUploading === a.id}
+                                  onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) handleArticleImageUpload(a.id, f);
+                                    e.target.value = '';
+                                  }}
+                                  className="block w-full text-[rgba(255,255,255,0.7)] text-[0.72rem] file:bg-[hsl(var(--g500))] file:text-[hsl(var(--p900))] file:font-bold file:border-0 file:px-2 file:py-1 file:rounded file:cursor-pointer file:me-2"
+                                />
+                                {articleImgUploading === a.id && (
+                                  <span className="text-[hsl(var(--g300))] text-[0.7rem] mt-1 block animate-pulse">
+                                    {lang === 'ar' ? '⏳ جاري رفع الصورة وحفظها…' : '⏳ Uploading and saving image…'}
+                                  </span>
+                                )}
+                              </label>
+                              {a.imageUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleArticleImageRemove(a)}
+                                  disabled={articleImgUploading === a.id}
+                                  className="self-start text-[0.72rem] text-[#ffb0b0] hover:underline mt-1"
+                                >
+                                  {articleImgUploading === a.id
+                                    ? (lang === 'ar' ? '⏳ جاري الإزالة…' : '⏳ Removing…')
+                                    : (lang === 'ar' ? '✕ إزالة الصورة' : '✕ Remove image')}
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
                         <div className="flex items-center gap-3">

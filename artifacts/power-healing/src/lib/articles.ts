@@ -15,6 +15,7 @@ export type Article = {
   contentEn: string;
   order: number;
   active: boolean;
+  imageUrl?: string;
   isDefault?: boolean;
   deleted?: boolean;
 };
