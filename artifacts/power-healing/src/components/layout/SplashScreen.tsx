@@ -69,9 +69,9 @@ export function SplashScreen() {
 
       <div className="relative z-10 flex flex-col items-center motion-safe:animate-[splash-reveal_1.5s_cubic-bezier(0.16,1,0.3,1)_forwards] motion-reduce:opacity-100 opacity-0">
         <img
-          src={`${import.meta.env.BASE_URL}img/masaha-n-logo.png`}
-          width="1254"
-          height="1254"
+          src={`${import.meta.env.BASE_URL}img/masaha-n-logo-hd.png`}
+          width="1089"
+          height="1445"
           alt="مساحة ن"
           className="w-[190px] sm:w-[210px] h-auto object-contain drop-shadow-[0_10px_24px_rgba(44,91,78,0.12)]"
           style={{ filter: 'contrast(1.07) saturate(1.04)' }}

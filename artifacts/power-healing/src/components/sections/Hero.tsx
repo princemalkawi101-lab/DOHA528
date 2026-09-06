@@ -199,7 +199,7 @@ export function Hero() {
 
       <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
         <div className="opacity-[0.06] blur-[1px]">
-          <img src="/img/masaha-n-logo.png" alt="" aria-hidden="true" className="w-[520px] h-[520px] object-contain" />
+          <img src="/img/masaha-n-logo-hd.png" alt="" aria-hidden="true" className="w-[520px] h-[520px] object-contain" />
         </div>
       </div>
 

@@ -73,7 +73,7 @@ export function MasahaLogo({ className = "", width = "78", height = "78", opacit
     >
       <span className="absolute inset-[18%] rounded-full bg-[rgba(212,160,23,0.22)] blur-xl" aria-hidden="true" />
       <img
-        src="/img/masaha-n-logo.png"
+        src="/img/masaha-n-logo-hd.png"
         alt="مساحة ن"
         className="relative w-full h-full object-contain drop-shadow-[0_0_10px_rgba(212,160,23,0.38)]"
       />
