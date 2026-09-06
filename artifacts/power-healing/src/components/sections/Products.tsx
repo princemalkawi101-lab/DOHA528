@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useApp } from '@/lib/store';
 import { Item, fetchItems, effectivePrice, discountPercent } from '@/lib/items';
-import { ContentCategory, fetchContentCategories } from '@/lib/contentCategories';
+import {
+  BuiltInContentKind,
+  ContentCategory,
+  fetchContentCategories,
+  mergeBuiltInContentCategories,
+} from '@/lib/contentCategories';
 
 const DESC_LIMIT = 180;
 
@@ -25,16 +30,16 @@ function CourseDescription({ desc, lang }: { desc: string; lang: string }) {
   );
 }
 
-type StandardTabKey = 'course' | 'workshop' | 'recorded' | 'individual-online' | 'vip';
+type StandardTabKey = BuiltInContentKind;
 type TabKey = StandardTabKey | `custom:${string}`;
 
-const TABS: { key: StandardTabKey; labelAr: string; labelEn: string }[] = [
-  { key: 'course', labelAr: 'الكورسات', labelEn: 'Courses' },
-  { key: 'workshop', labelAr: 'الورشات', labelEn: 'Workshops' },
-  { key: 'recorded', labelAr: 'الجلسات المسجلة', labelEn: 'Recorded' },
-  { key: 'individual-online', labelAr: 'جلسات فردية أونلاين', labelEn: 'Online 1-on-1' },
-  { key: 'vip', labelAr: '👑 خدمة VIP', labelEn: '👑 VIP Service' },
-];
+const DEFAULT_CATEGORY_IMAGES: Record<StandardTabKey, string> = {
+  course: `${import.meta.env.BASE_URL}assets/course-cover.jpg`,
+  workshop: `${import.meta.env.BASE_URL}assets/workshop-cover.jpg`,
+  recorded: `${import.meta.env.BASE_URL}assets/recorded-cover.jpg`,
+  'individual-online': `${import.meta.env.BASE_URL}assets/individual-cover.jpg`,
+  vip: `${import.meta.env.BASE_URL}assets/vip-cover.jpg`,
+};
 
 function readTabFromHash(): TabKey {
   if (typeof window === 'undefined') return 'course';
@@ -235,21 +240,27 @@ export function Products() {
   }, [items, tab]);
 
   const visibleCategories = useMemo(
-    () => categories.filter((category) => category.active).sort((a, b) => a.order - b.order),
+    () => mergeBuiltInContentCategories(categories).filter((category) => category.active),
     [categories],
   );
 
   const tabs = useMemo(
-    () => [
-      ...TABS,
-      ...visibleCategories.map((category) => ({
-        key: `custom:${category.id}` as TabKey,
-        labelAr: `${category.icon || '✦'} ${category.titleAr}`,
-        labelEn: `${category.icon || '✦'} ${category.titleEn || category.titleAr}`,
-      })),
-    ],
+    () => visibleCategories.map((category) => ({
+      key: (category.builtInKind || `custom:${category.id}`) as TabKey,
+      labelAr: category.titleAr,
+      labelEn: category.titleEn || category.titleAr,
+      descriptionAr: category.descriptionAr,
+      descriptionEn: category.descriptionEn,
+      imageUrl: category.imageUrl || (category.builtInKind ? DEFAULT_CATEGORY_IMAGES[category.builtInKind] : ''),
+    })),
     [visibleCategories],
   );
+
+  useEffect(() => {
+    if (tabs.length > 0 && !tabs.some((entry) => entry.key === tab)) {
+      setTab(tabs[0].key);
+    }
+  }, [tab, tabs]);
 
   const countForTab = (key: TabKey) => {
     const activeItems = (items || []).filter((item) => item.active !== false);
@@ -274,13 +285,18 @@ export function Products() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-10 sticky top-[68px] z-30 bg-white/85 backdrop-blur py-3 -mx-3 px-3 rounded-xl">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 mb-16">
           {tabs.map((tb) => {
             const active = tab === tb.key;
             const label = lang === 'ar' ? tb.labelAr : tb.labelEn;
+            const description = lang === 'ar' ? tb.descriptionAr : tb.descriptionEn;
+            const fallbackGradient = 'linear-gradient(135deg, hsl(var(--p600)), hsl(var(--p800)))';
             return (
               <button
                 key={tb.key}
+                type="button"
+                aria-pressed={active}
+                data-testid={`button-category-${tb.key.replace(':', '-')}`}
                 onClick={() => {
                   setTab(tb.key);
                   const newHash = tb.key.startsWith('custom:')
@@ -289,50 +305,72 @@ export function Products() {
                   if (window.location.hash !== newHash) {
                     history.replaceState(null, '', newHash);
                   }
+                  setTimeout(() => {
+                    const el = document.getElementById('products-list');
+                    if (el) {
+                      const y = el.getBoundingClientRect().top + window.scrollY - 100;
+                      window.scrollTo({ top: y, behavior: 'smooth' });
+                    }
+                  }, 150);
                 }}
-                style={
+                className={`group relative aspect-[4/5] sm:aspect-[4/5] overflow-hidden rounded-[24px] sm:rounded-[32px] transition-all duration-300 border-2 cursor-pointer text-start flex flex-col justify-end ${
                   active
-                    ? { backgroundColor: 'hsl(var(--p600))', color: '#ffffff', borderColor: 'transparent' }
-                    : { backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--p700))', borderColor: 'rgba(90,45,145,0.18)' }
-                }
-                className={`inline-flex items-center gap-2 text-[0.85rem] sm:text-[0.9rem] font-bold py-2 px-4 sm:px-5 rounded-full border transition-all cursor-pointer ${
-                  active ? 'shadow-[0_8px_20px_rgba(90,45,145,0.25)]' : 'hover:opacity-90'
+                    ? 'border-[hsl(var(--g500))] shadow-[0_12px_24px_rgba(212,160,23,0.3)] scale-[1.02] z-10'
+                    : 'border-transparent shadow-[0_8px_20px_rgba(90,45,145,0.08)] hover:shadow-[0_12px_30px_rgba(90,45,145,0.15)] hover:-translate-y-1'
                 }`}
               >
-                <span>{label}</span>
-                <span
-                  className={`text-[0.7rem] font-black min-w-[22px] h-[22px] inline-flex items-center justify-center px-1.5 rounded-full ${
-                    active ? 'bg-white/25 text-white' : 'bg-[rgba(90,45,145,0.1)] text-[hsl(var(--p700))]'
-                  }`}
-                >
-                  {countForTab(tb.key)}
-                </span>
+                <div
+                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
+                  style={tb.imageUrl ? { backgroundImage: `url(${tb.imageUrl})` } : { background: fallbackGradient }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--p900))]/90 via-[hsl(var(--p900))]/30 to-transparent" />
+
+                <div className="relative z-10 p-4 sm:p-5 w-full flex flex-col gap-2">
+                  <div className="flex justify-between items-end gap-2 w-full">
+                    <h3 className="text-white font-black text-[1.1rem] sm:text-[1.3rem] leading-snug drop-shadow-md">
+                      {label}
+                    </h3>
+                    <span
+                      className={`shrink-0 flex items-center justify-center min-w-[28px] h-[28px] rounded-full text-[0.75rem] font-black transition-colors ${
+                        active ? 'bg-[hsl(var(--g500))] text-[hsl(var(--p900))] shadow-[0_0_10px_rgba(212,160,23,0.5)]' : 'bg-white/20 text-white backdrop-blur'
+                      }`}
+                    >
+                      {countForTab(tb.key)}
+                    </span>
+                  </div>
+                  {description && <p className="text-white/80 text-xs sm:text-sm line-clamp-2">{description}</p>}
+                  {active && (
+                    <div className="h-1 w-10 bg-[hsl(var(--g500))] rounded-full mt-1 transition-all" />
+                  )}
+                </div>
               </button>
             );
           })}
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-[hsl(var(--card))] border border-[rgba(90,45,145,0.08)] rounded-[18px] p-7 h-[320px] animate-pulse" />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-[hsl(var(--muted-foreground))]">
-            {lang === 'ar' ? 'لا توجد عناصر في هذا القسم حالياً.' : 'No items in this category yet.'}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((it) => (
-              <ProductCard
-                key={it.id}
-                it={it}
-                category={it.categoryId ? categories.find((entry) => entry.id === it.categoryId) : undefined}
-              />
-            ))}
-          </div>
-        )}
+        <div id="products-list" className="scroll-mt-32">
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-[hsl(var(--card))] border border-[rgba(90,45,145,0.08)] rounded-[18px] p-7 h-[320px] animate-pulse" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-16 text-[hsl(var(--muted-foreground))]">
+              {lang === 'ar' ? 'لا توجد عناصر في هذا القسم حالياً.' : 'No items in this category yet.'}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filtered.map((it) => (
+                <ProductCard
+                  key={it.id}
+                  it={it}
+                  category={it.categoryId ? categories.find((entry) => entry.id === it.categoryId) : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

@@ -30,8 +30,10 @@ import {
   ContentCategory,
   deleteContentCategory,
   fetchContentCategories,
+  mergeBuiltInContentCategories,
   newContentCategoryTemplate,
   saveContentCategory,
+  saveContentCategoryOrder,
 } from '@/lib/contentCategories';
 import {
   Item,
@@ -131,6 +133,7 @@ export default function Admin() {
   const toggleItem = (id: string) => setExpandedItems((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAd = (id: string) => setExpandedAds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [itemImgUploading, setItemImgUploading] = useState<string | null>(null);
+  const [categoryImgUploading, setCategoryImgUploading] = useState<string | null>(null);
   const [aboutImageUrl, setAboutImageUrl] = useState<string>('');
   const [aboutImgUploading, setAboutImgUploading] = useState(false);
   const [aboutImgSaved, setAboutImgSaved] = useState(false);
@@ -178,7 +181,7 @@ export default function Admin() {
       setLoadingItems(false);
     });
     fetchContentCategories()
-      .then(setContentCategories)
+      .then((list) => setContentCategories(mergeBuiltInContentCategories(list)))
       .finally(() => setLoadingCategories(false));
     (async () => {
       try {
@@ -257,8 +260,27 @@ export default function Admin() {
   };
 
   const handleAddCategory = () => {
-    const fresh = newContentCategoryTemplate(contentCategories.length);
+    const nextOrder = contentCategories.reduce((max, category) => Math.max(max, category.order), -1) + 1;
+    const fresh = newContentCategoryTemplate(nextOrder);
     setContentCategories((prev) => [...prev, fresh]);
+  };
+
+  const handleMoveCategory = async (id: string, direction: -1 | 1) => {
+    const ordered = [...contentCategories].sort((a, b) => a.order - b.order);
+    const currentIndex = ordered.findIndex((category) => category.id === id);
+    const targetIndex = currentIndex + direction;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= ordered.length) return;
+    [ordered[currentIndex], ordered[targetIndex]] = [ordered[targetIndex], ordered[currentIndex]];
+    const normalized = ordered.map((category, order) => ({ ...category, order }));
+    setContentCategories(normalized);
+    try {
+      await saveContentCategoryOrder(normalized);
+      setCategorySavedId(id);
+      setCategoryFeedback('');
+      setTimeout(() => setCategorySavedId(null), 1800);
+    } catch {
+      setCategoryFeedback(lang === 'ar' ? 'تعذّر حفظ ترتيب البطاقات.' : 'Could not save the card order.');
+    }
   };
 
   const handleSaveCategory = async (category: ContentCategory) => {
@@ -520,6 +542,63 @@ export default function Admin() {
       alert(lang === 'ar' ? 'تعذّر إزالة الصورة، حاول مرة أخرى.' : 'Image removal failed, please try again.');
     } finally {
       setItemImgUploading(null);
+    }
+  };
+
+  const handleCategoryImgUpload = async (id: string, file: File) => {
+    setCategoryImgUploading(id);
+    try {
+      const category = contentCategories.find((entry) => entry.id === id);
+      if (!category) throw new Error('CATEGORY_NOT_FOUND');
+      if (!file.type.startsWith('image/')) throw new Error('INVALID_IMAGE_TYPE');
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const MAX = 1200;
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+          canvas.toBlob((b) => b ? resolve(b) : reject(new Error('canvas toBlob failed')), 'image/jpeg', 0.88);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+        img.src = url;
+      });
+      const imageRef = ref(storage, `category-covers/${id}/${Date.now()}.jpg`);
+      const snapshot = await uploadBytes(imageRef, blob, {
+        contentType: 'image/jpeg',
+        cacheControl: 'public,max-age=31536000,immutable',
+      });
+      const imageUrl = await getDownloadURL(snapshot.ref);
+      const updatedCategory = { ...category, imageUrl };
+      await saveContentCategory(updatedCategory);
+      setContentCategories((prev) => prev.map((entry) => entry.id === id ? updatedCategory : entry));
+      setCategorySavedId(id);
+      setTimeout(() => setCategorySavedId(null), 1800);
+    } catch (e) {
+      console.error('category image upload failed', e);
+      alert(lang === 'ar' ? 'تعذّر تحميل الصورة، حاول مرة أخرى.' : 'Image upload failed, please try again.');
+    } finally {
+      setCategoryImgUploading(null);
+    }
+  };
+
+  const handleCategoryImgRemove = async (category: ContentCategory) => {
+    setCategoryImgUploading(category.id);
+    try {
+      const updatedCategory = { ...category, imageUrl: '' };
+      await saveContentCategory(updatedCategory);
+      setContentCategories((prev) => prev.map((entry) => entry.id === category.id ? updatedCategory : entry));
+      setCategorySavedId(category.id);
+      setTimeout(() => setCategorySavedId(null), 1800);
+    } catch (e) {
+      console.error('category image removal failed', e);
+      alert(lang === 'ar' ? 'تعذّر إزالة الصورة، حاول مرة أخرى.' : 'Image removal failed, please try again.');
+    } finally {
+      setCategoryImgUploading(null);
     }
   };
 
@@ -971,20 +1050,20 @@ export default function Admin() {
         {adminTab === 'products' && <>
         <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-            <h2 className="text-white text-lg font-black">{lang === 'ar' ? '🗂️ إدارة فئات المحتوى المخصصة' : '🗂️ Custom Content Categories'}</h2>
+            <h2 className="text-white text-lg font-black">{lang === 'ar' ? 'إدارة بطاقات أقسام المحتوى' : 'Content Category Cards'}</h2>
             <button onClick={handleAddCategory} className="bg-[hsl(var(--g500))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90">
               + {lang === 'ar' ? 'فئة جديدة' : 'New Category'}
             </button>
           </div>
           <p className="text-[rgba(255,255,255,0.55)] text-sm mb-4">
-            {lang === 'ar' ? 'أنشئي فئات مرنة للمحتوى، ثم اربطي العناصر بها من محرر العنصر.' : 'Create flexible content categories, then assign items to them in the item editor.'}
+            {lang === 'ar' ? 'عدّلي اسم وصورة وترتيب كل بطاقة، أو أضيفي بطاقة جديدة ثم اربطي المحتوى بها من محرر العنصر.' : 'Edit each card name, image, and order, or add a new card and assign content from the item editor.'}
           </p>
           {categoryFeedback && <p className="mb-3 text-[#ffb0b0] text-sm font-semibold">{categoryFeedback}</p>}
           {loadingCategories ? <p className="text-[rgba(255,255,255,0.5)] text-sm">{lang === 'ar' ? 'جاري التحميل…' : 'Loading…'}</p> : contentCategories.length === 0 ? (
             <p className="text-[rgba(255,255,255,0.4)] text-sm italic">{lang === 'ar' ? 'لا توجد فئات مخصصة بعد.' : 'No custom categories yet.'}</p>
           ) : (
             <div className="flex flex-col gap-3">
-              {contentCategories.map((category) => (
+              {[...contentCategories].sort((a, b) => a.order - b.order).map((category, categoryIndex, orderedCategories) => (
                 <div key={category.id} className="bg-[rgba(0,0,0,0.22)] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Field label={lang === 'ar' ? 'العنوان (عربي)' : 'Title (Arabic)'}><input value={category.titleAr} onChange={(e) => updateCategory(category.id, { titleAr: e.target.value })} dir="rtl" className="adm-input" /></Field>
@@ -992,7 +1071,61 @@ export default function Admin() {
                     <Field label={lang === 'ar' ? 'الوصف (عربي)' : 'Description (Arabic)'}><textarea value={category.descriptionAr || ''} onChange={(e) => updateCategory(category.id, { descriptionAr: e.target.value })} dir="rtl" rows={2} className="adm-input" /></Field>
                     <Field label={lang === 'ar' ? 'الوصف (إنجليزي)' : 'Description (English)'}><textarea value={category.descriptionEn || ''} onChange={(e) => updateCategory(category.id, { descriptionEn: e.target.value })} dir="ltr" rows={2} className="adm-input" /></Field>
                     <Field label={lang === 'ar' ? 'الأيقونة' : 'Icon'}><input value={category.icon || ''} onChange={(e) => updateCategory(category.id, { icon: e.target.value })} className="adm-input" /></Field>
-                    <Field label={lang === 'ar' ? 'الترتيب' : 'Order'}><input type="number" value={category.order} onChange={(e) => updateCategory(category.id, { order: Number(e.target.value) || 0 })} className="adm-input" /></Field>
+                    <Field label={lang === 'ar' ? 'الترتيب' : 'Order'}>
+                      <div className="flex items-center gap-2 bg-[rgba(255,255,255,0.06)] rounded-lg p-1 border border-[rgba(255,255,255,0.1)] w-max">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveCategory(category.id, -1)}
+                          disabled={categoryIndex === 0}
+                          className="w-8 h-8 flex items-center justify-center bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.2)] rounded-md text-white font-bold transition-colors"
+                          title={lang === 'ar' ? 'تحريك للأعلى' : 'Move up'}
+                        >
+                          ↑
+                        </button>
+                        <span className="w-8 text-center text-white font-bold">{categoryIndex + 1}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveCategory(category.id, 1)}
+                          disabled={categoryIndex === orderedCategories.length - 1}
+                          className="w-8 h-8 flex items-center justify-center bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.2)] rounded-md text-white font-bold transition-colors"
+                          title={lang === 'ar' ? 'تحريك للأسفل' : 'Move down'}
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    </Field>
+                    <div className="col-span-1 md:col-span-2">
+                      <Field label={lang === 'ar' ? 'صورة الغلاف' : 'Cover Image'}>
+                        <div className="flex items-center gap-3">
+                          {category.imageUrl ? (
+                            <div className="relative w-24 h-16 rounded-md overflow-hidden border border-[rgba(255,255,255,0.1)] shrink-0">
+                              <img src={category.imageUrl} alt={category.titleAr || category.titleEn} className="w-full h-full object-cover" />
+                              <button
+                                onClick={() => handleCategoryImgRemove(category)}
+                                disabled={categoryImgUploading === category.id}
+                                className="absolute inset-0 bg-black/60 text-white text-xs flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                              >
+                                {lang === 'ar' ? 'إزالة' : 'Remove'}
+                              </button>
+                            </div>
+                          ) : null}
+                          <div className="flex-1">
+                            <label className="block bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.1)] rounded-lg px-3 py-2 text-sm text-[rgba(255,255,255,0.7)] text-center cursor-pointer hover:bg-[rgba(255,255,255,0.1)] transition-colors">
+                              {categoryImgUploading === category.id
+                                ? (lang === 'ar' ? 'جاري التحميل…' : 'Uploading…')
+                                : (lang === 'ar' ? 'اختر صورة 16:9' : 'Select 16:9 image')}
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                className="hidden"
+                                onChange={(e) => { if (e.target.files?.[0]) handleCategoryImgUpload(category.id, e.target.files[0]); }}
+                                disabled={categoryImgUploading === category.id}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </Field>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3 mt-3">
                     <label className="flex items-center gap-2 text-[rgba(255,255,255,0.75)] text-sm cursor-pointer">
@@ -1000,7 +1133,7 @@ export default function Admin() {
                       {category.active ? (lang === 'ar' ? 'مفعّلة' : 'Active') : (lang === 'ar' ? 'مخفية' : 'Hidden')}
                     </label>
                     <button onClick={() => handleSaveCategory(category)} className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm">{lang === 'ar' ? 'حفظ' : 'Save'}</button>
-                    <button onClick={() => handleDeleteCategory(category.id)} className="bg-[rgba(255,80,80,0.15)] border border-[rgba(255,80,80,0.3)] text-[#ffb0b0] font-semibold py-2 px-4 rounded-lg text-sm">{lang === 'ar' ? 'حذف' : 'Delete'}</button>
+                    {!category.builtInKind && <button onClick={() => handleDeleteCategory(category.id)} className="bg-[rgba(255,80,80,0.15)] border border-[rgba(255,80,80,0.3)] text-[#ffb0b0] font-semibold py-2 px-4 rounded-lg text-sm">{lang === 'ar' ? 'حذف' : 'Delete'}</button>}
                     {categorySavedId === category.id && <span className="text-[hsl(var(--g300))] text-sm font-semibold">{t('admin.saved')}</span>}
                   </div>
                 </div>
