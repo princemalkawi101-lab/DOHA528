@@ -3,23 +3,27 @@ import {
   capturePayPalOrder,
   createPayPalOrder,
   getPayPalRuntimeConfig,
+  getPayPalOrder,
   isPayPalApiError,
   isPayPalConfigurationError,
   type PayPalErrorDetail,
 } from "../lib/paypal";
+import rateLimit from "express-rate-limit";
+import { db, paymentOrdersTable, purchasesTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { getCatalogItem } from "../lib/catalog";
+import { requireFirebaseUser } from "../lib/firebase-auth";
 
 const router: IRouter = Router();
 
 type CartItemInput = {
-  titleEn?: unknown;
-  titleAr?: unknown;
-  nameKey?: unknown;
-  jod?: unknown;
+  itemId?: unknown;
+  variant?: unknown;
   qty?: unknown;
 };
 
 function parseCart(value: unknown):
-  | { ok: true; cart: Array<{ titleEn?: string; nameKey?: string; jod: number; qty: number }> }
+  | { ok: true; cart: Array<{ itemId: string; variant: "standard" | "vip"; qty: number }> }
   | { ok: false; message: string } {
   if (!Array.isArray(value) || value.length === 0) {
     return { ok: false, message: "Cart is empty or invalid" };
@@ -35,18 +39,15 @@ function parseCart(value: unknown):
     }
 
     const item = rawItem as CartItemInput;
-    const jod = Number(item.jod);
+    const variant: "standard" | "vip" =
+      item.variant === "vip" ? "vip" : "standard";
     const qty = Number(item.qty ?? 1);
-    if (!Number.isFinite(jod) || jod <= 0 || !Number.isFinite(qty) || !Number.isInteger(qty) || qty < 1 || qty > 100) {
-      return { ok: false, message: "Cart contains an invalid price or quantity" };
+    if (typeof item.itemId !== "string" || !item.itemId || item.itemId.length > 160
+      || (variant !== "standard" && variant !== "vip")
+      || !Number.isFinite(qty) || !Number.isInteger(qty) || qty < 1 || qty > 20) {
+      return { ok: false, message: "Cart contains an invalid item or quantity" };
     }
-
-    cart.push({
-      ...(typeof item.titleEn === "string" ? { titleEn: item.titleEn } : {}),
-      ...(typeof item.nameKey === "string" ? { nameKey: item.nameKey } : {}),
-      jod,
-      qty,
-    });
+    cart.push({ itemId: item.itemId, variant, qty });
   }
 
   return { ok: true, cart };
@@ -136,7 +137,15 @@ function sendPayPalError(
   });
 }
 
-router.post("/paypal/create-order", async (req, res): Promise<void> => {
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Too many payment requests. Please try again later." },
+});
+
+router.post("/paypal/create-order", paymentLimiter, requireFirebaseUser, async (req, res): Promise<void> => {
   const requestId = getRequestId(req);
   const parsed = parseCart(req.body?.cart);
   if (!parsed.ok) {
@@ -153,7 +162,30 @@ router.post("/paypal/create-order", async (req, res): Promise<void> => {
   }
 
   try {
-    const result = await createPayPalOrder({ cart: parsed.cart });
+    const trustedCart = await Promise.all(parsed.cart.map(async ({ itemId, variant, qty }) => {
+      const item = await getCatalogItem(itemId, variant);
+      if (!item?.active || item.priceJod <= 0) throw new Error(`ITEM_NOT_FOUND:${itemId}`);
+      return {
+        itemId: item.id,
+        titleAr: item.titleAr,
+        titleEn: item.titleEn,
+        kind: item.kind,
+        priceJod: item.priceJod,
+        quantity: qty,
+      };
+    }));
+    const result = await createPayPalOrder({
+      cart: trustedCart.map((item) => ({
+        titleEn: item.titleEn,
+        jod: item.priceJod,
+        qty: item.quantity,
+      })),
+    });
+    await db.insert(paymentOrdersTable).values({
+      orderId: result.id,
+      userId: req.firebaseUser!.sub,
+      cart: trustedCart,
+    });
     req.log.info(
       {
         operation: "create-order",
@@ -167,11 +199,15 @@ router.post("/paypal/create-order", async (req, res): Promise<void> => {
     );
     res.status(200).json({ id: result.id });
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith("ITEM_NOT_FOUND:")) {
+      res.status(400).json({ error: "Cart contains an unavailable item", code: "INVALID_CART", requestId });
+      return;
+    }
     sendPayPalError(req, res, error, "create-order");
   }
 });
 
-router.post("/paypal/capture-order", async (req, res): Promise<void> => {
+router.post("/paypal/capture-order", paymentLimiter, requireFirebaseUser, async (req, res): Promise<void> => {
   const requestId = getRequestId(req);
   const orderId = req.body?.orderId;
   if (typeof orderId !== "string" || !/^[A-Z0-9-]{5,80}$/i.test(orderId)) {
@@ -188,7 +224,52 @@ router.post("/paypal/capture-order", async (req, res): Promise<void> => {
   }
 
   try {
-    const result = await capturePayPalOrder(orderId);
+    const [paymentOrder] = await db.select().from(paymentOrdersTable)
+      .where(eq(paymentOrdersTable.orderId, orderId)).limit(1);
+    if (!paymentOrder || paymentOrder.userId !== req.firebaseUser!.sub) {
+      res.status(404).json({ error: "Payment order not found", code: "ORDER_NOT_FOUND", requestId });
+      return;
+    }
+    if (paymentOrder.status === "captured") {
+      res.status(200).json({
+        captureStatus: "COMPLETED",
+        orderId,
+        captureId: paymentOrder.captureId ?? "",
+      });
+      return;
+    }
+    let result;
+    try {
+      result = await capturePayPalOrder(orderId);
+    } catch (error) {
+      if (!isPayPalApiError(error) || error.providerName !== "ORDER_ALREADY_CAPTURED") throw error;
+      result = await getPayPalOrder(orderId);
+      req.log.warn({ orderId, requestId }, "Recovering an already captured PayPal order");
+    }
+    if (result.captureStatus !== "COMPLETED") {
+      res.status(409).json(result);
+      return;
+    }
+    await db.transaction(async (tx) => {
+      await tx.insert(purchasesTable).values(paymentOrder.cart.map((item) => ({
+        userId: req.firebaseUser!.sub,
+        userEmail: req.firebaseUser!.email ?? null,
+        userName: typeof req.firebaseUser!.name === "string" ? req.firebaseUser!.name : null,
+        itemId: item.itemId,
+        itemTitleAr: item.titleAr,
+        itemTitleEn: item.titleEn,
+        itemKind: item.kind,
+        quantity: item.quantity,
+        paidJod: (item.priceJod * item.quantity).toFixed(2),
+        paypalOrderId: orderId,
+        paypalCaptureId: result.captureId || null,
+      }))).onConflictDoNothing();
+      await tx.update(paymentOrdersTable).set({
+        status: "captured",
+        captureId: result.captureId || null,
+        capturedAt: new Date(),
+      }).where(eq(paymentOrdersTable.orderId, orderId));
+    });
     req.log.info(
       {
         operation: "capture-order",

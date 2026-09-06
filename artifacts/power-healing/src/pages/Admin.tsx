@@ -43,7 +43,7 @@ import {
   discountPercent,
 } from '@/lib/items';
 import { SEED_ITEMS } from '@/lib/seed-data';
-import { BookingStatus, deleteBooking, updateBookingStatus } from '@/lib/bookings';
+import { BookingStatus, deleteBooking, fetchAllBookings, updateBookingStatus } from '@/lib/bookings';
 import {
   AdSlide,
   AdStatus,
@@ -182,8 +182,7 @@ export default function Admin() {
       .finally(() => setLoadingCategories(false));
     (async () => {
       try {
-        const snap = await getDocs(fsQuery(collection(db, 'bookings'), orderBy('createdAt', 'desc')));
-        setBookings(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setBookings(await fetchAllBookings());
       } catch {}
     })();
     fetchAdSlides().then((list) => {

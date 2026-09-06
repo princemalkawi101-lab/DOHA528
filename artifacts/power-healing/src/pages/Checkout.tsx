@@ -7,7 +7,7 @@ import {
 } from '@paypal/react-paypal-js';
 import { useApp } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
-import { savePurchase } from '@/lib/purchases';
+import { serverApi } from '@/lib/serverApi';
 
 // PayPal client config is read at build time and injected by vite.config.ts.
 // VITE_PAYPAL_CLIENT_ID takes priority; PAYPAL_CLIENT_ID is the Vercel fallback.
@@ -27,13 +27,6 @@ const PAYPAL_SCRIPT_OPTIONS: ReactPayPalScriptOptions | null = PAYPAL_CLIENT_ID
       components: 'buttons',
     }
   : null;
-
-// Base URL for the backend API. When deployed on a different origin (Netlify),
-// set VITE_API_URL to the full origin of the api-server, e.g.
-//   VITE_API_URL=https://your-repl-name.replit.app
-// Leave empty/unset for same-origin development on Replit.
-const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) || '').replace(/\/+$/, '');
-const apiUrl = (path: string) => `${API_BASE}${path}`;
 
 type ApiResponse = {
   id?: unknown;
@@ -143,27 +136,6 @@ export default function Checkout() {
     );
   }
 
-  const recordPurchases = async () => {
-    for (const item of cart) {
-      const kind = (item.itemId ? (
-        item.requiresBooking ? 'individual-online' :
-        item.nameKey.includes('workshop') ? 'workshop' :
-        item.nameKey.includes('recorded') ? 'recorded' : 'course'
-      ) : 'course') as any;
-
-      await savePurchase({
-        userId: user.uid,
-        userEmail: user.email,
-        userName: user.displayName,
-        itemId: item.itemId || item.key,
-        itemTitleAr: item.titleAr || item.nameKey,
-        itemTitleEn: item.titleEn || item.nameKey,
-        itemKind: kind,
-        paidJod: item.jod * item.qty,
-      });
-    }
-  };
-
   return (
     <div className="min-h-[calc(100dvh-68px)] mt-[68px] px-4 py-10 bg-gradient-to-br from-[#1a0a2e] via-[#2a1444] to-[#1a0a2e]">
       <div className="max-w-3xl mx-auto">
@@ -241,15 +213,13 @@ export default function Checkout() {
                     createOrder={async () => {
                       setError('');
                       try {
-                        const res = await fetch(apiUrl('/api/paypal/create-order'), {
+                        const res = await serverApi('/api/paypal/create-order', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
                             cart: cart.map((c) => ({
-                              titleEn: c.titleEn || c.nameKey,
-                              titleAr: c.titleAr || c.nameKey,
-                              nameKey: c.nameKey,
-                              jod: c.jod,
+                              itemId: c.itemId || c.key,
+                              variant: c.purchaseVariant || (c.key.endsWith('-vip') ? 'vip' : 'standard'),
                               qty: c.qty,
                             })),
                           }),
@@ -281,7 +251,7 @@ export default function Checkout() {
                       let captureCompleted = false;
                       let paymentErrorMessage = '';
                       try {
-                        const res = await fetch(apiUrl('/api/paypal/capture-order'), {
+                        const res = await serverApi('/api/paypal/capture-order', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ orderId: data.orderID }),
@@ -313,7 +283,6 @@ export default function Checkout() {
                           captureId: result.captureId,
                           amount: result.amount,
                         }));
-                        await recordPurchases();
                         clearCart();
                         setLocation('/payment-success');
                       } catch (err: any) {

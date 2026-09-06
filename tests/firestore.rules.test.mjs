@@ -8,7 +8,6 @@ import {
   doc,
   getDoc,
   runTransaction,
-  serverTimestamp,
   setDoc,
 } from 'firebase/firestore';
 
@@ -110,7 +109,7 @@ try {
     titleAr: 'تعديل غير مصرح',
   }, { merge: true }));
 
-  await assertSucceeds(setDoc(doc(publicDb, 'bookings', 'booking-1'), {
+  await assertFails(setDoc(doc(publicDb, 'bookings', 'booking-1'), {
     itemId: 'course-1',
     itemTitleAr: 'دورة',
     itemTitleEn: 'Course',
@@ -121,7 +120,7 @@ try {
     whatsappCountryCode: '+962',
     whatsappNumber: '790000000',
     status: 'pending',
-    createdAt: serverTimestamp(),
+    createdAt: new Date(),
   }));
   await assertFails(getDoc(doc(publicDb, 'bookings', 'booking-1')));
 

@@ -1,16 +1,6 @@
-import {
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-  Timestamp,
-  deleteDoc,
-  doc,
-} from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, orderBy, query, Timestamp, where } from 'firebase/firestore';
 import { db } from './firebase';
+import { readJson, serverApi } from './serverApi';
 
 export type PurchaseKind = 'course' | 'workshop' | 'recorded' | 'individual-online';
 
@@ -28,50 +18,33 @@ export interface Purchase {
   createdAt: Timestamp | null;
 }
 
-export interface NewPurchase {
-  userId: string | null;
-  userEmail: string | null;
-  userName: string | null;
-  itemId: string;
-  itemTitleAr: string;
-  itemTitleEn: string;
-  itemKind: PurchaseKind;
-  paidJod: number;
-}
-
-export async function savePurchase(data: NewPurchase): Promise<string> {
-  const ref = await addDoc(collection(db, 'purchases'), {
-    ...data,
-    status: 'pending',
-    createdAt: serverTimestamp(),
-  });
-  return ref.id;
-}
-
 export async function fetchAllPurchases(): Promise<Purchase[]> {
-  const snap = await getDocs(
-    query(collection(db, 'purchases'), orderBy('createdAt', 'desc'))
-  );
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...(d.data() as Omit<Purchase, 'id'>),
-  }));
+  const [rows, legacySnap] = await Promise.all([
+    readJson<Array<Omit<Purchase, 'createdAt'> & { createdAt: string }>>(await serverApi('/api/admin/purchases')),
+    getDocs(query(collection(db, 'purchases'), orderBy('createdAt', 'desc'))),
+  ]);
+  return [
+    ...rows.map((row) => ({ ...row, paidJod: Number(row.paidJod), createdAt: Timestamp.fromDate(new Date(row.createdAt)) })),
+    ...legacySnap.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<Purchase, 'id'>) })),
+  ];
 }
 
 export async function fetchUserPurchases(userId: string): Promise<Purchase[]> {
-  const snap = await getDocs(
-    query(
-      collection(db, 'purchases'),
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
-    )
-  );
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...(d.data() as Omit<Purchase, 'id'>),
-  }));
+  const [rows, legacySnap] = await Promise.all([
+    readJson<Array<Omit<Purchase, 'createdAt'> & { createdAt: string }>>(await serverApi('/api/purchases/me')),
+    getDocs(query(collection(db, 'purchases'), where('userId', '==', userId), orderBy('createdAt', 'desc'))),
+  ]);
+  return [
+    ...rows.map((row) => ({ ...row, paidJod: Number(row.paidJod), createdAt: Timestamp.fromDate(new Date(row.createdAt)) })),
+    ...legacySnap.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<Purchase, 'id'>) })),
+  ];
 }
 
 export async function deletePurchase(id: string): Promise<void> {
-  await deleteDoc(doc(db, 'purchases', id));
+  const response = await serverApi(`/api/admin/purchases/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (response.status === 404) {
+    await deleteDoc(doc(db, 'purchases', id));
+    return;
+  }
+  await readJson(response);
 }

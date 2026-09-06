@@ -189,6 +189,7 @@ function BookingForm({ item, userEmail, userUid }: { item: CartItem; userEmail: 
     try {
       await createBooking({
         itemId: item.itemId || item.key,
+        purchaseVariant: item.purchaseVariant || (item.key.endsWith('-vip') ? 'vip' : 'standard'),
         itemTitleAr: item.titleAr || item.nameKey,
         itemTitleEn: item.titleEn || item.nameKey,
         buyerUid: userUid,

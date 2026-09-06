@@ -71,11 +71,6 @@ service cloud.firestore {
         );
     }
 
-    function validPublicSubmission() {
-      return request.resource.data.createdAt == request.time
-        && request.resource.data.status == 'pending';
-    }
-
     match /siteSettings/config {
       allow read: if true;
       allow create, update: if isAdmin() && validSiteSettingsWrite();
@@ -108,42 +103,15 @@ service cloud.firestore {
     }
 
     match /bookings/{bookingId} {
-      allow create: if validPublicSubmission()
-        && request.resource.data.keys().hasAll([
-          'itemId', 'itemTitleAr', 'itemTitleEn', 'buyerUid', 'buyerEmail',
-          'name', 'description', 'whatsappCountryCode', 'whatsappNumber',
-          'status', 'createdAt'
-        ])
-        && request.resource.data.name is string
-        && request.resource.data.name.size() > 0
-        && request.resource.data.name.size() <= 200
-        && request.resource.data.whatsappNumber is string
-        && request.resource.data.whatsappNumber.size() <= 40
-        && (
-          request.resource.data.buyerUid == null
-          || (isSignedIn() && request.resource.data.buyerUid == request.auth.uid)
-        );
+      allow create: if false;
       allow read, update, delete: if isAdmin();
     }
 
     match /purchases/{purchaseId} {
-      allow create: if validPublicSubmission()
-        && request.resource.data.keys().hasAll([
-          'userId', 'userEmail', 'userName', 'itemId', 'itemTitleAr',
-          'itemTitleEn', 'itemKind', 'paidJod', 'status', 'createdAt'
-        ])
-        && request.resource.data.itemKind in [
-          'course', 'workshop', 'recorded', 'individual-online'
-        ]
-        && request.resource.data.paidJod is number
-        && request.resource.data.paidJod >= 0
-        && (
-          request.resource.data.userId == null
-          || (isSignedIn() && request.resource.data.userId == request.auth.uid)
-        );
+      allow create, update: if false;
       allow read: if isAdmin()
         || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow update, delete: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /{document=**} {

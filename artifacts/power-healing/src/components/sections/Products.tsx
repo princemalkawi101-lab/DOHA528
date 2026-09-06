@@ -77,6 +77,7 @@ function ProductCard({ it, category }: { it: Item; category?: ContentCategory })
     addToCart(it.id + (isVip ? '-vip' : ''), it.icon, activePrice, {
       itemId: it.id,
       itemKind: it.kind,
+      purchaseVariant: isVip ? 'vip' : 'standard',
       titleAr: it.titleAr + (isVip ? ' (VIP)' : ''),
       titleEn: it.titleEn + (isVip ? ' (VIP)' : ''),
       originalJod: it.originalPriceJod,

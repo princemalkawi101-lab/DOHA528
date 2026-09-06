@@ -118,6 +118,12 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+  await import("node:fs/promises").then(({ copyFile }) =>
+    copyFile(
+      path.resolve(artifactDir, "../../lib/db/migrations/0001_commerce.sql"),
+      path.resolve(distDir, "0001_commerce.sql"),
+    ),
+  );
 }
 
 buildAll().catch((err) => {

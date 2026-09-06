@@ -1,10 +1,12 @@
-import { addDoc, collection, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { readJson, serverApi } from './serverApi';
+import { collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
 export type BookingStatus = 'pending' | 'completed' | 'cancelled';
 
 export type Booking = {
   itemId: string;
+  purchaseVariant?: 'standard' | 'vip';
   itemTitleAr: string;
   itemTitleEn: string;
   buyerUid: string | null;
@@ -17,22 +19,49 @@ export type Booking = {
   sessionTime?: string;
 };
 
+export type StoredBooking = Booking & {
+  id: string;
+  status: BookingStatus;
+  createdAt: string;
+};
+
+export async function fetchAllBookings(): Promise<StoredBooking[]> {
+  const [serverRows, legacySnap] = await Promise.all([
+    readJson<StoredBooking[]>(await serverApi('/api/admin/bookings')),
+    getDocs(query(collection(db, 'bookings'), orderBy('createdAt', 'desc'))),
+  ]);
+  return [
+    ...serverRows,
+    ...legacySnap.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<StoredBooking, 'id'>) })),
+  ];
+}
+
 export async function createBooking(b: Booking): Promise<string> {
-  const ref = await addDoc(collection(db, 'bookings'), {
-    ...b,
-    status: 'pending' as BookingStatus,
-    createdAt: serverTimestamp(),
-  });
-  return ref.id;
+  const { itemId, purchaseVariant, name, description, whatsappCountryCode, whatsappNumber, sessionDate, sessionTime } = b;
+  const result = await readJson<{ id: string }>(await serverApi('/api/bookings', {
+    method: 'POST',
+    body: JSON.stringify({ itemId, variant: purchaseVariant || 'standard', name, description, whatsappCountryCode, whatsappNumber, sessionDate, sessionTime }),
+  }));
+  return result.id;
 }
 
 export async function updateBookingStatus(id: string, status: BookingStatus): Promise<void> {
-  await updateDoc(doc(db, 'bookings', id), {
-    status,
-    updatedAt: serverTimestamp(),
+  const response = await serverApi(`/api/admin/bookings/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
   });
+  if (response.status === 404) {
+    await updateDoc(doc(db, 'bookings', id), { status, updatedAt: serverTimestamp() });
+    return;
+  }
+  await readJson(response);
 }
 
 export async function deleteBooking(id: string): Promise<void> {
-  await deleteDoc(doc(db, 'bookings', id));
+  const response = await serverApi(`/api/admin/bookings/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (response.status === 404) {
+    await deleteDoc(doc(db, 'bookings', id));
+    return;
+  }
+  await readJson(response);
 }

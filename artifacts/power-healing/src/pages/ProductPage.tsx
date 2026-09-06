@@ -72,6 +72,7 @@ export default function ProductPage() {
     addToCart(item.id + (isVip ? '-vip' : ''), item.icon, activePrice, {
       itemId: item.id,
       itemKind: item.kind,
+      purchaseVariant: isVip ? 'vip' : 'standard',
       titleAr: item.titleAr + (isVip ? ' (VIP)' : ''),
       titleEn: item.titleEn + (isVip ? ' (VIP)' : ''),
       originalJod: item.originalPriceJod,

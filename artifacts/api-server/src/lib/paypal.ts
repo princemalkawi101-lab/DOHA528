@@ -292,6 +292,37 @@ export async function capturePayPalOrder(orderId: string): Promise<{
   };
 }
 
+export async function getPayPalOrder(orderId: string): Promise<{
+  captureStatus: string;
+  orderId: string;
+  captureId: string;
+  amount: string;
+}> {
+  const config = getPayPalConfig();
+  const accessToken = await getPayPalAccessToken();
+  const response = await fetch(
+    `${config.baseUrl}/v2/checkout/orders/${encodeURIComponent(orderId)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  const body = await readResponseBody(response);
+  if (!response.ok) throw new PayPalApiError("get-order", response.status, body);
+  const purchaseUnit = Array.isArray(body.purchase_units) ? body.purchase_units[0] : undefined;
+  const payments = purchaseUnit && typeof purchaseUnit === "object"
+    ? (purchaseUnit as Record<string, unknown>).payments : undefined;
+  const captures = payments && typeof payments === "object"
+    ? (payments as Record<string, unknown>).captures : undefined;
+  const capture = Array.isArray(captures) && captures[0] && typeof captures[0] === "object"
+    ? captures[0] as Record<string, unknown> : undefined;
+  const amount = capture?.amount && typeof capture.amount === "object"
+    ? (capture.amount as Record<string, unknown>).value : "";
+  return {
+    captureStatus: typeof body.status === "string" ? body.status : "",
+    orderId,
+    captureId: typeof capture?.id === "string" ? capture.id : "",
+    amount: typeof amount === "string" ? amount : "",
+  };
+}
+
 export function isPayPalConfigurationError(
   error: unknown,
 ): error is PayPalConfigurationError {

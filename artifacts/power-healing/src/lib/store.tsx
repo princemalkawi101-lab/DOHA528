@@ -23,6 +23,7 @@ export type CartItem = {
   key: string;
   itemId?: string;
   itemKind?: string;
+  purchaseVariant?: 'standard' | 'vip';
   nameKey: string;
   titleAr?: string;
   titleEn?: string;
@@ -39,6 +40,7 @@ export type CartItem = {
 export type AddToCartOptions = {
   itemId?: string;
   itemKind?: string;
+  purchaseVariant?: 'standard' | 'vip';
   titleAr?: string;
   titleEn?: string;
   originalJod?: number;
@@ -128,6 +130,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         key: titleKey,
         itemId: opts.itemId,
         itemKind: opts.itemKind,
+        purchaseVariant: opts.purchaseVariant,
         nameKey: titleKey,
         titleAr: opts.titleAr,
         titleEn: opts.titleEn,
