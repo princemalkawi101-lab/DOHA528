@@ -102,6 +102,14 @@ const KIND_LABELS: Record<ItemKind, { ar: string; en: string }> = {
 
 const KIND_ORDER: ItemKind[] = ['course', 'workshop', 'recorded', 'individual-online', 'session', 'vip'];
 
+const BUILT_IN_CATEGORY_IMAGES: Partial<Record<ItemKind, string>> = {
+  course: `${import.meta.env.BASE_URL}assets/course-cover.jpg`,
+  workshop: `${import.meta.env.BASE_URL}assets/workshop-cover.jpg`,
+  recorded: `${import.meta.env.BASE_URL}assets/recorded-cover.jpg`,
+  'individual-online': `${import.meta.env.BASE_URL}assets/individual-cover.jpg`,
+  vip: `${import.meta.env.BASE_URL}assets/vip-cover.jpg`,
+};
+
 export default function Admin() {
   const { t, lang } = useApp();
   const { user, isAdmin, loading, logout } = useAuth();
@@ -111,7 +119,7 @@ export default function Admin() {
   const [bookings, setBookings] = useState<Array<Record<string, any>>>([]);
   const [loadingItems, setLoadingItems] = useState(true);
   const [savedKey, setSavedKey] = useState<string | null>(null);
-  const [activeKindTab, setActiveKindTab] = useState<ItemKind | string>('course');
+  const [activeKindTab, setActiveKindTab] = useState<string>('');
   const [contentCategories, setContentCategories] = useState<ContentCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [categorySavedId, setCategorySavedId] = useState<string | null>(null);
@@ -238,22 +246,25 @@ export default function Admin() {
 
   const handleAdd = (tab: ItemKind | string) => {
     const category = contentCategories.find((entry) => entry.id === tab);
-    const kind: ItemKind = category ? 'course' : tab as ItemKind;
+    let kind: ItemKind = tab as ItemKind;
+    let categoryId: string | null = null;
+
+    if (category) {
+      if (category.builtInKind) {
+        kind = category.builtInKind;
+      } else {
+        kind = 'course';
+        categoryId = category.id;
+      }
+    }
+
     const fresh = newItemTemplate(kind, items.length);
-    if (category) fresh.categoryId = category.id;
+    fresh.categoryId = categoryId;
     setItems((prev) => [...prev, fresh]);
     setActiveKindTab(tab);
+    setExpandedItems((prev) => new Set(prev).add(fresh.id));
   };
 
-  const activeContentTabLabel = () => {
-    const category = contentCategories.find((entry) => entry.id === activeKindTab);
-    if (category) {
-      return lang === 'ar'
-        ? (category.titleAr || category.titleEn || 'فئة جديدة')
-        : (category.titleEn || category.titleAr || 'New Category');
-    }
-    return KIND_LABELS[activeKindTab as ItemKind]?.[lang] || activeKindTab;
-  };
 
   const updateCategory = (id: string, patch: Partial<ContentCategory>) => {
     setContentCategories((prev) => prev.map((category) => category.id === id ? { ...category, ...patch } : category));
@@ -304,7 +315,7 @@ export default function Admin() {
     try {
       await deleteContentCategory(id);
       setContentCategories((prev) => prev.filter((category) => category.id !== id));
-      if (activeKindTab === id) setActiveKindTab('course');
+      if (activeKindTab === id) setActiveKindTab('');
       setCategoryFeedback('');
     } catch (error) {
       const blocked = error instanceof Error && error.message === 'CATEGORY_HAS_ITEMS';
@@ -1049,185 +1060,221 @@ export default function Admin() {
         {/* ── Products Tab ── */}
         {adminTab === 'products' && <>
         <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-            <h2 className="text-white text-lg font-black">{lang === 'ar' ? 'إدارة بطاقات أقسام المحتوى' : 'Content Category Cards'}</h2>
-            <button onClick={handleAddCategory} className="bg-[hsl(var(--g500))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90">
-              + {lang === 'ar' ? 'فئة جديدة' : 'New Category'}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+            <h2 className="text-white text-lg font-black flex items-center gap-2">
+              {lang === 'ar' ? '📚 إدارة أقسام المحتوى' : '📚 Content Management'}
+              <span className="text-[rgba(255,255,255,0.45)] text-xs font-medium">({contentCategories.length})</span>
+            </h2>
+            <button onClick={handleAddCategory} className="bg-[hsl(var(--g500))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90 shadow-md flex items-center justify-center gap-1">
+              <span className="text-lg leading-none mb-0.5">+</span> {lang === 'ar' ? 'فئة جديدة' : 'New Category'}
             </button>
           </div>
-          <p className="text-[rgba(255,255,255,0.55)] text-sm mb-4">
-            {lang === 'ar' ? 'عدّلي اسم وصورة وترتيب كل بطاقة، أو أضيفي بطاقة جديدة ثم اربطي المحتوى بها من محرر العنصر.' : 'Edit each card name, image, and order, or add a new card and assign content from the item editor.'}
+
+          <p className="text-[rgba(255,255,255,0.55)] text-sm mb-6">
+            {lang === 'ar' ? 'عدّلي اسم وصورة وترتيب كل قسم، وأضيفي المحتوى بداخل كل قسم.' : 'Edit each category card and add content inside it.'}
           </p>
           {categoryFeedback && <p className="mb-3 text-[#ffb0b0] text-sm font-semibold">{categoryFeedback}</p>}
-          {loadingCategories ? <p className="text-[rgba(255,255,255,0.5)] text-sm">{lang === 'ar' ? 'جاري التحميل…' : 'Loading…'}</p> : contentCategories.length === 0 ? (
-            <p className="text-[rgba(255,255,255,0.4)] text-sm italic">{lang === 'ar' ? 'لا توجد فئات مخصصة بعد.' : 'No custom categories yet.'}</p>
+
+          {loadingCategories || loadingItems ? (
+             <p className="text-[rgba(255,255,255,0.5)] text-sm">{lang === 'ar' ? 'جاري التحميل…' : 'Loading…'}</p>
+          ) : contentCategories.length === 0 ? (
+             <p className="text-[rgba(255,255,255,0.4)] text-sm italic">{lang === 'ar' ? 'لا توجد فئات بعد.' : 'No categories yet.'}</p>
           ) : (
-            <div className="flex flex-col gap-3">
-              {[...contentCategories].sort((a, b) => a.order - b.order).map((category, categoryIndex, orderedCategories) => (
-                <div key={category.id} className="bg-[rgba(0,0,0,0.22)] border border-[rgba(255,255,255,0.08)] rounded-xl p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <Field label={lang === 'ar' ? 'العنوان (عربي)' : 'Title (Arabic)'}><input value={category.titleAr} onChange={(e) => updateCategory(category.id, { titleAr: e.target.value })} dir="rtl" className="adm-input" /></Field>
-                    <Field label={lang === 'ar' ? 'العنوان (إنجليزي)' : 'Title (English)'}><input value={category.titleEn} onChange={(e) => updateCategory(category.id, { titleEn: e.target.value })} dir="ltr" className="adm-input" /></Field>
-                    <Field label={lang === 'ar' ? 'الوصف (عربي)' : 'Description (Arabic)'}><textarea value={category.descriptionAr || ''} onChange={(e) => updateCategory(category.id, { descriptionAr: e.target.value })} dir="rtl" rows={2} className="adm-input" /></Field>
-                    <Field label={lang === 'ar' ? 'الوصف (إنجليزي)' : 'Description (English)'}><textarea value={category.descriptionEn || ''} onChange={(e) => updateCategory(category.id, { descriptionEn: e.target.value })} dir="ltr" rows={2} className="adm-input" /></Field>
-                    <Field label={lang === 'ar' ? 'الأيقونة' : 'Icon'}><input value={category.icon || ''} onChange={(e) => updateCategory(category.id, { icon: e.target.value })} className="adm-input" /></Field>
-                    <Field label={lang === 'ar' ? 'الترتيب' : 'Order'}>
-                      <div className="flex items-center gap-2 bg-[rgba(255,255,255,0.06)] rounded-lg p-1 border border-[rgba(255,255,255,0.1)] w-max">
-                        <button
-                          type="button"
-                          onClick={() => handleMoveCategory(category.id, -1)}
-                          disabled={categoryIndex === 0}
-                          className="w-8 h-8 flex items-center justify-center bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.2)] rounded-md text-white font-bold transition-colors"
-                          title={lang === 'ar' ? 'تحريك للأعلى' : 'Move up'}
-                        >
-                          ↑
-                        </button>
-                        <span className="w-8 text-center text-white font-bold">{categoryIndex + 1}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleMoveCategory(category.id, 1)}
-                          disabled={categoryIndex === orderedCategories.length - 1}
-                          className="w-8 h-8 flex items-center justify-center bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.2)] rounded-md text-white font-bold transition-colors"
-                          title={lang === 'ar' ? 'تحريك للأسفل' : 'Move down'}
-                        >
-                          ↓
-                        </button>
-                      </div>
-                    </Field>
-                    <div className="col-span-1 md:col-span-2">
-                      <Field label={lang === 'ar' ? 'صورة الغلاف' : 'Cover Image'}>
-                        <div className="flex items-center gap-3">
-                          {category.imageUrl ? (
-                            <div className="relative w-24 h-16 rounded-md overflow-hidden border border-[rgba(255,255,255,0.1)] shrink-0">
-                              <img src={category.imageUrl} alt={category.titleAr || category.titleEn} className="w-full h-full object-cover" />
-                              <button
-                                onClick={() => handleCategoryImgRemove(category)}
-                                disabled={categoryImgUploading === category.id}
-                                className="absolute inset-0 bg-black/60 text-white text-xs flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                              >
-                                {lang === 'ar' ? 'إزالة' : 'Remove'}
-                              </button>
-                            </div>
-                          ) : null}
-                          <div className="flex-1">
-                            <label className="block bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.1)] rounded-lg px-3 py-2 text-sm text-[rgba(255,255,255,0.7)] text-center cursor-pointer hover:bg-[rgba(255,255,255,0.1)] transition-colors">
-                              {categoryImgUploading === category.id
-                                ? (lang === 'ar' ? 'جاري التحميل…' : 'Uploading…')
-                                : (lang === 'ar' ? 'اختر صورة 16:9' : 'Select 16:9 image')}
-                              <input
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                className="hidden"
-                                onChange={(e) => { if (e.target.files?.[0]) handleCategoryImgUpload(category.id, e.target.files[0]); }}
-                                disabled={categoryImgUploading === category.id}
-                              />
-                            </label>
-                          </div>
-                        </div>
-                      </Field>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 mt-3">
-                    <label className="flex items-center gap-2 text-[rgba(255,255,255,0.75)] text-sm cursor-pointer">
-                      <input type="checkbox" checked={category.active} onChange={(e) => updateCategory(category.id, { active: e.target.checked })} />
-                      {category.active ? (lang === 'ar' ? 'مفعّلة' : 'Active') : (lang === 'ar' ? 'مخفية' : 'Hidden')}
-                    </label>
-                    <button onClick={() => handleSaveCategory(category)} className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm">{lang === 'ar' ? 'حفظ' : 'Save'}</button>
-                    {!category.builtInKind && <button onClick={() => handleDeleteCategory(category.id)} className="bg-[rgba(255,80,80,0.15)] border border-[rgba(255,80,80,0.3)] text-[#ffb0b0] font-semibold py-2 px-4 rounded-lg text-sm">{lang === 'ar' ? 'حذف' : 'Delete'}</button>}
-                    {categorySavedId === category.id && <span className="text-[hsl(var(--g300))] text-sm font-semibold">{t('admin.saved')}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-        {/* ───── Items manager — categorized tabs ───── */}
-        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-            <h2 className="text-white text-lg font-black">
-              {lang === 'ar' ? '📚 إدارة المحتوى' : '📚 Content Management'}
-              <span className="ms-2 text-[rgba(255,255,255,0.45)] text-xs font-medium">({items.length})</span>
-            </h2>
-            <button onClick={() => handleAdd(activeKindTab)} className="bg-[hsl(var(--g500))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90">
-              + {lang === 'ar' ? `إضافة في ${activeContentTabLabel()}` : `Add to ${activeContentTabLabel()}`}
-            </button>
-          </div>
+             <div className="flex flex-col gap-4">
+               {[...contentCategories].sort((a, b) => a.order - b.order).map((category, categoryIndex, orderedCategories) => {
+                  const list = category.builtInKind
+                    ? items.filter((item) => item.kind === category.builtInKind && !item.categoryId)
+                    : items.filter((item) => item.categoryId === category.id);
 
-          {/* Category tabs */}
-          <div className="flex flex-wrap gap-2 mb-5 pb-3 border-b border-[rgba(255,255,255,0.08)]">
-            {KIND_ORDER.map((kind) => {
-              const count = items.filter((i) => i.kind === kind && !i.categoryId).length;
-              const active = activeKindTab === kind;
-              return (
-                <button
-                  key={kind}
-                  onClick={() => setActiveKindTab(kind)}
-                  className={`text-sm font-semibold py-2 px-3 rounded-lg border transition-colors ${
-                    active
-                      ? 'bg-[hsl(var(--g500))] text-[hsl(var(--p900))] border-[hsl(var(--g500))]'
-                      : 'bg-[rgba(255,255,255,0.04)] text-[rgba(255,255,255,0.75)] border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.08)]'
-                  }`}
-                >
-                  {KIND_LABELS[kind][lang]}
-                  <span className={`ms-1.5 text-[0.7rem] font-black ${active ? 'opacity-70' : 'opacity-50'}`}>({count})</span>
-                </button>
-              );
-            })}
-            {contentCategories.map((category) => {
-              const count = items.filter((item) => item.categoryId === category.id).length;
-              const active = activeKindTab === category.id;
-              return <button key={category.id} onClick={() => setActiveKindTab(category.id)} className={`text-sm font-semibold py-2 px-3 rounded-lg border transition-colors ${active ? 'bg-[hsl(var(--g500))] text-[hsl(var(--p900))] border-[hsl(var(--g500))]' : 'bg-[rgba(255,255,255,0.04)] text-[rgba(255,255,255,0.75)] border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.08)]'}`}>
-                {category.icon || '✦'} {lang === 'ar' ? category.titleAr : category.titleEn}<span className={`ms-1.5 text-[0.7rem] font-black ${active ? 'opacity-70' : 'opacity-50'}`}>({count})</span>
-              </button>;
-            })}
-          </div>
+                  // Use activeKindTab as the expanded category state
+                  const isExpanded = activeKindTab === category.id;
+                  const toggleCategory = () => setActiveKindTab(isExpanded ? '' : category.id);
+                  const categoryImageUrl = category.imageUrl
+                    || (category.builtInKind ? BUILT_IN_CATEGORY_IMAGES[category.builtInKind] : '');
 
-          {(() => {
-            const list = contentCategories.some((category) => category.id === activeKindTab)
-              ? items.filter((item) => item.categoryId === activeKindTab)
-              : items.filter((item) => item.kind === activeKindTab && !item.categoryId);
-            if (loadingItems) {
-              return <p className="text-[rgba(255,255,255,0.5)] text-sm">{lang === 'ar' ? 'جاري التحميل…' : 'Loading…'}</p>;
-            }
-            if (list.length === 0) {
-              return <p className="text-[rgba(255,255,255,0.4)] text-sm italic">{lang === 'ar' ? 'لا توجد عناصر في هذه الفئة بعد.' : 'No items in this category yet.'}</p>;
-            }
-            return (
-              <div className="flex flex-col gap-4">
-                {list.map((it) => {
-                  const pct = discountPercent(it);
-                  const open = expandedItems.has(it.id);
                   return (
-                    <div key={it.id} className="bg-[rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.08)] rounded-xl overflow-hidden">
-                      {/* ── Accordion Header ── */}
+                    <div key={category.id} className={`border rounded-xl overflow-hidden shadow-sm transition-colors ${isExpanded ? 'bg-[rgba(30,14,56,0.95)] border-[hsl(var(--g500))]' : 'bg-[rgba(0,0,0,0.22)] border-[rgba(255,255,255,0.08)]'}`}>
+                      {/* ── Category Accordion Header ── */}
                       <button
                         type="button"
-                        onClick={() => toggleItem(it.id)}
-                        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-start hover:bg-[rgba(255,255,255,0.04)] transition-colors cursor-pointer"
+                        onClick={toggleCategory}
+                        className="w-full flex items-center justify-between gap-3 px-4 py-4 text-start hover:bg-[rgba(255,255,255,0.04)] transition-colors cursor-pointer"
                       >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className="text-xl shrink-0">{it.icon || '📦'}</span>
+                        <div className="flex items-center gap-4 min-w-0">
+                          {categoryImageUrl ? (
+                            <img src={categoryImageUrl} alt={category.titleAr || category.titleEn} className="w-14 h-14 rounded-lg object-cover border border-[rgba(255,255,255,0.1)] shrink-0 shadow-sm" />
+                          ) : (
+                            <div className="w-14 h-14 rounded-lg bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.1)] shrink-0 flex items-center justify-center text-3xl shadow-sm">
+                              {category.icon || '✦'}
+                            </div>
+                          )}
                           <div className="min-w-0">
-                            <p className="text-white font-bold text-sm truncate">
-                              {lang === 'ar' ? (it.titleAr || it.titleEn || it.id) : (it.titleEn || it.titleAr || it.id)}
+                            <p className="text-white font-black text-lg truncate flex items-center gap-2">
+                              {lang === 'ar' ? (category.titleAr || category.titleEn || 'بدون اسم') : (category.titleEn || category.titleAr || 'Unnamed')}
+                              {!category.active && (
+                                <span className="text-[0.65rem] font-bold bg-black/60 text-white/60 px-2 py-0.5 rounded-full">{lang === 'ar' ? 'مخفية' : 'Hidden'}</span>
+                              )}
                             </p>
-                            <p className="text-[rgba(255,255,255,0.45)] text-xs">
-                              {it.originalPriceJod ? `${it.originalPriceJod} JOD` : '—'}
-                              {pct !== null && <span className="ms-2 text-[hsl(var(--g300))] font-bold">{pct}% off</span>}
-                              {savedKey === it.id && <span className="ms-2 text-[hsl(var(--g400))] font-bold">✓ {t('admin.saved')}</span>}
+                            <p className="text-[rgba(255,255,255,0.5)] text-sm mt-1 font-semibold flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[rgba(255,255,255,0.3)]"></span>
+                              {lang === 'ar' ? `${list.length} عناصر` : `${list.length} items`}
+                              {category.builtInKind && <span className="ms-2 text-[hsl(var(--g400))] opacity-90 font-bold">{lang === 'ar' ? '(فئة افتراضية)' : '(Built-in)'}</span>}
                             </p>
                           </div>
                         </div>
-                        <span className={`shrink-0 text-[rgba(255,255,255,0.5)] text-lg transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
-                          ▾
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-[rgba(255,255,255,0.5)] text-2xl transition-transform duration-300 ${isExpanded ? 'rotate-180 text-white' : ''}`}>
+                            ▾
+                          </span>
+                        </div>
                       </button>
 
-                      {/* ── Accordion Body ── */}
-                      {open && (
-                        <div className="px-4 pb-4 border-t border-[rgba(255,255,255,0.06)]">
+                      {/* ── Category Accordion Body ── */}
+                      {isExpanded && (
+                        <div className="border-t border-[rgba(255,255,255,0.06)] bg-[rgba(0,0,0,0.2)]">
 
-                          {/* ── Cover Image ── */}
+                          {/* 1. Category Settings Editor */}
+                          <div className="p-4 sm:p-6 border-b border-white/5 bg-[rgba(30,14,56,0.2)] relative">
+                            <h3 className="text-[hsl(var(--g300))] text-[0.8rem] font-black uppercase tracking-wider mb-5 flex items-center gap-2">
+                              <span className="w-5 h-5 rounded bg-[hsl(var(--g500))] text-[hsl(var(--p900))] flex items-center justify-center text-xs shadow-sm">⚙</span>
+                              {lang === 'ar' ? 'إعدادات القسم' : 'Category Settings'}
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                              <Field label={lang === 'ar' ? 'العنوان (عربي)' : 'Title (Arabic)'}><input value={category.titleAr} onChange={(e) => updateCategory(category.id, { titleAr: e.target.value })} dir="rtl" className="adm-input" /></Field>
+                              <Field label={lang === 'ar' ? 'العنوان (إنجليزي)' : 'Title (English)'}><input value={category.titleEn} onChange={(e) => updateCategory(category.id, { titleEn: e.target.value })} dir="ltr" className="adm-input" /></Field>
+                              <Field label={lang === 'ar' ? 'الوصف (عربي)' : 'Description (Arabic)'}><textarea value={category.descriptionAr || ''} onChange={(e) => updateCategory(category.id, { descriptionAr: e.target.value })} dir="rtl" rows={2} className="adm-input" /></Field>
+                              <Field label={lang === 'ar' ? 'الوصف (إنجليزي)' : 'Description (English)'}><textarea value={category.descriptionEn || ''} onChange={(e) => updateCategory(category.id, { descriptionEn: e.target.value })} dir="ltr" rows={2} className="adm-input" /></Field>
+                              <Field label={lang === 'ar' ? 'الأيقونة' : 'Icon'}><input value={category.icon || ''} onChange={(e) => updateCategory(category.id, { icon: e.target.value })} className="adm-input" /></Field>
+                              <Field label={lang === 'ar' ? 'الترتيب' : 'Order'}>
+                                <div className="flex items-center gap-2 bg-[rgba(255,255,255,0.06)] rounded-lg p-1 border border-[rgba(255,255,255,0.1)] w-max">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveCategory(category.id, -1)}
+                                    disabled={categoryIndex === 0}
+                                    className="w-8 h-8 flex items-center justify-center bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.2)] rounded-md text-white font-bold transition-colors disabled:opacity-30 disabled:hover:bg-[rgba(255,255,255,0.1)]"
+                                    title={lang === 'ar' ? 'تحريك للأعلى' : 'Move up'}
+                                  >↑</button>
+                                  <span className="w-8 text-center text-white font-bold">{categoryIndex + 1}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveCategory(category.id, 1)}
+                                    disabled={categoryIndex === orderedCategories.length - 1}
+                                    className="w-8 h-8 flex items-center justify-center bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.2)] rounded-md text-white font-bold transition-colors disabled:opacity-30 disabled:hover:bg-[rgba(255,255,255,0.1)]"
+                                    title={lang === 'ar' ? 'تحريك للأسفل' : 'Move down'}
+                                  >↓</button>
+                                </div>
+                              </Field>
+                              <div className="col-span-1 md:col-span-2">
+                                <Field label={lang === 'ar' ? 'صورة الغلاف' : 'Cover Image'}>
+                                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                                    {category.imageUrl ? (
+                                      <div className="relative w-36 h-20 rounded-lg overflow-hidden border border-[rgba(255,255,255,0.1)] shrink-0 group">
+                                        <img src={category.imageUrl} alt="" className="w-full h-full object-cover" />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCategoryImgRemove(category)}
+                                          disabled={categoryImgUploading === category.id}
+                                          className="absolute inset-0 bg-black/70 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity font-bold"
+                                        >
+                                          {lang === 'ar' ? 'إزالة' : 'Remove'}
+                                        </button>
+                                      </div>
+                                    ) : null}
+                                    <div className="flex-1 w-full sm:w-auto">
+                                      <label className="block bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.1)] rounded-lg px-4 py-3 text-sm text-[rgba(255,255,255,0.7)] text-center cursor-pointer hover:bg-[rgba(255,255,255,0.1)] transition-colors font-semibold">
+                                        {categoryImgUploading === category.id ? (lang === 'ar' ? '⏳ جاري التحميل…' : '⏳ Uploading…') : (lang === 'ar' ? '🖼 اختر صورة غلاف (16:9)' : '🖼 Select 16:9 image')}
+                                        <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => { if (e.target.files?.[0]) handleCategoryImgUpload(category.id, e.target.files[0]); }} disabled={categoryImgUploading === category.id} />
+                                      </label>
+                                    </div>
+                                  </div>
+                                </Field>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 mt-6 pt-5 border-t border-white/10 flex-wrap">
+                              <label className="flex items-center gap-3 text-white text-sm cursor-pointer font-bold select-none group">
+                                <input
+                                  type="checkbox"
+                                  checked={category.active}
+                                  onChange={(event) => updateCategory(category.id, { active: event.target.checked })}
+                                  className="sr-only"
+                                />
+                                <div className={`w-10 h-5 rounded-full transition-colors relative flex items-center shadow-inner ${category.active ? 'bg-[hsl(var(--g500))]' : 'bg-[rgba(255,255,255,0.18)]'}`}>
+                                  <div className={`w-4 h-4 rounded-full bg-white shadow absolute transition-all duration-300 ${category.active ? 'left-[22px]' : 'left-0.5'}`} />
+                                </div>
+                                {category.active ? (lang === 'ar' ? 'القسم مفعّل (يظهر للزوار)' : 'Active (visible to visitors)') : (lang === 'ar' ? 'القسم مخفي (يظهر لك فقط)' : 'Hidden (only for you)')}
+                              </label>
+                              <div className="flex gap-3 w-full sm:w-auto">
+                                {!category.builtInKind && (
+                                  <button onClick={() => handleDeleteCategory(category.id)} className="flex-1 sm:flex-none bg-[rgba(255,80,80,0.1)] border border-[rgba(255,80,80,0.2)] text-[#ffb0b0] font-bold py-2 px-5 rounded-lg text-sm hover:bg-[rgba(255,80,80,0.2)] transition-colors">
+                                    {lang === 'ar' ? 'حذف القسم' : 'Delete'}
+                                  </button>
+                                )}
+                                <button onClick={() => handleSaveCategory(category)} className="flex-1 sm:flex-none bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-7 rounded-lg text-sm flex items-center justify-center gap-2 hover:opacity-90 shadow-md">
+                                  {categorySavedId === category.id && <span className="text-[hsl(var(--p900))] text-xs font-black">✓</span>}
+                                  {lang === 'ar' ? 'حفظ إعدادات القسم' : 'Save Category'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 2. Items List inside Category */}
+                          <div className="p-4 sm:p-6 bg-black/10">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                              <h3 className="text-[hsl(var(--g300))] text-[0.8rem] font-black uppercase tracking-wider flex items-center gap-2">
+                                <span className="w-5 h-5 rounded bg-[hsl(var(--g500))] text-[hsl(var(--p900))] flex items-center justify-center text-xs shadow-sm">📄</span>
+                                {lang === 'ar' ? 'محتوى القسم' : 'Category Content'}
+                              </h3>
+                              <button onClick={() => handleAdd(category.id)} className="bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.15)] text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 shadow-sm border border-white/10">
+                                <span className="text-xl leading-none -mt-0.5">+</span> {lang === 'ar' ? 'إضافة محتوى جديد' : 'Add Content'}
+                              </button>
+                            </div>
+
+                            {list.length === 0 ? (
+                              <p className="text-[rgba(255,255,255,0.3)] text-sm italic text-center py-10 border border-white/10 border-dashed rounded-xl bg-white/5 font-medium">
+                                {lang === 'ar' ? 'لا يوجد محتوى هنا بعد. انقري على إضافة محتوى جديد للبدء.' : 'No content here yet. Click Add Content to begin.'}
+                              </p>
+                            ) : (
+                              <div className="flex flex-col gap-4">
+                                {list.map((it) => {
+                                  const pct = discountPercent(it);
+                                  const open = expandedItems.has(it.id);
+                                  return (
+                                    <div key={it.id} className={`bg-[rgba(30,14,56,0.95)] border border-[rgba(255,255,255,0.08)] rounded-xl overflow-hidden shadow-md transition-colors ${open ? 'border-white/20' : ''}`}>
+                                      {/* ── Item Accordion Header ── */}
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleItem(it.id)}
+                                        className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 text-start transition-colors cursor-pointer ${open ? 'bg-white/5' : 'hover:bg-[rgba(255,255,255,0.03)]'}`}
+                                      >
+                                        <div className="flex items-center gap-4 min-w-0">
+                                          <div className="w-12 h-12 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center shrink-0 shadow-inner">
+                                            {it.imageUrl ? (
+                                              <img src={it.imageUrl} alt="" className="w-full h-full object-cover rounded-lg opacity-80" />
+                                            ) : (
+                                              <span className="text-2xl opacity-80">{it.icon || '📦'}</span>
+                                            )}
+                                          </div>
+                                          <div className="min-w-0">
+                                            <p className="text-white font-bold text-base truncate flex items-center gap-2">
+                                              {lang === 'ar' ? (it.titleAr || it.titleEn || it.id) : (it.titleEn || it.titleAr || it.id)}
+                                              {!it.active && <span className="text-[0.6rem] bg-black/40 px-2 py-0.5 rounded-full text-white/50 font-semibold">{lang === 'ar' ? 'مخفي' : 'Hidden'}</span>}
+                                            </p>
+                                            <p className="text-[rgba(255,255,255,0.45)] text-xs mt-1 font-semibold flex items-center gap-2">
+                                              <span>{it.originalPriceJod ? `${it.originalPriceJod} JOD` : '—'}</span>
+                                              {pct !== null && <span className="text-[hsl(var(--g300))] font-black bg-[hsl(var(--g500))/10] px-1.5 py-0.5 rounded text-[0.65rem]">{pct}% off</span>}
+                                              {savedKey === it.id && <span className="text-[hsl(var(--g400))] font-black ml-1">✓ {t('admin.saved')}</span>}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <span className={`shrink-0 text-[rgba(255,255,255,0.3)] text-xl transition-transform duration-300 ${open ? 'rotate-180 text-white' : ''}`}>
+                                          ▾
+                                        </span>
+                                      </button>
+
+                                      {/* ── Item Accordion Body ── */}
+                                      {open && (
+                                        <div className="px-4 pb-5 border-t border-[rgba(255,255,255,0.06)] bg-black/20 pt-4">
+{/* ── Cover Image ── */}
                           <div className="mt-3 mb-4 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4 pb-4 border-b border-[rgba(255,255,255,0.06)]">
                             <div>
                               <div className="w-full aspect-video rounded-lg overflow-hidden bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.1)] mb-2">
@@ -1405,7 +1452,8 @@ export default function Admin() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 flex-wrap">
+
+<div className="flex items-center gap-2 flex-wrap">
                             <button onClick={() => handleSaveItem(it)} className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90">
                               {lang === 'ar' ? 'حفظ' : 'Save'}
                             </button>
@@ -1414,14 +1462,22 @@ export default function Admin() {
                             </button>
                             {savedKey === it.id && <span className="text-[hsl(var(--g300))] text-sm font-semibold">{t('admin.saved')}</span>}
                           </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+
                         </div>
                       )}
                     </div>
                   );
-                })}
-              </div>
-            );
-          })()}
+               })}
+             </div>
+          )}
         </section>
         </>}
 
