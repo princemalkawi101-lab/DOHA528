@@ -14,6 +14,7 @@ export function SplashScreen() {
   });
 
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+  const [isLogoReady, setIsLogoReady] = useState(false);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -24,7 +25,15 @@ export function SplashScreen() {
     // Prevent scrolling while splash is active
     document.body.style.overflow = 'hidden';
 
-    // Respect reduced motion: shorten the duration
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isVisible]);
+
+  useEffect(() => {
+    if (!isVisible || !isLogoReady) return;
+
+    // Start the visible duration only after the logo is fully decoded.
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const displayDuration = prefersReducedMotion ? 400 : 2000;
     const fadeOutDuration = 800; // Time for the opacity transition
@@ -41,9 +50,8 @@ export function SplashScreen() {
     return () => {
       clearTimeout(startFadeTimer);
       clearTimeout(unmountTimer);
-      document.body.style.overflow = '';
     };
-  }, [isVisible]);
+  }, [isLogoReady, isVisible]);
 
   if (!isVisible) return null;
 
@@ -67,12 +75,26 @@ export function SplashScreen() {
         aria-hidden="true"
       />
 
-      <div className="relative z-10 flex flex-col items-center motion-safe:animate-[splash-reveal_1.5s_cubic-bezier(0.16,1,0.3,1)_forwards] motion-reduce:opacity-100 opacity-0">
+      <div
+        className={`relative z-10 flex flex-col items-center ${
+          isLogoReady
+            ? 'motion-safe:animate-[splash-reveal_1.5s_cubic-bezier(0.16,1,0.3,1)_forwards] motion-reduce:opacity-100 opacity-0'
+            : 'opacity-0'
+        }`}
+      >
         <img
-          src={`${import.meta.env.BASE_URL}img/masaha-n-logo-hd.png`}
-          width="1089"
-          height="1445"
+          src={`${import.meta.env.BASE_URL}img/masaha-n-logo-splash.webp`}
+          width="640"
+          height="849"
           alt="مساحة ن"
+          fetchPriority="high"
+          decoding="async"
+          onLoad={(event) => {
+            event.currentTarget.decode()
+              .catch(() => undefined)
+              .finally(() => setIsLogoReady(true));
+          }}
+          onError={() => setIsLogoReady(true)}
           className="w-[190px] sm:w-[210px] h-auto object-contain drop-shadow-[0_10px_24px_rgba(44,91,78,0.12)]"
           style={{ filter: 'contrast(1.07) saturate(1.04)' }}
         />
