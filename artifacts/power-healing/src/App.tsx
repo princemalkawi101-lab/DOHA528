@@ -3,6 +3,7 @@ import { AppProvider } from "@/lib/store";
 import { AuthProvider } from "@/lib/auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { SplashScreen } from "@/components/layout/SplashScreen";
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
@@ -25,6 +26,7 @@ function AppRoutes() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col">
+      <SplashScreen />
       <Navbar />
       <main className="flex-1">
         <Switch>

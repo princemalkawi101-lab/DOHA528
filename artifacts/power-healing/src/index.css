@@ -111,6 +111,18 @@
   .animate-shake {
     animation: shake 3s ease-in-out infinite;
   }
+  @keyframes splash-reveal {
+    0% {
+      opacity: 0;
+      transform: scale(0.92) translateY(12px);
+      filter: blur(4px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      filter: blur(0px);
+    }
+  }
   body {
     @apply font-sans antialiased bg-background text-foreground leading-relaxed;
     overflow-x: hidden;
