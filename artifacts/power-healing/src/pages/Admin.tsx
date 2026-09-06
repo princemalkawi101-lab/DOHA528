@@ -61,6 +61,7 @@ import {
 } from '@/lib/adSlides';
 import { fetchAllPurchases, deletePurchase, Purchase } from '@/lib/purchases';
 import { Review, fetchReviews, saveReview, deleteReview, newReviewTemplate, seedHardcodedReviews, HARDCODED_TESTIMONIALS } from '@/lib/reviews';
+import { Article, fetchArticles, saveArticle, deleteArticle, saveArticleOrder, newArticleTemplate } from '@/lib/articles';
 import {
   BarChart,
   Bar,
@@ -156,7 +157,12 @@ export default function Admin() {
   // ── These MUST stay above early returns to obey Rules of Hooks ──
   const [importing, setImporting] = useState(false);
   const [importStatus, setImportStatus] = useState<string>('');
-  const [adminTab, setAdminTab] = useState<'products' | 'bookings' | 'settings' | 'ads' | 'reviews'>('products');
+  const [adminTab, setAdminTab] = useState<'products' | 'bookings' | 'settings' | 'ads' | 'reviews' | 'articles'>('products');
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loadingArticles, setLoadingArticles] = useState(false);
+  const [articleSavedId, setArticleSavedId] = useState<string | null>(null);
+  const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set());
+  const toggleArticle = (id: string) => setExpandedArticles(prev => prev.has(id) ? new Set() : new Set([id]));
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [reviewSavedId, setReviewSavedId] = useState<string | null>(null);
@@ -171,6 +177,14 @@ export default function Admin() {
     setLoadingReviews(true);
     fetchReviews().then((list) => { setReviews(list); setLoadingReviews(false); });
   }, [adminTab, loadingReviews, reviews.length]);
+
+  useEffect(() => {
+    if (adminTab !== 'articles') return;
+    if (loadingArticles || articles.length > 0) return;
+    setLoadingArticles(true);
+    fetchArticles().then((list) => { setArticles(list); setLoadingArticles(false); });
+  }, [adminTab, loadingArticles, articles.length]);
+
 
   useEffect(() => {
     fetchSiteSettings().then((s) => {
@@ -839,6 +853,7 @@ export default function Admin() {
             { key: 'settings', ar: '⚙️ الإعدادات', en: '⚙️ Settings' },
             { key: 'ads', ar: '🎯 الإعلانات', en: '🎯 Banner Ads' },
             { key: 'reviews', ar: '⭐ التقييمات', en: '⭐ Reviews' },
+            { key: 'articles', ar: 'المقالات', en: 'Articles' },
           ] as { key: typeof adminTab; ar: string; en: string }[]).map((tb) => (
             <button
               key={tb.key}
@@ -2031,6 +2046,198 @@ export default function Admin() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+        </>}
+
+
+        {/* ── Articles Tab ── */}
+        {adminTab === 'articles' && <>
+        <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+            <h2 className="text-white text-lg font-black">
+              {lang === 'ar' ? 'إدارة المقالات' : 'Manage Articles'}
+              <span className="ms-2 text-[rgba(255,255,255,0.45)] text-xs font-medium">({articles.length})</span>
+            </h2>
+            <button
+              onClick={() => {
+                const fresh = newArticleTemplate(articles.length);
+                setArticles((prev) => [...prev, fresh]);
+                setExpandedArticles(new Set([fresh.id]));
+              }}
+              className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-bold text-sm px-5 py-2 rounded-xl transition-all hover:scale-[1.02]"
+            >
+              {lang === 'ar' ? '+ مقال جديد' : '+ New Article'}
+            </button>
+          </div>
+
+          {loadingArticles ? (
+            <div className="text-[rgba(255,255,255,0.5)] text-center py-6">...</div>
+          ) : articles.length === 0 ? (
+            <div className="text-[rgba(255,255,255,0.5)] text-center py-6 text-sm">
+              {lang === 'ar' ? 'لا يوجد مقالات.' : 'No articles.'}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {articles.map((a, index) => {
+                const isExpanded = expandedArticles.has(a.id);
+                return (
+                  <div key={a.id} className="bg-[rgba(0,0,0,0.2)] border border-[rgba(255,255,255,0.06)] rounded-xl overflow-hidden transition-all">
+                    {/* Compact View */}
+                    <div
+                      onClick={() => toggleArticle(a.id)}
+                      className="p-4 flex items-center justify-between cursor-pointer hover:bg-[rgba(255,255,255,0.02)]"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-white font-bold">{a.titleAr || (lang === 'ar' ? 'بدون عنوان' : 'Untitled')}</span>
+                        <span className="text-[rgba(255,255,255,0.5)] text-xs mt-1">{a.categoryAr} - {a.dateAr}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {!a.active && (
+                          <span className="text-[hsl(var(--destructive))] text-xs font-bold px-2 py-1 rounded bg-[rgba(255,0,0,0.1)]">
+                            {lang === 'ar' ? 'مخفي' : 'Hidden'}
+                          </span>
+                        )}
+                        <span className="text-[rgba(255,255,255,0.3)] text-lg transition-transform duration-300" style={{ transform: isExpanded ? 'rotate(180deg)' : 'none' }}>
+                          ⌄
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Expanded Edit View */}
+                    {isExpanded && (
+                      <div className="p-4 border-t border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.15)] flex flex-col gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <label className="flex flex-col gap-1.5">
+                            <span className="text-xs font-bold text-[rgba(255,255,255,0.6)]">العنوان (عربي)</span>
+                            <input className="adm-input" value={a.titleAr} onChange={(e) => setArticles(prev => prev.map(p => p.id === a.id ? {...p, titleAr: e.target.value} : p))} />
+                          </label>
+                          <label className="flex flex-col gap-1.5">
+                            <span className="text-xs font-bold text-[rgba(255,255,255,0.6)]">Title (English)</span>
+                            <input className="adm-input" value={a.titleEn} onChange={(e) => setArticles(prev => prev.map(p => p.id === a.id ? {...p, titleEn: e.target.value} : p))} />
+                          </label>
+                          <label className="flex flex-col gap-1.5">
+                            <span className="text-xs font-bold text-[rgba(255,255,255,0.6)]">التصنيف (عربي)</span>
+                            <input className="adm-input" value={a.categoryAr} onChange={(e) => setArticles(prev => prev.map(p => p.id === a.id ? {...p, categoryAr: e.target.value} : p))} />
+                          </label>
+                          <label className="flex flex-col gap-1.5">
+                            <span className="text-xs font-bold text-[rgba(255,255,255,0.6)]">Category (English)</span>
+                            <input className="adm-input" value={a.categoryEn} onChange={(e) => setArticles(prev => prev.map(p => p.id === a.id ? {...p, categoryEn: e.target.value} : p))} />
+                          </label>
+                          <label className="flex flex-col gap-1.5">
+                            <span className="text-xs font-bold text-[rgba(255,255,255,0.6)]">التاريخ (عربي)</span>
+                            <input className="adm-input" value={a.dateAr} onChange={(e) => setArticles(prev => prev.map(p => p.id === a.id ? {...p, dateAr: e.target.value} : p))} />
+                          </label>
+                          <label className="flex flex-col gap-1.5">
+                            <span className="text-xs font-bold text-[rgba(255,255,255,0.6)]">Date (English)</span>
+                            <input className="adm-input" value={a.dateEn} onChange={(e) => setArticles(prev => prev.map(p => p.id === a.id ? {...p, dateEn: e.target.value} : p))} />
+                          </label>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <label className="flex flex-col gap-1.5">
+                            <span className="text-xs font-bold text-[rgba(255,255,255,0.6)]">الوصف القصير (عربي)</span>
+                            <textarea className="adm-input min-h-[80px] resize-y" value={a.descriptionAr} onChange={(e) => setArticles(prev => prev.map(p => p.id === a.id ? {...p, descriptionAr: e.target.value} : p))} />
+                          </label>
+                          <label className="flex flex-col gap-1.5">
+                            <span className="text-xs font-bold text-[rgba(255,255,255,0.6)]">Short Description (English)</span>
+                            <textarea className="adm-input min-h-[80px] resize-y" value={a.descriptionEn} onChange={(e) => setArticles(prev => prev.map(p => p.id === a.id ? {...p, descriptionEn: e.target.value} : p))} />
+                          </label>
+                          <label className="flex flex-col gap-1.5">
+                            <span className="text-xs font-bold text-[rgba(255,255,255,0.6)]">المحتوى الكامل (عربي)</span>
+                            <textarea className="adm-input min-h-[140px] resize-y" value={a.contentAr} onChange={(e) => setArticles(prev => prev.map(p => p.id === a.id ? {...p, contentAr: e.target.value} : p))} />
+                          </label>
+                          <label className="flex flex-col gap-1.5">
+                            <span className="text-xs font-bold text-[rgba(255,255,255,0.6)]">Full Content (English)</span>
+                            <textarea className="adm-input min-h-[140px] resize-y" value={a.contentEn} onChange={(e) => setArticles(prev => prev.map(p => p.id === a.id ? {...p, contentEn: e.target.value} : p))} />
+                          </label>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={a.active}
+                              onChange={(e) => setArticles(prev => prev.map(p => p.id === a.id ? {...p, active: e.target.checked} : p))}
+                              className="w-4 h-4 accent-[hsl(var(--g500))]"
+                            />
+                            <span className="text-sm text-white font-medium">{lang === 'ar' ? 'عرض للعامة' : 'Publicly Visible'}</span>
+                          </label>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[rgba(255,255,255,0.1)] pt-4 mt-2">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await saveArticle(a);
+                                  setArticleSavedId(a.id);
+                                  setTimeout(() => setArticleSavedId(null), 1800);
+                                } catch {
+                                  alert(lang === 'ar' ? 'تعذّر الحفظ.' : 'Save failed.');
+                                }
+                              }}
+                              className="bg-[hsl(var(--g500))] text-[hsl(var(--p900))] px-4 py-2 rounded-lg font-bold text-sm shrink-0"
+                            >
+                              {lang === 'ar' ? 'حفظ' : 'Save'}
+                            </button>
+
+                            <button
+                              onClick={async () => {
+                                if (!confirm(lang === 'ar' ? 'تأكيد الحذف؟' : 'Confirm delete?')) return;
+                                try {
+                                  await deleteArticle(a);
+                                  setArticles(prev => prev.filter(p => p.id !== a.id));
+                                } catch {
+                                  alert(lang === 'ar' ? 'تعذّر الحذف.' : 'Delete failed.');
+                                }
+                              }}
+                              className="bg-[rgba(255,0,0,0.15)] text-[hsl(var(--destructive))] px-4 py-2 rounded-lg font-bold text-sm shrink-0"
+                            >
+                              {lang === 'ar' ? 'حذف' : 'Delete'}
+                            </button>
+
+                            {articleSavedId === a.id && (
+                              <span className="text-[hsl(var(--g300))] text-sm font-semibold">{t('admin.saved')}</span>
+                            )}
+                          </div>
+
+                          {/* Reordering */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              disabled={index === 0}
+                              onClick={async () => {
+                                const arr = [...articles];
+                                [arr[index], arr[index - 1]] = [arr[index - 1], arr[index]];
+                                const updated = arr.map((item, i) => ({ ...item, order: i }));
+                                setArticles(updated);
+                                await saveArticleOrder(updated);
+                              }}
+                              className="w-8 h-8 rounded bg-[rgba(255,255,255,0.05)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[rgba(255,255,255,0.1)] text-white text-lg flex items-center justify-center"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              disabled={index === articles.length - 1}
+                              onClick={async () => {
+                                const arr = [...articles];
+                                [arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
+                                const updated = arr.map((item, i) => ({ ...item, order: i }));
+                                setArticles(updated);
+                                await saveArticleOrder(updated);
+                              }}
+                              className="w-8 h-8 rounded bg-[rgba(255,255,255,0.05)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[rgba(255,255,255,0.1)] text-white text-lg flex items-center justify-center"
+                            >
+                              ↓
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>

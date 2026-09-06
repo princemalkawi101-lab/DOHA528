@@ -109,6 +109,17 @@ try {
     titleAr: 'تعديل غير مصرح',
   }, { merge: true }));
 
+  await assertSucceeds(setDoc(doc(adminDb, 'articles', 'article-1'), {
+    titleAr: 'مقال',
+    titleEn: 'Article',
+    order: 0,
+    active: true,
+  }));
+  await assertSucceeds(getDoc(doc(publicDb, 'articles', 'article-1')));
+  await assertFails(setDoc(doc(regularDb, 'articles', 'article-1'), {
+    titleAr: 'تعديل غير مصرح',
+  }, { merge: true }));
+
   await assertFails(setDoc(doc(publicDb, 'bookings', 'booking-1'), {
     itemId: 'course-1',
     itemTitleAr: 'دورة',

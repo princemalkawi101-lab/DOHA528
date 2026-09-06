@@ -1,13 +1,19 @@
+import { useEffect, useState } from 'react';
 import { useApp } from '@/lib/store';
+import { Article, fetchArticles } from '@/lib/articles';
 
 export function Blog() {
-  const { t } = useApp();
+  const { t, lang } = useApp();
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeArticle, setActiveArticle] = useState<Article | null>(null);
 
-  const posts = [
-    { key: '1' },
-    { key: '2' },
-    { key: '3' },
-  ];
+  useEffect(() => {
+    fetchArticles().then((data) => {
+      setArticles(data.filter(a => a.active));
+      setLoading(false);
+    });
+  }, []);
 
   return (
     <section id="blog" className="section bg-[hsl(var(--card))]">
@@ -16,31 +22,79 @@ export function Blog() {
           <span className="section-label">{t('blog.label')}</span>
           <h2 className="section-title">{t('blog.title')}</h2>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
-          {posts.map(post => (
-            <div key={post.key} className="bg-white rounded-2xl p-7 border border-[rgba(90,45,145,0.08)] transition-all hover:-translate-y-1.5 hover:shadow-[0_15px_40px_rgba(90,45,145,0.12)] flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                <span className="bg-[hsl(var(--muted))] text-[hsl(var(--p600))] text-[0.78rem] font-semibold py-1 px-3 rounded-full">
-                  {t(`blog.cat${post.key}`)}
-                </span>
-                <span className="text-[hsl(var(--muted-foreground))] text-[0.78rem]">
-                  {t(`blog.date${post.key}`)}
-                </span>
+
+        {loading ? (
+          <div className="text-center py-10 opacity-50">...</div>
+        ) : articles.length === 0 ? (
+          <div className="text-center py-10 opacity-50">{lang === 'ar' ? 'لا يوجد مقالات حالياً.' : 'No articles available.'}</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
+            {articles.map((post) => (
+              <div
+                key={post.id}
+                className="bg-[#e6f7f4] rounded-2xl p-7 border border-[#b2e5d9] transition-all hover:-translate-y-1.5 hover:shadow-[0_15px_40px_rgba(30,170,140,0.12)] flex flex-col"
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <span className="bg-[#ccede5] text-[#13755f] text-[0.78rem] font-semibold py-1 px-3 rounded-full">
+                    {lang === 'ar' ? post.categoryAr : post.categoryEn}
+                  </span>
+                  <span className="text-[#3c9b84] text-[0.78rem] font-medium">
+                    {lang === 'ar' ? post.dateAr : post.dateEn}
+                  </span>
+                </div>
+                <h3 className="text-[1.05rem] font-bold text-[#0d5947] mb-3 leading-[1.5]">
+                  {lang === 'ar' ? post.titleAr : post.titleEn}
+                </h3>
+                <p className="text-[#2b8670] text-[0.9rem] leading-[1.7] mb-5 flex-1 line-clamp-3">
+                  {lang === 'ar' ? post.descriptionAr : post.descriptionEn}
+                </p>
+                <button
+                  onClick={() => setActiveArticle(post)}
+                  className="text-[#10705a] font-black text-[0.9rem] text-start hover:text-[#0b5443] transition-colors"
+                >
+                  {t('blog.readMore')}
+                </button>
               </div>
-              <h3 className="text-[1.05rem] font-bold text-[hsl(var(--p900))] mb-3 leading-[1.5]">
-                {t(`blog.title${post.key}`)}
-              </h3>
-              <p className="text-[hsl(var(--muted-foreground))] text-[0.9rem] leading-[1.7] mb-5 flex-1">
-                {t(`blog.desc${post.key}`)}
-              </p>
-              <a href="#" className="text-[hsl(var(--p500))] font-semibold text-[0.9rem]">
-                {t('blog.readMore')}
-              </a>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Full Article Dialog */}
+      {activeArticle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <div
+            className="absolute inset-0 bg-[rgba(10,35,30,0.4)] backdrop-blur-sm"
+            onClick={() => setActiveArticle(null)}
+          ></div>
+          <div className="relative bg-[#f4fcf9] w-full max-w-2xl max-h-[85vh] rounded-3xl shadow-[0_30px_60px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-5 sm:p-6 border-b border-[#d8f2ec] bg-white">
+              <span className="bg-[#ccede5] text-[#13755f] text-[0.8rem] font-bold py-1 px-3 rounded-full">
+                {lang === 'ar' ? activeArticle.categoryAr : activeArticle.categoryEn}
+              </span>
+              <button
+                onClick={() => setActiveArticle(null)}
+                className="w-8 h-8 rounded-full bg-[#edf9f6] text-[#2b8670] flex items-center justify-center hover:bg-[#d8f2ec] hover:text-[#10705a] transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 sm:p-8 overflow-y-auto">
+              <div className="mb-6">
+                <span className="text-[#3c9b84] text-sm font-medium block mb-2">
+                  {lang === 'ar' ? activeArticle.dateAr : activeArticle.dateEn}
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black text-[#0d5947] leading-[1.4]">
+                  {lang === 'ar' ? activeArticle.titleAr : activeArticle.titleEn}
+                </h2>
+              </div>
+              <div className="text-[#206655] text-base leading-[1.8] whitespace-pre-wrap">
+                {lang === 'ar' ? activeArticle.contentAr : activeArticle.contentEn}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
