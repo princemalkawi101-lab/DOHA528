@@ -26,13 +26,18 @@ export type StoredBooking = Booking & {
 };
 
 export async function fetchAllBookings(): Promise<StoredBooking[]> {
-  const [serverRows, legacySnap] = await Promise.all([
+  const [serverResult, legacyResult] = await Promise.allSettled([
     readJson<StoredBooking[]>(await serverApi('/api/admin/bookings')),
     getDocs(query(collection(db, 'bookings'), orderBy('createdAt', 'desc'))),
   ]);
+  if (serverResult.status === 'rejected' && legacyResult.status === 'rejected') {
+    throw new Error('Unable to load bookings from either data source');
+  }
+  const serverRows = serverResult.status === 'fulfilled' ? serverResult.value : [];
+  const legacyDocs = legacyResult.status === 'fulfilled' ? legacyResult.value.docs : [];
   return [
     ...serverRows,
-    ...legacySnap.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<StoredBooking, 'id'>) })),
+    ...legacyDocs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<StoredBooking, 'id'>) })),
   ];
 }
 
