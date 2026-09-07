@@ -220,7 +220,8 @@ export default function Checkout() {
                             cart: cart.map((c) => ({
                               itemId: c.itemId || c.key,
                               variant: c.purchaseVariant || (c.key.endsWith('-vip') ? 'vip' : 'standard'),
-                              qty: c.qty,
+                              jod: Number(c.jod).toFixed(2),
+                              qty: Math.max(1, Math.trunc(Number(c.qty) || 1)),
                             })),
                           }),
                         });

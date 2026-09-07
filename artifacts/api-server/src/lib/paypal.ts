@@ -184,11 +184,37 @@ export async function createPayPalOrder(input: {
 }): Promise<{ id: string; amount: string; currency: string }> {
   const config = getPayPalConfig();
   const runtime = getPayPalRuntimeConfig();
-  const totalJod = input.cart.reduce(
-    (sum, item) => sum + item.jod * item.qty,
-    0,
-  );
-  const amount = (totalJod * runtime.conversionRate).toFixed(2);
+  const normalizedCart = input.cart.map((item) => {
+    const priceJod = Number(item.jod);
+    const quantity = Number(item.qty);
+    if (!Number.isFinite(priceJod) || priceJod <= 0
+      || !Number.isInteger(quantity) || quantity < 1) {
+      throw new TypeError("Cart contains an invalid price or quantity");
+    }
+    return {
+      ...item,
+      quantity,
+      unitAmount: Number(priceJod * runtime.conversionRate).toFixed(2),
+    };
+  });
+  const paypalItems = normalizedCart.map((item) => ({
+    name: String(item.titleEn || item.nameKey || "Item").slice(0, 127),
+    unit_amount: {
+      currency_code: runtime.currency,
+      value: Number(item.unitAmount).toFixed(2),
+    },
+    quantity: String(item.quantity),
+  }));
+  const amount = paypalItems
+    .reduce(
+      (sum, item) =>
+        sum + Number(item.unit_amount.value) * Number(item.quantity),
+      0,
+    )
+    .toFixed(2);
+  if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) {
+    throw new TypeError("Cart contains an invalid price or quantity");
+  }
   const description = input.cart
     .map((item) => item.titleEn || item.nameKey || "Item")
     .join(", ")
@@ -206,7 +232,17 @@ export async function createPayPalOrder(input: {
       body: JSON.stringify({
         intent: "CAPTURE",
         purchase_units: [{
-          amount: { currency_code: runtime.currency, value: amount },
+          amount: {
+            currency_code: runtime.currency,
+            value: Number(amount).toFixed(2),
+            breakdown: {
+              item_total: {
+                currency_code: runtime.currency,
+                value: Number(amount).toFixed(2),
+              },
+            },
+          },
+          items: paypalItems,
           description,
         }],
       }),

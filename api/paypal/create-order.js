@@ -39,18 +39,38 @@ module.exports = async function createOrder(req, res) {
       });
     }
 
-    const total = cart.reduce((sum, item) => {
-      const jod = Number(item && item.jod);
-      const qty = Number(item && (item.qty || 1));
-      return sum + (Number.isFinite(jod) && Number.isFinite(qty) ? jod * qty : 0);
-    }, 0);
-    if (!Number.isFinite(total) || total <= 0) {
+    const normalizedCart = cart.map((item) => {
+      const priceJod = Number(item && item.jod);
+      const quantity = Number(item && (item.qty ?? 1));
+      return { item, priceJod, quantity };
+    });
+    const hasInvalidItem = normalizedCart.some(({ priceJod, quantity }) =>
+      !Number.isFinite(priceJod) ||
+      priceJod <= 0 ||
+      !Number.isInteger(quantity) ||
+      quantity < 1 ||
+      quantity > 20
+    );
+    if (hasInvalidItem) {
       return res.status(400).json({ error: 'Cart contains an invalid price or quantity', code: 'INVALID_CART' });
     }
 
-    const usdTotal = (total * 1.41).toFixed(2);
-    const description = cart
-      .map((item) => item.titleEn || item.nameKey || 'Item')
+    const paypalItems = normalizedCart.map(({ item, priceJod, quantity }) => ({
+      name: String(item.titleEn || item.nameKey || 'Item').slice(0, 127),
+      unit_amount: {
+        currency_code: 'USD',
+        value: Number(priceJod * 1.41).toFixed(2),
+      },
+      quantity: String(quantity),
+    }));
+    const usdTotal = paypalItems
+      .reduce((sum, item) => sum + Number(item.unit_amount.value) * Number(item.quantity), 0)
+      .toFixed(2);
+    if (!Number.isFinite(Number(usdTotal)) || Number(usdTotal) <= 0) {
+      return res.status(400).json({ error: 'Cart contains an invalid price or quantity', code: 'INVALID_CART' });
+    }
+    const description = normalizedCart
+      .map(({ item }) => item.titleEn || item.nameKey || 'Item')
       .join(', ')
       .slice(0, 127);
 
@@ -62,7 +82,20 @@ module.exports = async function createOrder(req, res) {
       },
       body: JSON.stringify({
         intent: 'CAPTURE',
-        purchase_units: [{ amount: { currency_code: 'USD', value: usdTotal }, description }],
+        purchase_units: [{
+          amount: {
+            currency_code: 'USD',
+            value: Number(usdTotal).toFixed(2),
+            breakdown: {
+              item_total: {
+                currency_code: 'USD',
+                value: Number(usdTotal).toFixed(2),
+              },
+            },
+          },
+          items: paypalItems,
+          description,
+        }],
       }),
     });
     const orderBody = await orderRes.json().catch(() => ({}));
