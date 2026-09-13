@@ -262,7 +262,12 @@ export default function Admin() {
       setTimeout(() => setSavedKey(null), 1800);
     } catch (error) {
       console.error('item save failed', error);
-      alert(lang === 'ar' ? 'تعذّر الحفظ. تحققي من الاتصال وحاولي مرة أخرى.' : 'Save failed. Check your connection and try again.');
+      const code = error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: unknown }).code)
+        : '';
+      alert(lang === 'ar'
+        ? `تعذّر الحفظ${code ? ` (${code})` : ''}. تحققي من صلاحية الحساب والاتصال وحاولي مرة أخرى.`
+        : `Save failed${code ? ` (${code})` : ''}. Check admin access and connection, then try again.`);
     } finally {
       setItemSaving(null);
     }
@@ -535,6 +540,7 @@ export default function Admin() {
       const item = items.find((entry) => entry.id === id);
       if (!item) throw new Error('ITEM_NOT_FOUND');
       if (!file.type.startsWith('image/')) throw new Error('INVALID_IMAGE_TYPE');
+      await auth.currentUser?.getIdToken(true);
       const blob = await new Promise<Blob>((resolve, reject) => {
         const img = new Image();
         const url = URL.createObjectURL(file);
@@ -569,7 +575,12 @@ export default function Admin() {
       setTimeout(() => setSavedKey(null), 1800);
     } catch (e) {
       console.error('item image upload failed', e);
-      alert(lang === 'ar' ? 'تعذّر تحميل الصورة، حاول مرة أخرى.' : 'Image upload failed, please try again.');
+      const code = e && typeof e === 'object' && 'code' in e
+        ? String((e as { code?: unknown }).code)
+        : '';
+      alert(lang === 'ar'
+        ? `تعذّر تحميل الصورة${code ? ` (${code})` : ''}. تحققي من صلاحية الحساب والاتصال وحاولي مرة أخرى.`
+        : `Image upload failed${code ? ` (${code})` : ''}. Check admin access and connection, then try again.`);
     } finally {
       setItemImgUploading(null);
     }

@@ -10,7 +10,7 @@ import {
   runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { auth, db } from './firebase';
 
 export type ItemKind = 'course' | 'workshop' | 'recorded' | 'individual-online' | 'session' | 'vip';
 export type ContentEntryType = 'material' | 'lesson';
@@ -56,6 +56,7 @@ export async function saveItem(item: Item): Promise<void> {
   const cleanRest = Object.fromEntries(
     Object.entries(rest).filter(([, value]) => value !== undefined),
   );
+  await auth.currentUser?.getIdToken(true);
 
   await runTransaction(db, async (transaction) => {
     const current = await transaction.get(itemRef);
