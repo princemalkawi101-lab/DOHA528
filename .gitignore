@@ -47,3 +47,8 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# User-provided browser screenshots are reference material, not app assets
+attached_assets/Screenshot_20260913_202011_Samsung_Browser_1789320053547.jpg
+attached_assets/Screenshot_20260913_202034_Samsung_Browser_1789320069477.jpg
+attached_assets/Screenshot_20260913_205005_Samsung_Browser_1789321821308.jpg
