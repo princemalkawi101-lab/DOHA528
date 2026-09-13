@@ -135,10 +135,13 @@ export const DEFAULT_AD_SLIDES: AdSlide[] = [
 
 /**
  * Resize/compress an image File into a base64 data URL.
- * Caps the longest edge at maxEdge px, encodes as JPEG quality 0.82.
- * Result is small enough to comfortably fit inside a Firestore doc.
+ * Keeps the result below Firestore's document-size limit when stored inline.
  */
-export async function fileToCompressedDataUrl(file: File, maxEdge = 1400): Promise<string> {
+export async function fileToCompressedDataUrl(
+  file: File,
+  maxEdge = 1400,
+  maxBytes = 450_000,
+): Promise<string> {
   const dataUrl: string = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(reader.error);
@@ -151,14 +154,25 @@ export async function fileToCompressedDataUrl(file: File, maxEdge = 1400): Promi
     im.onerror = () => reject(new Error('image load failed'));
     im.src = dataUrl;
   });
-  const ratio = Math.min(1, maxEdge / Math.max(img.width, img.height));
-  const w = Math.round(img.width * ratio);
-  const h = Math.round(img.height * ratio);
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('canvas ctx unavailable');
-  ctx.drawImage(img, 0, 0, w, h);
-  return canvas.toDataURL('image/jpeg', 0.82);
+  let edge = Math.min(maxEdge, Math.max(img.width, img.height));
+  const qualities = [0.82, 0.72, 0.62, 0.52];
+
+  for (let pass = 0; pass < 6; pass += 1) {
+    const ratio = Math.min(1, edge / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.width * ratio));
+    canvas.height = Math.max(1, Math.round(img.height * ratio));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('canvas ctx unavailable');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    for (const quality of qualities) {
+      const compressed = canvas.toDataURL('image/jpeg', quality);
+      if (compressed.length <= maxBytes) return compressed;
+    }
+
+    edge = Math.max(480, Math.round(edge * 0.78));
+  }
+
+  throw new Error('IMAGE_TOO_LARGE');
 }

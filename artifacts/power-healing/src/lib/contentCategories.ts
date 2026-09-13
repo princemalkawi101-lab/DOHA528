@@ -10,7 +10,7 @@ import {
   writeBatch,
   where,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { auth, db } from './firebase';
 
 export type BuiltInContentKind = 'course' | 'workshop' | 'recorded' | 'individual-online' | 'vip';
 
@@ -67,6 +67,7 @@ export async function fetchContentCategories(): Promise<ContentCategory[]> {
 export async function saveContentCategory(category: ContentCategory): Promise<void> {
   const { id, linkedItemIds: _linkedItemIds, ...rest } = category;
   const categoryRef = doc(db, COL, id);
+  await auth.currentUser?.getIdToken(true);
   await runTransaction(db, async (transaction) => {
     const current = await transaction.get(categoryRef);
     transaction.set(

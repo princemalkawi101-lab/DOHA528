@@ -1,5 +1,5 @@
 import { collection, doc, getDocs, orderBy, query, runTransaction, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { db } from './firebase';
+import { auth, db } from './firebase';
 
 export type Article = {
   id: string;
@@ -105,6 +105,7 @@ export async function fetchArticles(): Promise<Article[]> {
 export async function saveArticle(article: Article): Promise<void> {
   const { id, ...rest } = article;
   const ref = doc(db, COL, id);
+  await auth.currentUser?.getIdToken(true);
   await runTransaction(db, async (t) => {
     t.set(ref, {
       ...rest,

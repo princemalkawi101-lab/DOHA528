@@ -16,10 +16,10 @@ Never set administrator claims from browser code.
 
 ## Deployment
 
-From an authenticated Firebase CLI, deploy both rule sets:
+From an authenticated Firebase CLI, deploy the Firestore rules:
 
 ```sh
-pnpm dlx firebase-tools deploy --only firestore:rules,storage --project "$VITE_FIREBASE_PROJECT_ID"
+pnpm dlx firebase-tools deploy --only firestore:rules --project "$VITE_FIREBASE_PROJECT_ID"
 ```
 
 The Firebase project is intentionally not hard-coded in `.firebaserc`; the
@@ -30,8 +30,8 @@ accidental deployment to the wrong project.
 
 - `siteSettings/config`, catalog content, advertisements, reviews, and slider
   settings are publicly readable and writable only by an administrator.
-- Course, article, and category images are publicly readable and writable only
-  by an administrator, with a 10 MB image-size limit.
+- Uploaded course, article, and category images are stored as compressed Base64
+  data URLs inside their Firestore documents; Firebase Storage is not required.
 - Social links are limited to 5 entries. Every entry must use a supported
   platform, contain only the expected fields, use an HTTPS destination, and
   provide valid ordering and activation values.

@@ -2,10 +2,9 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
 import { collection, getDocs, orderBy, query as fsQuery } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useApp, RATES } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
-import { db, auth, storage } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import {
   AboutContent,
   Certificate,
@@ -541,33 +540,7 @@ export default function Admin() {
       if (!item) throw new Error('ITEM_NOT_FOUND');
       if (!file.type.startsWith('image/')) throw new Error('INVALID_IMAGE_TYPE');
       await auth.currentUser?.getIdToken(true);
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-          const MAX = 1200;
-          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-          canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-          URL.revokeObjectURL(url);
-          canvas.toBlob((b) => b ? resolve(b) : reject(new Error('canvas toBlob failed')), 'image/jpeg', 0.88);
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
-        img.src = url;
-      });
-      const imageRef = ref(storage, `course-covers/${id}/${Date.now()}.jpg`);
-      const snapshot = await Promise.race([
-        uploadBytes(imageRef, blob, {
-          contentType: 'image/jpeg',
-          cacheControl: 'public,max-age=31536000,immutable',
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('IMAGE_UPLOAD_TIMEOUT')), 30000),
-        ),
-      ]);
-      const imageUrl = await getDownloadURL(snapshot.ref);
+      const imageUrl = await fileToCompressedDataUrl(file, 1200, 450_000);
       const updatedItem = { ...item, imageUrl };
       await saveItem(updatedItem);
       setItems((prev) => prev.map((entry) => entry.id === id ? updatedItem : entry));
@@ -579,8 +552,8 @@ export default function Admin() {
         ? String((e as { code?: unknown }).code)
         : '';
       alert(lang === 'ar'
-        ? `تعذّر تحميل الصورة${code ? ` (${code})` : ''}. تحققي من صلاحية الحساب والاتصال وحاولي مرة أخرى.`
-        : `Image upload failed${code ? ` (${code})` : ''}. Check admin access and connection, then try again.`);
+        ? `تعذّر حفظ الصورة${code ? ` (${code})` : ''}. قد تكون الصورة كبيرة جداً أو لا توجد صلاحية للحفظ.`
+        : `Image save failed${code ? ` (${code})` : ''}. The image may be too large or the account may not have write access.`);
     } finally {
       setItemImgUploading(null);
     }
@@ -608,28 +581,7 @@ export default function Admin() {
       const article = articles.find((entry) => entry.id === id);
       if (!article) throw new Error('ARTICLE_NOT_FOUND');
       if (!file.type.startsWith('image/')) throw new Error('INVALID_IMAGE_TYPE');
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-          const MAX = 1200;
-          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-          canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-          URL.revokeObjectURL(url);
-          canvas.toBlob((b) => b ? resolve(b) : reject(new Error('canvas toBlob failed')), 'image/jpeg', 0.88);
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
-        img.src = url;
-      });
-      const imageRef = ref(storage, `article-images/${id}/${Date.now()}.jpg`);
-      const snapshot = await uploadBytes(imageRef, blob, {
-        contentType: 'image/jpeg',
-        cacheControl: 'public,max-age=31536000,immutable',
-      });
-      const imageUrl = await getDownloadURL(snapshot.ref);
+      const imageUrl = await fileToCompressedDataUrl(file, 1000, 350_000);
       const updatedArticle = { ...article, imageUrl };
       await saveArticle(updatedArticle);
       setArticles((prev) => prev.map((entry) => entry.id === id ? updatedArticle : entry));
@@ -637,7 +589,7 @@ export default function Admin() {
       setTimeout(() => setArticleSavedId(null), 1800);
     } catch (e) {
       console.error('article image upload failed', e);
-      alert(lang === 'ar' ? 'تعذّر تحميل الصورة، حاول مرة أخرى.' : 'Image upload failed, please try again.');
+      alert(lang === 'ar' ? 'تعذّر حفظ الصورة. قد تكون كبيرة جداً أو لا توجد صلاحية للحفظ.' : 'Image save failed. The image may be too large or the account may not have write access.');
     } finally {
       setArticleImgUploading(null);
     }
@@ -665,28 +617,7 @@ export default function Admin() {
       const category = contentCategories.find((entry) => entry.id === id);
       if (!category) throw new Error('CATEGORY_NOT_FOUND');
       if (!file.type.startsWith('image/')) throw new Error('INVALID_IMAGE_TYPE');
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-          const MAX = 1200;
-          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-          canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-          URL.revokeObjectURL(url);
-          canvas.toBlob((b) => b ? resolve(b) : reject(new Error('canvas toBlob failed')), 'image/jpeg', 0.88);
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
-        img.src = url;
-      });
-      const imageRef = ref(storage, `category-covers/${id}/${Date.now()}.jpg`);
-      const snapshot = await uploadBytes(imageRef, blob, {
-        contentType: 'image/jpeg',
-        cacheControl: 'public,max-age=31536000,immutable',
-      });
-      const imageUrl = await getDownloadURL(snapshot.ref);
+      const imageUrl = await fileToCompressedDataUrl(file, 1000, 350_000);
       const updatedCategory = { ...category, imageUrl };
       await saveContentCategory(updatedCategory);
       setContentCategories((prev) => prev.map((entry) => entry.id === id ? updatedCategory : entry));
@@ -694,7 +625,7 @@ export default function Admin() {
       setTimeout(() => setCategorySavedId(null), 1800);
     } catch (e) {
       console.error('category image upload failed', e);
-      alert(lang === 'ar' ? 'تعذّر تحميل الصورة، حاول مرة أخرى.' : 'Image upload failed, please try again.');
+      alert(lang === 'ar' ? 'تعذّر حفظ الصورة. قد تكون كبيرة جداً أو لا توجد صلاحية للحفظ.' : 'Image save failed. The image may be too large or the account may not have write access.');
     } finally {
       setCategoryImgUploading(null);
     }
