@@ -53,6 +53,9 @@ export async function fetchItems(): Promise<Item[]> {
 export async function saveItem(item: Item): Promise<void> {
   const { id, ...rest } = item;
   const itemRef = doc(db, COL, id);
+  const cleanRest = Object.fromEntries(
+    Object.entries(rest).filter(([, value]) => value !== undefined),
+  );
 
   await runTransaction(db, async (transaction) => {
     const current = await transaction.get(itemRef);
@@ -78,7 +81,7 @@ export async function saveItem(item: Item): Promise<void> {
       throw new Error('CATEGORY_NOT_FOUND');
     }
 
-    transaction.set(itemRef, { ...rest, categoryId: nextCategoryId, updatedAt: serverTimestamp() }, { merge: true });
+    transaction.set(itemRef, { ...cleanRest, categoryId: nextCategoryId, updatedAt: serverTimestamp() }, { merge: true });
 
     if (previousCategoryRef && previousCategory?.exists()) {
       transaction.update(previousCategoryRef, { linkedItemIds: arrayRemove(id) });

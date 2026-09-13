@@ -120,6 +120,7 @@ export default function Admin() {
   const [bookings, setBookings] = useState<Array<Record<string, any>>>([]);
   const [loadingItems, setLoadingItems] = useState(true);
   const [savedKey, setSavedKey] = useState<string | null>(null);
+  const [itemSaving, setItemSaving] = useState<string | null>(null);
   const [activeKindTab, setActiveKindTab] = useState<string>('');
   const [contentCategories, setContentCategories] = useState<ContentCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -248,9 +249,23 @@ export default function Admin() {
   };
 
   const handleSaveItem = async (it: Item) => {
-    await saveItem(it);
-    setSavedKey(it.id);
-    setTimeout(() => setSavedKey(null), 1800);
+    if (itemSaving === it.id) return;
+    setItemSaving(it.id);
+    try {
+      await Promise.race([
+        saveItem(it),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('SAVE_TIMEOUT')), 15000),
+        ),
+      ]);
+      setSavedKey(it.id);
+      setTimeout(() => setSavedKey(null), 1800);
+    } catch (error) {
+      console.error('item save failed', error);
+      alert(lang === 'ar' ? 'تعذّر الحفظ. تحققي من الاتصال وحاولي مرة أخرى.' : 'Save failed. Check your connection and try again.');
+    } finally {
+      setItemSaving(null);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -537,10 +552,15 @@ export default function Admin() {
         img.src = url;
       });
       const imageRef = ref(storage, `course-covers/${id}/${Date.now()}.jpg`);
-      const snapshot = await uploadBytes(imageRef, blob, {
-        contentType: 'image/jpeg',
-        cacheControl: 'public,max-age=31536000,immutable',
-      });
+      const snapshot = await Promise.race([
+        uploadBytes(imageRef, blob, {
+          contentType: 'image/jpeg',
+          cacheControl: 'public,max-age=31536000,immutable',
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('IMAGE_UPLOAD_TIMEOUT')), 30000),
+        ),
+      ]);
       const imageUrl = await getDownloadURL(snapshot.ref);
       const updatedItem = { ...item, imageUrl };
       await saveItem(updatedItem);
@@ -1527,8 +1547,15 @@ export default function Admin() {
 
 
 <div className="flex items-center gap-2 flex-wrap">
-                            <button onClick={() => handleSaveItem(it)} className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90">
-                              {lang === 'ar' ? 'حفظ' : 'Save'}
+                            <button
+                              type="button"
+                              onClick={() => handleSaveItem(it)}
+                              disabled={itemSaving === it.id || itemImgUploading === it.id}
+                              className="bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2 px-4 rounded-lg text-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {itemSaving === it.id
+                                ? (lang === 'ar' ? 'جارٍ الحفظ…' : 'Saving…')
+                                : (lang === 'ar' ? 'حفظ' : 'Save')}
                             </button>
                             <button onClick={() => handleDelete(it.id)} className="bg-[rgba(255,80,80,0.15)] border border-[rgba(255,80,80,0.3)] text-[#ffb0b0] font-semibold py-2 px-4 rounded-lg text-sm hover:bg-[rgba(255,80,80,0.25)]">
                               {lang === 'ar' ? 'حذف' : 'Delete'}
