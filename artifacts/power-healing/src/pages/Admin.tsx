@@ -8,13 +8,21 @@ import { db, auth } from '@/lib/firebase';
 import {
   AboutContent,
   Certificate,
+  DEFAULT_EVENT_SETTINGS,
   DEFAULT_ABOUT_CONTENT,
   DEFAULT_CERTIFICATES,
+  EventSettings,
   fetchSiteSettings,
   saveSiteSettings,
   saveSocialLinksWithRevision,
   SOCIAL_LINKS_CONFLICT,
 } from '@/lib/siteSettings';
+import {
+  EventRegistration,
+  fetchEventRegistrations,
+  updateEventRegistrationStatus,
+  deleteEventRegistration,
+} from '@/lib/eventRegistrations';
 import {
   normalizeSocialDestination,
   newSocialLinkTemplate,
@@ -154,11 +162,14 @@ export default function Admin() {
   const [settingsSaving, setSettingsSaving] = useState<'about' | 'certificates' | 'socialLinks' | null>(null);
   const [settingsFeedback, setSettingsFeedback] = useState<string>('');
   const [socialFeedback, setSocialFeedback] = useState<string>('');
+  const [eventSettings, setEventSettings] = useState<EventSettings>(DEFAULT_EVENT_SETTINGS);
+  const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>([]);
+  const [eventFeedback, setEventFeedback] = useState('');
 
   // ── These MUST stay above early returns to obey Rules of Hooks ──
   const [importing, setImporting] = useState(false);
   const [importStatus, setImportStatus] = useState<string>('');
-  const [adminTab, setAdminTab] = useState<'products' | 'bookings' | 'settings' | 'ads' | 'reviews' | 'articles'>('products');
+  const [adminTab, setAdminTab] = useState<'products' | 'bookings' | 'settings' | 'ads' | 'reviews' | 'articles' | 'event'>('products');
   const [articles, setArticles] = useState<Article[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(false);
   const [articleSavedId, setArticleSavedId] = useState<string | null>(null);
@@ -194,6 +205,7 @@ export default function Admin() {
       setCertificates(s.certificates === undefined ? DEFAULT_CERTIFICATES : s.certificates);
       setSocialLinks(socialLinksOrDefaults(s.socialLinks));
       setSocialLinksRevision(Number.isInteger(s.socialLinksRevision) && (s.socialLinksRevision ?? 0) >= 0 ? s.socialLinksRevision! : 0);
+      setEventSettings({ ...DEFAULT_EVENT_SETTINGS, ...(s.event || {}) });
     });
   }, []);
 
@@ -220,6 +232,7 @@ export default function Admin() {
       .catch(() => setPurchases([]))
       .finally(() => setLoadingPurchases(false));
     fetchAdSliderConfig().then(setAdSliderCfg).catch(() => {});
+    fetchEventRegistrations().then(setEventRegistrations).catch(() => setEventRegistrations([]));
   }, [isAdmin]);
 
   if (loading) {
@@ -372,6 +385,37 @@ export default function Admin() {
       setSettingsFeedback(lang === 'ar' ? 'تعذّر حفظ محتوى «من أنا».' : 'Could not save About content.');
     } finally {
       setSettingsSaving(null);
+    }
+  };
+
+  const handleSaveEventSettings = async () => {
+    setSettingsSaving('about');
+    try {
+      await saveSiteSettings({ event: eventSettings });
+      setEventFeedback(lang === 'ar' ? 'تم حفظ إعدادات الفعالية.' : 'Event settings saved.');
+    } catch {
+      setEventFeedback(lang === 'ar' ? 'تعذّر حفظ إعدادات الفعالية.' : 'Could not save event settings.');
+    } finally {
+      setSettingsSaving(null);
+    }
+  };
+
+  const handleEventRegistrationStatus = async (entry: EventRegistration, status: 'approved' | 'rejected') => {
+    try {
+      await updateEventRegistrationStatus(entry.id, status);
+      setEventRegistrations((prev) => prev.map((item) => item.id === entry.id ? { ...item, status } : item));
+    } catch {
+      setEventFeedback(lang === 'ar' ? 'تعذّر تحديث حالة التسجيل.' : 'Could not update registration status.');
+    }
+  };
+
+  const handleEventRegistrationDelete = async (entry: EventRegistration) => {
+    if (!confirm(lang === 'ar' ? 'حذف هذا التسجيل وإيصال الدفع نهائيًا؟' : 'Permanently delete this registration and receipt?')) return;
+    try {
+      await deleteEventRegistration(entry.id);
+      setEventRegistrations((prev) => prev.filter((item) => item.id !== entry.id));
+    } catch {
+      setEventFeedback(lang === 'ar' ? 'تعذّر حذف التسجيل.' : 'Could not delete registration.');
     }
   };
 
@@ -870,6 +914,7 @@ export default function Admin() {
           {([
             { key: 'products', ar: '📚 المحتوى', en: '📚 Products' },
             { key: 'bookings', ar: '📅 الحجوزات', en: '📅 Bookings' },
+            { key: 'event', ar: 'الفعالية', en: 'Event' },
             { key: 'settings', ar: '⚙️ الإعدادات', en: '⚙️ Settings' },
             { key: 'ads', ar: '🎯 الإعلانات', en: '🎯 Banner Ads' },
             { key: 'reviews', ar: '⭐ التقييمات', en: '⭐ Reviews' },
@@ -888,6 +933,73 @@ export default function Admin() {
             </button>
           ))}
         </div>
+
+        {adminTab === 'event' && <>
+          <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
+            <h2 className="text-white text-lg font-black mb-2">{lang === 'ar' ? 'إعدادات ورشة النجاح' : 'Success Workshop Settings'}</h2>
+            <p className="text-[rgba(255,255,255,0.55)] text-sm mb-5">
+              {lang === 'ar' ? 'أضيفي بيانات CliQ وروابط الصور قبل نشر التسجيل. الأسعار والتاريخ ثابتة حسب تفاصيل الفعالية.' : 'Set the CliQ details and image URLs before publishing. Price and event date are fixed.'}
+            </p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Field label={lang === 'ar' ? 'اسم صاحب حساب CliQ' : 'CliQ Account Name'}>
+                <input className="adm-input" value={eventSettings.cliqAccountName} onChange={(e) => setEventSettings((p) => ({ ...p, cliqAccountName: e.target.value }))} />
+              </Field>
+              <Field label={lang === 'ar' ? 'اسم المستخدم أو رقم CliQ' : 'CliQ Alias or Number'}>
+                <input className="adm-input" dir="ltr" value={eventSettings.cliqAlias} onChange={(e) => setEventSettings((p) => ({ ...p, cliqAlias: e.target.value }))} />
+              </Field>
+              <Field label={lang === 'ar' ? 'رابط صورة دعاء' : 'Doha Portrait URL'}>
+                <input className="adm-input" dir="ltr" type="url" placeholder="https://…" value={eventSettings.portraitUrl} onChange={(e) => setEventSettings((p) => ({ ...p, portraitUrl: e.target.value }))} />
+              </Field>
+              <Field label={lang === 'ar' ? 'رابط صورة عمّان' : 'Amman Background URL'}>
+                <input className="adm-input" dir="ltr" type="url" placeholder="https://…" value={eventSettings.ammanImageUrl} onChange={(e) => setEventSettings((p) => ({ ...p, ammanImageUrl: e.target.value }))} />
+              </Field>
+            </div>
+            <div className="flex flex-wrap gap-5 mt-5">
+              <label className="flex items-center gap-2 text-white text-sm">
+                <input type="checkbox" checked={eventSettings.enabled} onChange={(e) => setEventSettings((p) => ({ ...p, enabled: e.target.checked }))} />
+                {lang === 'ar' ? 'نشر صفحة الفعالية / تفعيل التسجيل' : 'Publish event page and enable registration'}
+              </label>
+              <label className="flex items-center gap-2 text-white text-sm">
+                <input type="checkbox" checked={eventSettings.announcementEnabled} onChange={(e) => setEventSettings((p) => ({ ...p, announcementEnabled: e.target.checked }))} />
+                {lang === 'ar' ? 'إظهار شريط الإعلان في الصفحة الرئيسية' : 'Show the homepage announcement'}
+              </label>
+            </div>
+            <button onClick={handleSaveEventSettings} disabled={settingsSaving === 'about'} className="mt-5 bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2.5 px-5 rounded-lg text-sm disabled:opacity-50">
+              {settingsSaving === 'about' ? (lang === 'ar' ? 'جاري الحفظ…' : 'Saving…') : (lang === 'ar' ? 'حفظ إعدادات الفعالية' : 'Save Event Settings')}
+            </button>
+            {eventFeedback && <p className="mt-3 text-sm text-[hsl(var(--g300))]">{eventFeedback}</p>}
+          </section>
+          <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
+            <h2 className="text-white text-lg font-black mb-4">{lang === 'ar' ? `تسجيلات الفعالية (${eventRegistrations.length})` : `Event registrations (${eventRegistrations.length})`}</h2>
+            {!eventRegistrations.length ? <p className="text-[rgba(255,255,255,0.55)] text-sm">{lang === 'ar' ? 'لا توجد تسجيلات حتى الآن.' : 'No registrations yet.'}</p> : (
+              <div className="grid gap-4">
+                {eventRegistrations.map((entry) => (
+                  <article key={entry.id} className="rounded-xl border border-[rgba(255,255,255,0.12)] bg-black/20 p-4">
+                    <div className="flex flex-wrap justify-between gap-3">
+                      <div>
+                        <p className="font-bold text-white">{entry.name}</p>
+                        <p className="text-sm text-[rgba(255,255,255,0.65)]" dir="ltr">{entry.phone}</p>
+                        <p className="text-xs text-[hsl(var(--g300))] mt-1">
+                          {entry.attendance === 'online' ? 'Online · PayPal · $30' : 'حضوري · CliQ · 25 JOD'}
+                          {entry.paypalOrderId ? ` · ${entry.paypalOrderId}` : ''}
+                        </p>
+                        <p className="text-xs mt-1 text-[rgba(255,255,255,0.55)]">
+                          {entry.status === 'pending' ? 'قيد المراجعة' : entry.status === 'approved' ? 'مقبول' : 'مرفوض'}
+                        </p>
+                      </div>
+                      {entry.receiptDataUrl && <a href={entry.receiptDataUrl} target="_blank" rel="noreferrer" className="text-sm text-[hsl(var(--g300))] underline">عرض إيصال CliQ</a>}
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button onClick={() => handleEventRegistrationStatus(entry, 'approved')} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white">تأكيد التسجيل</button>
+                      <button onClick={() => handleEventRegistrationStatus(entry, 'rejected')} className="rounded-lg bg-red-900 px-4 py-2 text-sm font-bold text-white">رفض</button>
+                      <button onClick={() => handleEventRegistrationDelete(entry)} className="rounded-lg border border-red-400/40 px-4 py-2 text-sm font-bold text-red-200">حذف</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </>}
 
         {/* ── Bookings Tab ── */}
         {adminTab === 'bookings' && <>

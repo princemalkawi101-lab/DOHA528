@@ -11,7 +11,28 @@ export interface SiteSettings {
   certificates?: Certificate[];
   socialLinks?: SocialLink[];
   socialLinksRevision?: number;
+  event?: EventSettings;
 }
+
+export interface EventSettings {
+  enabled: boolean;
+  announcementEnabled: boolean;
+  portraitUrl: string;
+  ammanImageUrl: string;
+  cliqAccountName: string;
+  cliqAlias: string;
+  cliqInstructions: string;
+}
+
+export const DEFAULT_EVENT_SETTINGS: EventSettings = {
+  enabled: true,
+  announcementEnabled: true,
+  portraitUrl: '',
+  ammanImageUrl: '',
+  cliqAccountName: '',
+  cliqAlias: '',
+  cliqInstructions: 'حوّلي 25 دينارًا أردنيًا عبر CliQ ثم أرفقي صورة واضحة لإيصال التحويل.',
+};
 
 export interface AboutContent {
   badgeAr: string;

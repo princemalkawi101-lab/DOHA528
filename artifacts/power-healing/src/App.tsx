@@ -17,20 +17,25 @@ import TermsConditions from "@/pages/TermsConditions";
 import ProductPage from "@/pages/ProductPage";
 import CategoryPage from "@/pages/CategoryPage";
 import NotFound from "@/pages/not-found";
+import EventRoute from "@/pages/EventRoute";
+import { EventAnnouncement } from "@/components/layout/EventAnnouncement";
 
 function AppRoutes() {
   const [location] = useLocation();
   const isAuthPage = location === '/login' || location === '/signup';
   const isAdminPage = location.startsWith('/admin');
   const isFlowPage = location === '/checkout' || location === '/payment-success';
+  const isEventPage = location === '/event';
 
   return (
     <div className="min-h-[100dvh] flex flex-col">
       <SplashScreen />
-      <Navbar />
+      {!isEventPage && <Navbar />}
+      {location === '/' && <EventAnnouncement />}
       <main className="flex-1">
         <Switch>
           <Route path="/" component={Home} />
+          <Route path="/event" component={EventRoute} />
           <Route path="/login" component={Login} />
           <Route path="/signup" component={Signup} />
           <Route path="/admin" component={Admin} />
@@ -45,7 +50,7 @@ function AppRoutes() {
           <Route component={NotFound} />
         </Switch>
       </main>
-      {!isAuthPage && !isAdminPage && !isFlowPage && <Footer />}
+      {!isAuthPage && !isAdminPage && !isFlowPage && !isEventPage && <Footer />}
     </div>
   );
 }

@@ -1,0 +1,11 @@
+.ev{--iv:42 45% 96%;--iv2:40 38% 91%;--ink:264 60% 12%;--gold:43 78% 46%;--gold2:44 90% 66%;--plum:267 53% 30%;background:hsl(var(--iv));color:hsl(var(--ink));font-family:'Cairo',sans-serif;position:relative;overflow:hidden}
+.ev::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");z-index:1}
+.ev-rise{opacity:0;transform:translateY(18px);animation:evRise .9s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes evRise{to{opacity:1;transform:none}}
+.ev-halo{animation:evSpin 40s linear infinite}
+@keyframes evSpin{to{transform:rotate(360deg)}}
+.ev-shine{background:linear-gradient(110deg,hsl(var(--gold)) 0%,hsl(var(--gold2)) 45%,hsl(var(--gold)) 70%);color:hsl(var(--ink))}
+.ev-card{background:hsl(0 0% 100%/.55);border:1px solid hsl(var(--gold)/.3);border-radius:22px;backdrop-filter:blur(6px)}
+.ev-in{width:100%;background:hsl(var(--iv));border:1px solid hsl(var(--gold)/.35);border-radius:12px;padding:.8rem 1rem;transition:border-color .2s}
+.ev-in:focus{outline:2px solid hsl(var(--gold)/.5);border-color:hsl(var(--gold))}
+@media (prefers-reduced-motion:reduce){.ev-rise{animation:none;opacity:1;transform:none}.ev-halo{animation:none}}

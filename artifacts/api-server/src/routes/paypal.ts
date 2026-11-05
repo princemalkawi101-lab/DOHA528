@@ -207,6 +207,43 @@ router.post("/paypal/create-order", paymentLimiter, requireFirebaseUser, async (
   }
 });
 
+router.post("/paypal/create-event-order", paymentLimiter, requireFirebaseUser, async (req, res): Promise<void> => {
+  const requestId = getRequestId(req);
+  const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+  const phone = typeof req.body?.phone === "string" ? req.body.phone.trim() : "";
+  if (name.length < 2 || name.length > 120 || phone.length < 7 || phone.length > 30) {
+    res.status(400).json({ error: "Name and phone are required", code: "INVALID_REGISTRATION", requestId });
+    return;
+  }
+  try {
+    const runtime = getPayPalRuntimeConfig();
+    const result = await createPayPalOrder({
+      currencyCode: "USD",
+      cart: [{
+        titleEn: "Success Workshop — Online",
+        jod: 30 / runtime.conversionRate,
+        amount: 30,
+        qty: 1,
+      }],
+    });
+    await db.insert(paymentOrdersTable).values({
+      orderId: result.id,
+      userId: req.firebaseUser!.sub,
+      cart: [{
+        itemId: "event:success-workshop-amman-2026:online",
+        titleAr: "ورشة النجاح — حضور أونلاين",
+        titleEn: "Success Workshop — Online",
+        kind: "event",
+        priceJod: 30 / runtime.conversionRate,
+        quantity: 1,
+      }],
+    });
+    res.status(200).json({ id: result.id });
+  } catch (error) {
+    sendPayPalError(req, res, error, "create-order");
+  }
+});
+
 router.post("/paypal/capture-order", paymentLimiter, requireFirebaseUser, async (req, res): Promise<void> => {
   const requestId = getRequestId(req);
   const orderId = req.body?.orderId;
@@ -250,8 +287,14 @@ router.post("/paypal/capture-order", paymentLimiter, requireFirebaseUser, async 
       res.status(409).json(result);
       return;
     }
+    const isEventOrder = paymentOrder.cart.some((item) => item.itemId.startsWith("event:"));
+    if (isEventOrder && (result.amount !== "30.00" || result.currency !== "USD")) {
+      req.log.error({ orderId, requestId, amount: result.amount, currency: result.currency }, "Event payment amount did not match the fixed ticket price");
+      res.status(409).json({ error: "Payment amount did not match the event ticket", code: "EVENT_PAYMENT_MISMATCH", requestId });
+      return;
+    }
     await db.transaction(async (tx) => {
-      await tx.insert(purchasesTable).values(paymentOrder.cart.map((item) => ({
+      if (!isEventOrder) await tx.insert(purchasesTable).values(paymentOrder.cart.map((item) => ({
         userId: req.firebaseUser!.sub,
         userEmail: req.firebaseUser!.email ?? null,
         userName: typeof req.firebaseUser!.name === "string" ? req.firebaseUser!.name : null,

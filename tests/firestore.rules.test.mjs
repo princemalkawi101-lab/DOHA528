@@ -8,6 +8,7 @@ import {
   doc,
   getDoc,
   runTransaction,
+  serverTimestamp,
   setDoc,
 } from 'firebase/firestore';
 
@@ -134,6 +135,66 @@ try {
     createdAt: new Date(),
   }));
   await assertFails(getDoc(doc(publicDb, 'bookings', 'booking-1')));
+
+  const cliqRegistration = {
+    userId: 'regular-user',
+    eventId: 'success-workshop-amman-2026',
+    attendance: 'in-person',
+    paymentMethod: 'cliq',
+    name: 'Test Attendee',
+    phone: '+962790000000',
+    receiptDataUrl: `data:image/jpeg;base64,${'A'.repeat(120)}`,
+    amountJod: 25,
+    status: 'pending',
+    createdAt: serverTimestamp(),
+  };
+  await assertFails(setDoc(doc(publicDb, 'eventRegistrations', 'cliq-anonymous'), cliqRegistration));
+  await assertSucceeds(setDoc(doc(regularDb, 'eventRegistrations', 'cliq-valid'), cliqRegistration));
+  await assertFails(setDoc(doc(regularDb, 'eventRegistrations', 'cliq-forged'), {
+    ...cliqRegistration,
+    status: 'approved',
+  }));
+  await assertFails(setDoc(doc(regularDb, 'eventRegistrations', 'cliq-wrong-amount'), {
+    ...cliqRegistration,
+    amountJod: 1,
+  }));
+  await assertSucceeds(setDoc(doc(regularDb, 'eventRegistrations', 'paypal-valid'), {
+    userId: 'regular-user',
+    eventId: 'success-workshop-amman-2026',
+    attendance: 'online',
+    paymentMethod: 'paypal',
+    name: 'Online Attendee',
+    phone: '+962790000001',
+    paypalOrderId: 'PAYPAL-ORDER-12345',
+    amountUsd: 30,
+    status: 'pending',
+    createdAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(regularDb, 'eventRegistrations', 'paypal-another-user'), {
+    userId: 'someone-else',
+    eventId: 'success-workshop-amman-2026',
+    attendance: 'online',
+    paymentMethod: 'paypal',
+    name: 'Online Attendee',
+    phone: '+962790000001',
+    paypalOrderId: 'PAYPAL-ORDER-12345',
+    amountUsd: 30,
+    status: 'pending',
+    createdAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(publicDb, 'eventRegistrations', 'paypal-forged'), {
+    eventId: 'success-workshop-amman-2026',
+    attendance: 'online',
+    paymentMethod: 'paypal',
+    name: 'Online Attendee',
+    phone: '+962790000001',
+    paypalOrderId: 'PAYPAL-ORDER-12345',
+    amountUsd: 30,
+    status: 'approved',
+    createdAt: serverTimestamp(),
+  }));
+  await assertFails(getDoc(doc(publicDb, 'eventRegistrations', 'cliq-valid')));
+  await assertSucceeds(getDoc(doc(adminDb, 'eventRegistrations', 'cliq-valid')));
 
   console.log('Firestore rules tests passed');
 } finally {

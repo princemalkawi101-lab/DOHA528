@@ -112,6 +112,51 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    match /eventRegistrations/{registrationId} {
+      allow create: if request.resource.data.keys().hasOnly([
+          'userId', 'eventId', 'attendance', 'paymentMethod', 'name', 'phone',
+          'receiptDataUrl', 'amountJod', 'paypalOrderId', 'amountUsd',
+          'status', 'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'userId', 'eventId', 'attendance', 'paymentMethod', 'name', 'phone',
+          'status', 'createdAt'
+        ])
+        && request.resource.data.eventId == 'success-workshop-amman-2026'
+        && isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() >= 7
+        && request.resource.data.phone.size() <= 30
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && (
+          (
+            request.resource.data.attendance == 'in-person'
+            && request.resource.data.paymentMethod == 'cliq'
+            && request.resource.data.keys().hasAll(['receiptDataUrl', 'amountJod'])
+            && request.resource.data.receiptDataUrl is string
+            && request.resource.data.receiptDataUrl.size() >= 100
+            && request.resource.data.receiptDataUrl.size() <= 600000
+            && request.resource.data.receiptDataUrl.matches('data:image/[^;]+;base64,[A-Za-z0-9+/=]+')
+            && request.resource.data.amountJod == 25
+          )
+          || (
+            request.resource.data.attendance == 'online'
+            && request.resource.data.paymentMethod == 'paypal'
+            && request.resource.data.keys().hasAll(['paypalOrderId', 'amountUsd'])
+            && request.resource.data.paypalOrderId is string
+            && request.resource.data.paypalOrderId.size() >= 5
+            && request.resource.data.paypalOrderId.size() <= 80
+            && request.resource.data.amountUsd == 30
+          )
+        );
+      allow read, update, delete: if isAdmin();
+    }
+
     match /purchases/{purchaseId} {
       allow create, update: if false;
       allow read: if isAdmin()

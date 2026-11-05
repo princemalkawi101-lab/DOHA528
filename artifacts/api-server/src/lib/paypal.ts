@@ -175,32 +175,36 @@ export async function getPayPalAccessToken(): Promise<string> {
 }
 
 export async function createPayPalOrder(input: {
+  currencyCode?: string;
   cart: Array<{
     titleEn?: string;
     nameKey?: string;
     jod: number;
     qty: number;
+    amount?: number;
   }>;
 }): Promise<{ id: string; amount: string; currency: string }> {
   const config = getPayPalConfig();
   const runtime = getPayPalRuntimeConfig();
+  const currency = input.currencyCode ?? runtime.currency;
   const normalizedCart = input.cart.map((item) => {
     const priceJod = Number(item.jod);
     const quantity = Number(item.qty);
-    if (!Number.isFinite(priceJod) || priceJod <= 0
+    const unitAmount = item.amount === undefined ? priceJod * runtime.conversionRate : Number(item.amount);
+    if (!Number.isFinite(unitAmount) || unitAmount <= 0
       || !Number.isInteger(quantity) || quantity < 1) {
       throw new TypeError("Cart contains an invalid price or quantity");
     }
     return {
       ...item,
       quantity,
-      unitAmount: Number(priceJod * runtime.conversionRate).toFixed(2),
+      unitAmount: unitAmount.toFixed(2),
     };
   });
   const paypalItems = normalizedCart.map((item) => ({
     name: String(item.titleEn || item.nameKey || "Item").slice(0, 127),
     unit_amount: {
-      currency_code: runtime.currency,
+      currency_code: currency,
       value: Number(item.unitAmount).toFixed(2),
     },
     quantity: String(item.quantity),
@@ -233,11 +237,11 @@ export async function createPayPalOrder(input: {
         intent: "CAPTURE",
         purchase_units: [{
           amount: {
-            currency_code: runtime.currency,
+            currency_code: currency,
             value: Number(amount).toFixed(2),
             breakdown: {
               item_total: {
-                currency_code: runtime.currency,
+                currency_code: currency,
                 value: Number(amount).toFixed(2),
               },
             },
@@ -265,7 +269,7 @@ export async function createPayPalOrder(input: {
     });
   }
 
-  return { id: body.id, amount, currency: runtime.currency };
+  return { id: body.id, amount, currency };
 }
 
 export async function capturePayPalOrder(orderId: string): Promise<{
@@ -273,6 +277,7 @@ export async function capturePayPalOrder(orderId: string): Promise<{
   orderId: string;
   captureId: string;
   amount: string;
+  currency: string;
 }> {
   const config = getPayPalConfig();
   const accessToken = await getPayPalAccessToken();
@@ -319,12 +324,17 @@ export async function capturePayPalOrder(orderId: string): Promise<{
     capture?.amount && typeof capture.amount === "object"
       ? (capture.amount as Record<string, unknown>).value
       : "";
+  const captureCurrency =
+    capture?.amount && typeof capture.amount === "object"
+      ? (capture.amount as Record<string, unknown>).currency_code
+      : "";
 
   return {
     captureStatus: typeof body.status === "string" ? body.status : "",
     orderId,
     captureId: typeof capture?.id === "string" ? capture.id : "",
     amount: typeof captureAmount === "string" ? captureAmount : "",
+    currency: typeof captureCurrency === "string" ? captureCurrency : "",
   };
 }
 
@@ -333,6 +343,7 @@ export async function getPayPalOrder(orderId: string): Promise<{
   orderId: string;
   captureId: string;
   amount: string;
+  currency: string;
 }> {
   const config = getPayPalConfig();
   const accessToken = await getPayPalAccessToken();
@@ -351,11 +362,14 @@ export async function getPayPalOrder(orderId: string): Promise<{
     ? captures[0] as Record<string, unknown> : undefined;
   const amount = capture?.amount && typeof capture.amount === "object"
     ? (capture.amount as Record<string, unknown>).value : "";
+  const currency = capture?.amount && typeof capture.amount === "object"
+    ? (capture.amount as Record<string, unknown>).currency_code : "";
   return {
     captureStatus: typeof body.status === "string" ? body.status : "",
     orderId,
     captureId: typeof capture?.id === "string" ? capture.id : "",
     amount: typeof amount === "string" ? amount : "",
+    currency: typeof currency === "string" ? currency : "",
   };
 }
 
