@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { CalendarDays, Clock, MapPin, Video, Crown, BookOpen, Gift, MessageCircle, Upload, Loader2, AlertCircle, CheckCircle2, Copy, Sparkles, ArrowDown, ArrowLeft, Check, Sun } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, Video, Crown, BookOpen, Gift, MessageCircle, Upload, Loader2, AlertCircle, CheckCircle2, Copy, Sparkles, ArrowLeft, Check } from 'lucide-react';
+import dohaAmmanImage from '../assets/doha-amman.webp';
 import './Event.css';
 
 export type EventMode = 'in-person' | 'online';
@@ -35,10 +36,10 @@ const facts = [
   { icon: Sparkles, label: 'المدة', value: '3 ساعات' },
 ];
 const perks = [
-  { icon: Crown, t: 'مقعد VIP', d: 'مكانك محجوز في الصفوف الأولى، قريبًا من دعاء.' },
+  { icon: Crown, t: 'مقعد VIP', d: 'مكانك محجوز في الصفوف الأولى، قريبًا من دوحة.' },
   { icon: BookOpen, t: 'برنامج مسجّل', d: 'تعود إليه متى احتجت، لتثبّت ما تعلّمته.' },
   { icon: Gift, t: 'دفتر امتنان مجاني', d: 'رفيقك اليومي لترسيخ التجسيد بعد الورشة.' },
-  { icon: MessageCircle, t: 'جلسة أسئلة خاصة عبر Zoom', d: 'لقاء مباشر مع دعاء للإجابة عن أسئلتك.' },
+  { icon: MessageCircle, t: 'جلسة أسئلة خاصة عبر Zoom', d: 'لقاء مباشر مع دوحة للإجابة عن أسئلتك.' },
 ];
 
 export default function Event(p: EventPageProps) {
@@ -58,47 +59,22 @@ export default function Event(p: EventPageProps) {
   return (
     <div dir="rtl" className="ev" data-testid="page-event">
       <header className="ev-hero" id="top">
-        {p.backgroundUrl && <img src={p.backgroundUrl} alt="عمّان" className="ev-hero-city" data-testid="img-amman" />}
-        <div className="ev-hero-shade" />
-        <div className="ev-hero-grain" aria-hidden="true" />
+        <div className="ev-hero-glow" aria-hidden="true" />
         <div className="ev-hero-inner">
-          <div className="ev-hero-copy">
-            <div className="ev-edition"><span className="ev-edition-mark" /> ورشة حضورية وأونلاين <span className="ev-edition-line" /></div>
-            {p.announcement?.title && (
-              <div className="ev-announcement" data-testid="text-announcement">
-                <span className="ev-live-dot" />
-                <span>{p.announcement.title}</span>
-                {p.announcement.body && <span className="ev-announcement-body">— {p.announcement.body}</span>}
-              </div>
-            )}
-            <p className="ev-kicker">ورشة حيّة مع دعاء <span>·</span> عمّان</p>
-            <h1 className="ev-title" data-testid="text-title">ورشة<br /><em>النجاح</em></h1>
-            <p className="ev-subtitle">التجسيد من عالم الروح<br className="ev-mobile-break" /> إلى عالم المادة</p>
-            <div className="ev-date-stamp" aria-label="السبت 21 نوفمبر 2026">
-              <span className="ev-date-label">موعد اللقاء</span>
-              <span className="ev-date-day">21</span>
-              <span className="ev-date-month">نوفمبر</span>
-              <span className="ev-date-year">2026</span>
-              <span className="ev-date-weekday">السبت</span>
-            </div>
-            <a href="#register" className="ev-hero-cta" data-testid="link-register">
-              احجزي مقعدك <ArrowLeft aria-hidden="true" />
-            </a>
-            <a href="#details" className="ev-discover"><span>اكتشفي تفاصيل اللقاء</span><ArrowDown aria-hidden="true" /></a>
-          </div>
-
-          <div className="ev-hero-portrait">
+          <figure className="ev-hero-portrait">
             <div className="ev-portrait-frame">
-              {p.portraitUrl
-                ? <img src={p.portraitUrl} alt="دعاء" className="ev-portrait-image" data-testid="img-portrait" />
-                : <div className="ev-portrait-fallback" aria-label="دعاء">دعاء</div>}
+              <img
+                src={p.portraitUrl || dohaAmmanImage}
+                alt="Master Doha Malkawi in Amman, Jordan"
+                className="ev-portrait-image"
+                data-testid="img-portrait"
+              />
+              <figcaption className="ev-portrait-caption">
+                <MapPin aria-hidden="true" />
+                <span>Amman, Jordan</span>
+              </figcaption>
             </div>
-            <div className="ev-portrait-caption"><span>لقاء مباشر</span><i /><span>مع دعاء</span></div>
-            <div className="ev-portrait-note" aria-hidden="true"><Sun /><span>من الداخل<br />إلى الواقع</span></div>
-          </div>
-          <div className="ev-hero-bottom">
-            <span>عمّان، الأردن</span><i /><span>21.11.2026</span><i /><span>1:00 ظهرًا</span>
-          </div>
+          </figure>
         </div>
       </header>
 
@@ -107,11 +83,20 @@ export default function Event(p: EventPageProps) {
           <div className="ev-section-index"><span>01</span><i /></div>
           <div className="ev-intro-copy">
             <p className="ev-eyebrow">من عالم الروح إلى عالم المادة</p>
-            <h2>حين يلتقي ما تؤمنين به<br /><em>بما تصنعينه في حياتك.</em></h2>
-          </div>
-          <div className="ev-intro-side">
-            <p>ورشة النجاح مع دعاء، لقاء حيّ يمتد لثلاث ساعات. اختاري الحضور في عمّان أو الانضمام أونلاين.</p>
-            <a href="#register" className="ev-text-link">اختاري طريقة حضورك <ArrowLeft aria-hidden="true" /></a>
+            <h1 className="ev-intro-title" data-testid="text-title">تجسيد النجاح</h1>
+            <p className="ev-intro-lead">ماذا لو كان النجاح الذي تبحث عنه… احتمال موجود في أعماقك ينتظر أن تختار تجسيده</p>
+            <div className="ev-intro-body">
+              <p>هناك نجاحات لم تُخلق لتبقى مجرد احتمالات في داخلك.</p>
+              <p>هناك خبرات، إمكانيات، ونسخ منك تنتظر أن تُستدعى إلى واقعك.</p>
+              <p>في هذه التجربة الحضورية، سننطلق من مستوى الروح، لنفتح مساحة جديدة للوعي بالنجاح، ونستكشف ما يعنيه أن تنتقل من معرفة الإمكانيات التي تحملها إلى عيشها وتجسيدها في حياتك الحالية.</p>
+              <p>النجاح ليس مجرد إنجاز تصل إليه…<br />بل وعي تختاره، وإمكانيات تسمح لها بالظهور، وواقع تبدأ بخلقه من خلال اختياراتك.</p>
+            </div>
+            <div className="ev-intro-signoff">
+              <strong>تجسيد النجاح</strong>
+              <p>تجربة انتقال من عالم الروح إلى عالم المادة.</p>
+              <span>مع <bdi dir="ltr">Master Doha Malkawi</bdi></span>
+            </div>
+            <a href="#register" className="ev-text-link" data-testid="link-register">اختاري طريقة حضورك <ArrowLeft aria-hidden="true" /></a>
           </div>
         </section>
 
@@ -265,7 +250,7 @@ export default function Event(p: EventPageProps) {
       </main>
 
       <footer className="ev-footer">
-        <a href="#top" className="ev-footer-brand">ورشة النجاح<span> · </span>التجسيد من عالم الروح إلى عالم المادة</a>
+        <a href="#top" className="ev-footer-brand">تجسيد النجاح<span> · </span>من عالم الروح إلى عالم المادة</a>
         <span>السبت 21 نوفمبر 2026 <i /> عمّان وأونلاين</span>
       </footer>
     </div>

@@ -28,7 +28,7 @@ export default function EventRoute() {
     fetchSiteSettings().then((s) => setSettings({
       ...DEFAULT_EVENT_SETTINGS,
       ...(s.event || {}),
-      portraitUrl: s.event?.portraitUrl || s.aboutImageUrl || '',
+      portraitUrl: s.event?.portraitUrl || '',
     }));
   }, []);
   useEffect(() => {
