@@ -33,6 +33,12 @@ VIP is an additional $49 upgrade after a base booking; a VIP purchase must not a
 
 **How to apply:** Preserve separate base-approval and VIP-membership states, and grant VIP access only from server-verified payment.
 
+An unavailable registration-status service is an unknown booking state, not proof that the attendee has no booking.
+
+**Why:** Treating an outage as an empty registration could invite a second payment. The user requested graceful recovery from stalled loading, not bypassing payment safeguards.
+
+**How to apply:** End loading with a retryable error and keep new payments blocked until status is verified. Do not fall back to attendee Firestore reads, which are intentionally administrator-only.
+
 Event confirmation emails use the connected Gmail account, not Resend by default.
 
 **Why:** The user requested a Gmail sender; Resend cannot verify a gmail.com sending domain.

@@ -26,6 +26,8 @@ export default function EventRoute() {
   const [registration, setRegistration] = useState<MyEventRegistration | null>(null);
   const [registrationLoading, setRegistrationLoading] = useState(false);
   const [registrationError, setRegistrationError] = useState('');
+  const [authTimedOut, setAuthTimedOut] = useState(false);
+  const retryRegistration = useRef<() => void>(() => {});
   const [stage, setStage] = useState<Stage | null>(null);
   const [showVipPaypal, setShowVipPaypal] = useState(false);
   const [vipError, setVipError] = useState('');
@@ -36,28 +38,48 @@ export default function EventRoute() {
   activeUser.current = user?.uid;
   const recoveryKey = user ? `event-payment-recovery:${user.uid}` : '';
 
-  useEffect(() => subscribeSiteSettings((s) => {
-    setSettings({ ...DEFAULT_EVENT_SETTINGS, ...s.event });
-    setSettingsStatus('ready');
-  }, () => setSettingsStatus('error')), []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSettingsStatus('error'), 12000);
+    const unsubscribe = subscribeSiteSettings((s) => {
+      clearTimeout(timer);
+      setSettings({ ...DEFAULT_EVENT_SETTINGS, ...s.event });
+      setSettingsStatus('ready');
+    }, () => { clearTimeout(timer); setSettingsStatus('error'); });
+    return () => { clearTimeout(timer); unsubscribe(); };
+  }, []);
+  useEffect(() => {
+    setAuthTimedOut(false);
+    if (!authLoading) return;
+    const timer = window.setTimeout(() => setAuthTimedOut(true), 12000);
+    return () => clearTimeout(timer);
+  }, [authLoading]);
   useEffect(() => {
     if (settingsStatus === 'ready' && !settings.enabled) setLocation('/', { replace: true });
   }, [settingsStatus, settings.enabled, setLocation]);
 
   useEffect(() => {
     let cancelled = false;
+    let inFlight = false;
+    const controller = new AbortController();
     registrationRevision.current += 1;
     setRegistration(null); setStage(null); setShowVipPaypal(false);
     setName(''); setPhone(''); setEmail(user?.email || ''); setReceipt(null);
     setSubmitError(''); setPaypalError(''); setVipError(''); setRegistrationError('');
     setRecoverOrder(recoveryKey ? sessionStorage.getItem(recoveryKey) || '' : '');
+    retryRegistration.current = () => {};
     if (!user) { setRegistrationLoading(false); return; }
     setRegistrationLoading(true);
     const load = async () => {
+      if (inFlight || cancelled) return;
+      inFlight = true;
+      setRegistrationLoading(true);
       const revision = registrationRevision.current;
       try {
-        const result = await eventRequest<{ registration: MyEventRegistration | null }>({ action: 'mine' });
+        const result = await eventRequest<{ registration: MyEventRegistration | null }>({ action: 'mine' }, { signal: controller.signal });
         if (cancelled || revision !== registrationRevision.current) return;
+        if (!result || !Object.prototype.hasOwnProperty.call(result, 'registration')) {
+          throw new Error('تعذّر التحقق من حالة التسجيل. يرجى إعادة المحاولة.');
+        }
         setRegistration(result.registration);
         if (result.registration?.status === 'rejected' && result.registration.membershipStatus !== 'VIP Member') setStage(null);
         if (result.registration) {
@@ -65,13 +87,14 @@ export default function EventRoute() {
         }
         setRegistrationError('');
       } catch (error) {
-        if (!cancelled) setRegistrationError(error instanceof Error ? error.message : 'تعذّر تحميل التسجيل الحالي.');
-      } finally { if (!cancelled) setRegistrationLoading(false); }
+        if (!cancelled && revision === registrationRevision.current) setRegistrationError(error instanceof Error ? error.message : 'تعذّر تحميل التسجيل الحالي.');
+      } finally { inFlight = false; if (!cancelled) setRegistrationLoading(false); }
     };
     void load();
     const refresh = () => { void load(); };
+    retryRegistration.current = refresh;
     window.addEventListener('focus', refresh);
-    return () => { cancelled = true; window.removeEventListener('focus', refresh); };
+    return () => { cancelled = true; controller.abort(); window.removeEventListener('focus', refresh); };
   }, [user?.uid, recoveryKey]);
 
   const paypalOptions = useMemo<ReactPayPalScriptOptions | null>(() => CLIENT_ID ? ({
@@ -86,6 +109,8 @@ export default function EventRoute() {
   };
   const openRegistration = (entry: MyEventRegistration) => {
     registrationRevision.current += 1;
+    setRegistrationError('');
+    setRegistrationLoading(false);
     setRegistration(entry);
     if (entry.status === 'rejected' && entry.membershipStatus !== 'VIP Member') {
       setStage(null);
@@ -176,7 +201,7 @@ export default function EventRoute() {
     if (!paymentBusy.current) { setStage(null); setShowVipPaypal(false); }
   }, []);
 
-  if (settingsStatus === 'error') return <div dir="rtl" className="min-h-screen grid place-content-center p-6" role="alert">تعذّر تحميل إعدادات الورشة. يرجى تحديث الصفحة.</div>;
+  if (settingsStatus === 'error') return <div dir="rtl" className="min-h-screen grid place-content-center p-6" role="alert">تعذّر تحميل إعدادات الورشة. <button type="button" className="underline" onClick={() => window.location.reload()}>إعادة المحاولة</button></div>;
   if (settingsStatus === 'loading' || !settings.enabled) return <div dir="rtl" role="status" className="min-h-screen grid place-content-center p-6">جارٍ تحميل الصفحة…</div>;
   return <div className="ev">
     <EventPage
@@ -189,11 +214,12 @@ export default function EventRoute() {
       submitted={registration?.attendance === 'in-person' && registration.status !== 'rejected'}
       paypalSlot={paymentButtons('online')} paypalError={paypalError}
       paypalDone={registration?.attendance === 'online' && registration.status !== 'rejected'}
-      registrationLoading={authLoading || registrationLoading || !!registrationError}
+      registrationLoading={(authLoading && !authTimedOut) || registrationLoading}
+      registrationError={authTimedOut ? 'تعذّر التحقق من تسجيل الدخول. يرجى إعادة المحاولة.' : registrationError}
+      onRetryRegistration={() => { if (authTimedOut) window.location.reload(); else retryRegistration.current(); }}
       onVipOffer={onVipOffer}
     />
     {(registrationError || recoverOrder || registration) && <aside dir="rtl" className="mx-auto max-w-3xl border border-amber-600/30 bg-[#fff8e7] p-5 text-[#174c3c]" data-testid="event-registration-status">
-      {registrationError && <p role="alert">{registrationError} <button className="underline" onClick={() => window.location.reload()}>إعادة المحاولة</button></p>}
       {registration && <><p>{registration.membershipStatus === 'VIP Member' ? 'VIP Member' : 'التذكرة العادية'} · {registration.status === 'pending' ? 'قيد المراجعة' : registration.status === 'approved' ? 'تم تأكيد التسجيل' : 'تم رفض الطلب؛ يرجى التواصل معنا.'}</p>
         {registration.status !== 'rejected' && <button className="mt-3 font-bold underline" onClick={() => openRegistration(registration)} data-testid="button-manage-event">{registration.membershipStatus === 'VIP Member' ? 'عرض وصول VIP' : 'عرض التسجيل وترقية VIP'}</button>}</>}
       {recoverOrder && <div className="mt-4"><p>إذا وافقت على الدفع ولم يظهر التأكيد، استعد تأكيده هنا دون دفع جديد.</p>

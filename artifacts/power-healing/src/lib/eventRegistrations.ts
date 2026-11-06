@@ -8,7 +8,7 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { readJson, serverApi } from './serverApi';
+import { serverApi } from './serverApi';
 
 export type EventRegistrationStatus = 'pending' | 'approved' | 'rejected';
 
@@ -59,8 +59,51 @@ export interface MyEventRegistration {
   telegramUrl?: string;
 }
 
-export async function eventRequest<T>(body: Record<string, unknown>): Promise<T> {
-  return readJson<T>(await serverApi('/api/event', { method: 'POST', body: JSON.stringify(body) }));
+export async function eventRequest<T>(
+  body: Record<string, unknown>,
+  options: { signal?: AbortSignal; timeoutMs?: number } = {},
+): Promise<T> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let cancel: () => void = () => {};
+  const interrupted = new Promise<never>((_, reject) => {
+    cancel = () => {
+      controller.abort();
+      reject(new DOMException('Request cancelled', 'AbortError'));
+    };
+    options.signal?.addEventListener('abort', cancel, { once: true });
+    if (options.signal?.aborted) { cancel(); return; }
+    // Include Firebase token retrieval and response-body parsing in the deadline.
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error('تعذّر الاتصال بخدمة التسجيل في الوقت المحدد. تحقق من اتصالك وأعد المحاولة، ولا تدفع مرة أخرى إذا دفعت سابقًا.'));
+    }, options.timeoutMs ?? (body.action === 'mine' ? 12000 : 45000));
+  });
+  try {
+    return await Promise.race([interrupted, (async () => {
+      if (controller.signal.aborted) throw new DOMException('Request cancelled', 'AbortError');
+      const response = await serverApi('/api/event', {
+        method: 'POST', body: JSON.stringify(body), signal: controller.signal,
+      });
+      if (!response.headers.get('content-type')?.includes('application/json')) {
+        throw new Error('خدمة التسجيل غير متاحة حاليًا. يرجى إعادة المحاولة بعد قليل.');
+      }
+      const result: unknown = await response.json();
+      if (!response.ok) {
+        const message = result && typeof result === 'object' && 'error' in result && typeof result.error === 'string'
+          ? result.error : 'تعذّر تحميل خدمة التسجيل. يرجى إعادة المحاولة.';
+        throw new Error(message);
+      }
+      return result as T;
+    })()]);
+  } catch (error) {
+    if (error instanceof TypeError) throw new Error('تعذّر الاتصال بخدمة التسجيل. تحقق من اتصالك وأعد المحاولة.');
+    if (error instanceof SyntaxError) throw new Error('تعذّر التحقق من استجابة خدمة التسجيل. يرجى إعادة المحاولة.');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    options.signal?.removeEventListener('abort', cancel);
+  }
 }
 
 export async function fetchEventRegistrations(): Promise<EventRegistration[]> {
