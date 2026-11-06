@@ -17,4 +17,5 @@ export const EventActionRequestAction = {
   review: "review",
   "retry-email": "retry-email",
   "email-readiness": "email-readiness",
+  arrival: "arrival",
 } as const;

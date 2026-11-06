@@ -18,8 +18,11 @@ export const EventPaymentWebhookBody = zod.object({
 });
 
 /**
- * @summary Authenticated event registration, payments, and administrator review
+ * @summary Authenticated event registration, payments, administrator review and arrival
  */
+export const eventWorkflowBodyExpectedRevisionMin = 0;
+export const eventWorkflowBodyExpectedRevisionMax = 9007199254740991;
+
 export const EventWorkflowBody = zod.object({
   action: zod.enum([
     "mine",
@@ -29,7 +32,22 @@ export const EventWorkflowBody = zod.object({
     "review",
     "retry-email",
     "email-readiness",
+    "arrival",
   ]),
+  arrived: zod
+    .boolean()
+    .optional()
+    .describe(
+      "Administrator-only arrival action; requires an approved in-person base ticket when true.",
+    ),
+  expectedRevision: zod
+    .number()
+    .min(eventWorkflowBodyExpectedRevisionMin)
+    .max(eventWorkflowBodyExpectedRevisionMax)
+    .optional()
+    .describe(
+      "Required for arrival actions; missing legacy arrivalRevision is zero. Stale changes return 409; repeated check-ins return already-arrived without replacing the original arrival.",
+    ),
   tier: zod.enum(["online", "vip"]).optional(),
   registrationId: zod.string().optional(),
   orderId: zod.string().optional(),

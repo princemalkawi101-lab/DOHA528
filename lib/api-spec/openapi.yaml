@@ -37,7 +37,7 @@ paths:
   /event:
     post:
       operationId: eventWorkflow
-      summary: Authenticated event registration, payments, and administrator review
+      summary: Authenticated event registration, payments, administrator review and arrival
       security:
         - firebaseBearer: []
       requestBody:
@@ -60,6 +60,8 @@ paths:
           description: Missing or invalid Firebase token
         "403":
           description: Administrator access required
+        "404":
+          description: Registration not found
         "409":
           description: Invalid payment or registration state
   /healthz:
@@ -101,7 +103,15 @@ components:
       properties:
         action:
           type: string
-          enum: [mine, register-cliq, create-order, capture-order, review, retry-email, email-readiness]
+          enum: [mine, register-cliq, create-order, capture-order, review, retry-email, email-readiness, arrival]
+        arrived:
+          type: boolean
+          description: Administrator-only arrival action; requires an approved in-person base ticket when true.
+        expectedRevision:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+          description: Required for arrival actions; missing legacy arrivalRevision is zero. Stale changes return 409; repeated check-ins return already-arrived without replacing the original arrival.
         tier:
           type: string
           enum: [online, vip]

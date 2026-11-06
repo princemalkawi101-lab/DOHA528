@@ -10,6 +10,7 @@ import {
   runTransaction,
   serverTimestamp,
   setDoc,
+  updateDoc,
 } from 'firebase/firestore';
 
 const projectId = 'demo-power-healing';
@@ -201,6 +202,19 @@ try {
   await assertFails(setDoc(doc(adminDb, 'eventRegistrations', 'vip-forged-admin-client'), {
     ...cliqRegistration, membershipStatus: 'VIP Member',
   }));
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'eventRegistrations', 'arrival-protected'), {
+      ...cliqRegistration, status: 'approved',
+    });
+  });
+  for (const client of [publicDb, regularDb, adminDb, legacyAdminDb]) {
+    await assertFails(updateDoc(doc(client, 'eventRegistrations', 'arrival-protected'), {
+      arrivedAt: serverTimestamp(), arrivedBy: 'forged', arrivalRevision: 1,
+    }));
+    await assertFails(updateDoc(doc(client, 'eventRegistrations', 'arrival-protected'), {
+      arrivedAt: null, duplicateCheckIns: 0,
+    }));
+  }
   await assertFails(setDoc(doc(regularDb, 'eventPaymentOrders', 'PAYPAL-FORGED'), { status: 'captured', amount: 49 }));
   await assertFails(getDoc(doc(adminDb, 'eventPaymentOrders', 'PAYPAL-FORGED')));
   await assertFails(setDoc(doc(regularDb, 'eventCheckoutSessions', 'fake'), { orderId: 'FAKE' }));

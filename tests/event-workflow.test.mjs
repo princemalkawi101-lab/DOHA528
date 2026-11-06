@@ -110,6 +110,15 @@ const vip = await eventAction(user, { action: 'capture-order', orderId: vipOrder
 assert.equal(vip.registration.membershipStatus, 'VIP Member');
 assert.equal(vip.registration.status, 'pending', 'VIP payment must not approve an unreviewed CliQ receipt');
 assert.ok(vip.registration.telegramUrl.startsWith('https://t.me/'));
+const arrival = (u, id, arrived = true, expectedRevision = 0) =>
+  eventAction(u, { action: 'arrival', registrationId: id, arrived, expectedRevision });
+const failsWithStatus = (promise, status) => assert.rejects(promise, (error) => error.status === status);
+await failsWithStatus(arrival(user, core.registration.id), 403);
+await failsWithStatus(arrival(other, core.registration.id, false), 403);
+await failsWithStatus(arrival(admin, 'missing-registration'), 404);
+await failsWithStatus(arrival(admin, core.registration.id), 409); // Pending VIP is not an entry ticket.
+await assert.rejects(eventAction(admin, { action: 'arrival', registrationId: core.registration.id, arrived: 'true', expectedRevision: 0 }));
+await assert.rejects(eventAction(admin, { action: 'arrival', registrationId: core.registration.id, arrived: true }));
 const calls = globalThis.__eventTestPayments.captures;
 await eventAction(user, { action: 'capture-order', orderId: vipOrder.id });
 assert.equal(globalThis.__eventTestPayments.captures, calls, 'Retry must not recapture');
@@ -121,11 +130,58 @@ const emailAttempts = globalThis.__eventTestEmail.attempts;
 await eventAction(admin, { action: 'retry-email', registrationId: core.registration.id });
 assert.equal(globalThis.__eventTestEmail.attempts, emailAttempts);
 
+// Atomic check-in retains the first arrival when two desks check in together.
+const concurrentArrivals = await Promise.all([
+  arrival(admin, core.registration.id),
+  arrival({ uid: `second-admin-${run}`, admin: true }, core.registration.id),
+]);
+assert.deepEqual(concurrentArrivals.map((result) => result.outcome).sort(), ['already-arrived', 'arrived']);
+const arrivalRef = db.doc(`eventRegistrations/${core.registration.id}`);
+const firstArrival = (await arrivalRef.get()).data();
+assert.equal(firstArrival.arrivalRevision, 1);
+assert.equal(firstArrival.duplicateCheckIns, 1);
+assert.equal(firstArrival.status, 'approved');
+assert.equal(firstArrival.membershipStatus, 'VIP Member');
+const duplicateArrival = await arrival(admin, core.registration.id, true, 1);
+assert.equal(duplicateArrival.outcome, 'already-arrived');
+assert.equal(duplicateArrival.arrivedAt, firstArrival.arrivedAt.toDate().toISOString());
+const afterDuplicate = (await arrivalRef.get()).data();
+assert.equal(afterDuplicate.arrivedBy, firstArrival.arrivedBy);
+assert.equal(afterDuplicate.duplicateCheckIns, 2);
+await failsWithStatus(eventAction(admin, { action: 'review', registrationId: core.registration.id, status: 'rejected' }), 409);
+await failsWithStatus(arrival(admin, core.registration.id, false, 0), 409);
+assert.equal((await arrival(admin, core.registration.id, false, 1)).outcome, 'undone');
+assert.equal((await arrivalRef.get()).data().arrivedAt, null);
+assert.equal((await arrivalRef.get()).data().arrivedBy, null);
+assert.equal((await arrival(admin, core.registration.id, true, 2)).outcome, 'arrived');
+await failsWithStatus(arrival(admin, core.registration.id, false, 1), 409);
+assert.equal((await arrivalRef.get()).data().arrivalRevision, 3, 'Stale undo cannot clear a newer arrival');
+await arrival(admin, core.registration.id, false, 3);
+await eventAction(admin, { action: 'review', registrationId: core.registration.id, status: 'rejected' });
+await failsWithStatus(arrival(admin, core.registration.id, true, 4), 409);
+await eventAction(admin, { action: 'review', registrationId: core.registration.id, status: 'approved' });
+// Approval and check-in/rejection races cannot leave a rejected attendee checked in.
+await Promise.allSettled([
+  arrival(admin, core.registration.id, true, 4),
+  eventAction(admin, { action: 'review', registrationId: core.registration.id, status: 'rejected' }),
+]);
+const raced = (await arrivalRef.get()).data();
+assert.ok(!(raced.status === 'rejected' && raced.arrivedAt));
+// Legacy records need no arrival backfill; missing revision defaults to zero.
+await arrivalRef.update({ arrivedAt: null, arrivalRevision: 0, status: 'approved', membershipStatus: 'Standard' });
+assert.equal((await arrival(admin, core.registration.id)).outcome, 'arrived');
+await arrival(admin, core.registration.id, false, 1);
+await arrivalRef.update({ membershipStatus: 'VIP Member' });
+await arrivalRef.update({ eventId: 'different-event' });
+await failsWithStatus(arrival(admin, core.registration.id, true, 2), 404);
+await arrivalRef.update({ eventId: EVENT_ID });
+
 const onlineOrder = await eventAction(onlineUser, { action: 'create-order', tier: 'online', ...attendee, amount: 1 });
 assert.equal(globalThis.__eventTestPayments.orders.get(onlineOrder.id).amount, 30);
 const online = await eventAction(onlineUser, { action: 'capture-order', orderId: onlineOrder.id });
 assert.equal(online.registration.status, 'approved');
 assert.equal(online.registration.telegramUrl, undefined);
+await failsWithStatus(arrival(admin, online.registration.id), 409);
 globalThis.__eventTestEmail.fail = true;
 const failed = await eventAction(admin, { action: 'review', registrationId: online.registration.id, status: 'approved' });
 assert.equal(failed.emailStatus, 'failed');

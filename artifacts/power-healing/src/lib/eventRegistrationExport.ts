@@ -1,4 +1,5 @@
 import type { EventRegistration } from './eventRegistrations';
+import { arrivalDate } from './eventArrival';
 
 export type EventExportSelection = 'approved-standard' | 'verified-vip' | 'pending-cliq';
 
@@ -35,10 +36,12 @@ export function buildEventRegistrationCsv(
   selection: EventExportSelection,
 ): string {
   const rows = [
-    ['Registration reference', 'Name', 'Phone', 'Email', 'Attendance', 'Base ticket status', 'Membership status'],
+    ['Registration reference', 'Name', 'Phone', 'Email', 'Attendance', 'Base ticket status', 'Membership status', 'Arrival status', 'Arrived at (UTC)', 'Duplicate check-in attempts'],
     ...selectEventExportEntries(entries, selection).map((entry) => [
       entry.id, entry.name, entry.phone, entry.email, entry.attendance,
       entry.status, entry.membershipStatus ?? 'Standard',
+      arrivalDate(entry) ? 'Arrived' : 'Not arrived', arrivalDate(entry)?.toISOString() ?? '',
+      String(entry.duplicateCheckIns ?? 0),
     ]),
   ];
   // UTF-8 BOM keeps Arabic readable when the CSV is opened in Excel.

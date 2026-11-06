@@ -48,12 +48,23 @@ test('allowlist excludes receipts, private links, credentials, and provider meta
     const text = csv(entries, selection);
     assert.ok(!text.includes('PRIVATE_'));
     assert.ok(!text.includes('ORDER_ONLY'));
-    assert.ok(text.startsWith('\uFEFF"Registration reference","Name","Phone","Email","Attendance","Base ticket status","Membership status"\r\n'));
+    assert.ok(text.startsWith('\uFEFF"Registration reference","Name","Phone","Email","Attendance","Base ticket status","Membership status","Arrival status","Arrived at (UTC)","Duplicate check-in attempts"\r\n'));
     assert.ok(text.endsWith('\r\n'));
     assert.ok(text.includes('ضحى، أحمد'));
   }
   assert.match(csv([entries[1]], 'approved-standard'), /"approved","Standard"/);
   assert.equal(csv([], 'verified-vip').split('\r\n').length, 2);
+});
+
+test('arrival exports support legacy, timestamp, undone, and duplicate states without staff identifiers', () => {
+  const arrivedAt = '2026-11-06T10:30:00.000Z';
+  for (const value of [arrivedAt, { toDate: () => new Date(arrivedAt) }]) {
+    const text = csv([{ ...base, arrivedAt: value, duplicateCheckIns: 2, arrivedBy: 'PRIVATE_STAFF' }], 'approved-standard');
+    assert.match(text, /"Arrived","2026-11-06T10:30:00.000Z","2"/);
+    assert.ok(!text.includes('PRIVATE_STAFF'));
+  }
+  assert.match(csv([base], 'approved-standard'), /"Not arrived","","0"/);
+  assert.match(csv([{ ...base, arrivedAt: null, duplicateCheckIns: 2 }], 'approved-standard'), /"Not arrived","","2"/);
 });
 
 test('CSV escapes quotes, delimiters, newlines, and missing email', () => {

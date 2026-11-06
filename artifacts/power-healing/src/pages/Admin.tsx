@@ -22,6 +22,7 @@ import {
   subscribeEventRegistrations,
   eventRequest,
   updateEventRegistrationStatus,
+  updateEventArrival,
   deleteEventRegistration,
 } from '@/lib/eventRegistrations';
 import {
@@ -29,6 +30,7 @@ import {
   selectEventExportEntries,
   EventExportSelection,
 } from '@/lib/eventRegistrationExport';
+import { arrivalDate, searchEventRegistrations } from '@/lib/eventArrival';
 import {
   normalizeSocialDestination,
   newSocialLinkTemplate,
@@ -174,6 +176,8 @@ export default function Admin() {
   const [eventReviewBusy, setEventReviewBusy] = useState<string | null>(null);
   const [eventExportSelection, setEventExportSelection] = useState<EventExportSelection>('approved-standard');
   const [eventRegistrationsReady, setEventRegistrationsReady] = useState(false);
+  const [eventSearch, setEventSearch] = useState('');
+  const visibleEventRegistrations = searchEventRegistrations(eventRegistrations, eventSearch);
   const eventExportCount = selectEventExportEntries(eventRegistrations, eventExportSelection).length;
 
   // ── These MUST stay above early returns to obey Rules of Hooks ──
@@ -222,6 +226,7 @@ export default function Admin() {
   useEffect(() => {
     setEventRegistrationsReady(false);
     setEventRegistrations([]);
+    setEventSearch('');
     if (!isAdmin) return;
     fetchItems().then((list) => {
       setItems(list);
@@ -251,7 +256,7 @@ export default function Admin() {
       setEventRegistrationsReady(false);
       setEventFeedback('تعذّر تحميل تسجيلات الفعالية. يرجى تحديث الصفحة.');
     });
-  }, [isAdmin]);
+  }, [isAdmin, user?.uid]);
 
   if (loading) {
     return (
@@ -429,6 +434,25 @@ export default function Admin() {
         : status === 'approved' ? 'تم قبول التسجيل وإرسال بريد التأكيد.' : 'تم رفض التسجيل.');
     } catch (error) {
       setEventFeedback(error instanceof Error ? error.message : 'تعذّر تحديث حالة التسجيل.');
+    } finally { setEventReviewBusy(null); }
+  };
+
+  const handleEventArrival = async (entry: EventRegistration, arrived: boolean) => {
+    if (!user || !isAdmin || eventReviewBusy || !eventRegistrationsReady) return;
+    if (!arrived && !confirm(lang === 'ar' ? 'إلغاء تسجيل وصول هذا الشخص؟' : 'Undo this attendee’s arrival?')) return;
+    setEventReviewBusy(entry.id);
+    try {
+      const result = await updateEventArrival(entry, arrived);
+      setEventRegistrations((prev) => prev.map((item) => item.id === entry.id && (item.arrivalRevision ?? 0) <= result.arrivalRevision
+        ? { ...item, arrivedAt: result.arrivedAt, arrivalRevision: result.arrivalRevision, duplicateCheckIns: Math.max(item.duplicateCheckIns ?? 0, result.duplicateCheckIns) }
+        : item));
+      setEventFeedback(result.outcome === 'already-arrived'
+        ? (lang === 'ar' ? 'تنبيه: تم تسجيل الوصول مسبقًا. لم يتم تسجيل وصول ثانٍ.' : 'Duplicate check-in: this attendee has already arrived. No second arrival was recorded.')
+        : result.outcome === 'arrived'
+          ? (lang === 'ar' ? 'تم تسجيل الوصول.' : 'Arrival recorded.')
+          : (lang === 'ar' ? 'تم إلغاء تسجيل الوصول.' : 'Arrival undone.'));
+    } catch (error) {
+      setEventFeedback(error instanceof Error ? error.message : (lang === 'ar' ? 'تعذّر تحديث الوصول.' : 'Could not update arrival.'));
     } finally { setEventReviewBusy(null); }
   };
 
@@ -1044,6 +1068,16 @@ export default function Admin() {
           </section>
           <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
             <h2 className="text-white text-lg font-black mb-4">{lang === 'ar' ? `تسجيلات الفعالية (${eventRegistrations.length})` : `Event registrations (${eventRegistrations.length})`}</h2>
+            {eventFeedback && <p className="mb-4 text-sm text-amber-200" role="status" aria-live="polite" data-testid="event-registration-feedback">{eventFeedback}</p>}
+            <label className="block text-sm text-white mb-4" htmlFor="event-registration-search">
+              {lang === 'ar' ? 'البحث بالاسم أو الهاتف أو البريد أو مرجع التسجيل' : 'Search by name, phone, email or registration reference'}
+              <input id="event-registration-search" type="search" value={eventSearch} onChange={(e) => setEventSearch(e.target.value)} className="adm-input mt-1" data-testid="input-event-search" />
+            </label>
+            <p className="text-sm text-white/70 mb-4" role="status">
+              {lang === 'ar'
+                ? `${visibleEventRegistrations.length} نتائج · ${eventRegistrations.filter((entry) => !!entry.arrivedAt).length} وصلوا. الوصول للتذاكر الحضورية المقبولة فقط، وليس لعضوية VIP وحدها.`
+                : `${visibleEventRegistrations.length} results · ${eventRegistrations.filter((entry) => !!entry.arrivedAt).length} arrived. Entry requires an approved in-person base ticket, not VIP membership alone.`}
+            </p>
             <div className="mb-5 space-y-3">
               <div className="flex flex-wrap items-end gap-3">
                 <label className="text-sm text-white" htmlFor="event-export-selection">
@@ -1071,13 +1105,20 @@ export default function Admin() {
                   : 'VIP membership does not approve the base ticket; both statuses are exported separately. Lists contain personal contact details; store them securely. Receipts, private links, and payment data are excluded.'}
               </p>
             </div>
-            {!eventRegistrations.length ? <p className="text-[rgba(255,255,255,0.55)] text-sm">{lang === 'ar' ? 'لا توجد تسجيلات حتى الآن.' : 'No registrations yet.'}</p> : (
+            {!visibleEventRegistrations.length ? <p className="text-[rgba(255,255,255,0.55)] text-sm">{lang === 'ar' ? 'لا توجد تسجيلات مطابقة.' : 'No matching registrations.'}</p> : (
               <div className="grid gap-4">
-                {eventRegistrations.map((entry) => (
+                {visibleEventRegistrations.map((entry) => (
                   <article key={entry.id} className="rounded-xl border border-[rgba(255,255,255,0.12)] bg-black/20 p-4">
                     <div className="flex flex-wrap justify-between gap-3">
                       <div>
                         <p className="font-bold text-white">{entry.name}</p>
+                        <p className="text-xs text-white/70 break-all" dir="ltr">{lang === 'ar' ? 'مرجع التسجيل' : 'Registration reference'}: {entry.id}</p>
+                        <p className="mt-2 text-sm font-bold text-emerald-200" data-testid={`arrival-status-${entry.id}`}>
+                          {entry.arrivedAt
+                            ? `${lang === 'ar' ? 'وصل' : 'Arrived'} · ${arrivalDate(entry)?.toLocaleString(lang === 'ar' ? 'ar-JO' : 'en-GB') ?? ''}`
+                            : (lang === 'ar' ? 'لم يصل' : 'Not arrived')}
+                        </p>
+                        {!!entry.duplicateCheckIns && <p className="text-sm text-amber-200" data-testid={`duplicate-checkins-${entry.id}`}>{lang === 'ar' ? 'محاولات وصول مكررة' : 'Duplicate check-in attempts'}: {entry.duplicateCheckIns}</p>}
                         <p className="text-sm text-[rgba(255,255,255,0.65)]" dir="ltr">{entry.phone}</p>
                         <p className="text-sm text-white/70" dir="ltr">{entry.email || 'لا يوجد بريد إلكتروني في التسجيل القديم'}</p>
                         {entry.membershipStatus === 'VIP Member' && <p className="mt-2 font-bold text-amber-300" data-testid="admin-vip-member">VIP Member · $49 · {entry.vipPaypalOrderId}</p>}
@@ -1086,14 +1127,19 @@ export default function Admin() {
                           {entry.paypalOrderId ? ` · ${entry.paypalOrderId}` : ''}
                         </p>
                         <p className="text-xs mt-1 text-[rgba(255,255,255,0.55)]">
-                          {entry.status === 'pending' ? 'قيد المراجعة' : entry.status === 'approved' ? 'مقبول' : 'مرفوض'}
+                          {lang === 'ar' ? 'التذكرة الأساسية: ' : 'Base ticket: '}
+                          {lang === 'ar' ? (entry.status === 'pending' ? 'قيد المراجعة' : entry.status === 'approved' ? 'مقبول' : 'مرفوض') : entry.status}
                         </p>
                         <p className="text-xs mt-2 text-amber-200">بريد التأكيد: {entry.confirmationEmailStatus === 'sent' ? 'تم الإرسال' : entry.confirmationEmailStatus === 'failed' ? 'تعذّر الإرسال' : entry.confirmationEmailStatus === 'sending' ? 'جارٍ الإرسال' : entry.confirmationEmailStatus === 'uncertain' ? 'يحتاج التحقق من بريد Gmail المرسل قبل الإعادة' : 'لم يُرسل'}</p>
                         {entry.confirmationEmailError && <p className="mt-1 text-xs text-red-200" role="alert">{entry.confirmationEmailError}</p>}
                       </div>
                       {entry.receiptDataUrl && <a href={entry.receiptDataUrl} target="_blank" rel="noreferrer" className="text-sm text-[hsl(var(--g300))] underline"><img src={entry.receiptDataUrl} alt={`إيصال CliQ — ${entry.name}`} className="mb-2 h-32 w-32 rounded-lg object-contain bg-white" loading="lazy" />عرض إيصال CliQ</a>}
                     </div>
-                    <div className="flex gap-2 mt-4">
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      <button type="button" disabled={!eventRegistrationsReady || !!eventReviewBusy || entry.status !== 'approved' || entry.attendance !== 'in-person'} onClick={() => handleEventArrival(entry, true)} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" data-testid={`check-in-event-${entry.id}`}>
+                        {entry.arrivedAt ? (lang === 'ar' ? 'التحقق من الوصول مجددًا' : 'Check in again') : (lang === 'ar' ? 'تسجيل الوصول' : 'Mark arrived')}
+                      </button>
+                      {!!entry.arrivedAt && <button type="button" disabled={!eventRegistrationsReady || !!eventReviewBusy} onClick={() => handleEventArrival(entry, false)} className="rounded-lg border border-teal-300/40 px-4 py-2 text-sm font-bold text-teal-100 disabled:opacity-50" data-testid={`undo-arrival-${entry.id}`}>{lang === 'ar' ? 'إلغاء الوصول' : 'Undo arrival'}</button>}
                       {entry.status !== 'approved' && <button disabled={!!eventReviewBusy} onClick={() => handleEventRegistrationStatus(entry, 'approved')} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" data-testid={`approve-event-${entry.id}`}>{eventReviewBusy === entry.id ? 'جارٍ التأكيد…' : 'Approve · تأكيد التسجيل'}</button>}
                       {entry.status === 'approved' && entry.confirmationEmailStatus !== 'sent' && <button disabled={!!eventReviewBusy} onClick={() => handleRetryEventEmail(entry)} className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" data-testid={`retry-event-email-${entry.id}`}>إرسال / إعادة إرسال التأكيد</button>}
                       <button disabled={!!eventReviewBusy} onClick={() => handleEventRegistrationStatus(entry, 'rejected')} className="rounded-lg bg-red-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">رفض</button>

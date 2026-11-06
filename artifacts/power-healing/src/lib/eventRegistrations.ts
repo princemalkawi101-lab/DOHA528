@@ -31,6 +31,9 @@ export interface EventRegistration {
   vipPaypalOrderId?: string;
   confirmationEmailStatus?: 'not_sent' | 'sent' | 'failed' | 'sending' | 'uncertain';
   confirmationEmailError?: string;
+  arrivedAt?: { toDate?: () => Date } | string | null;
+  arrivalRevision?: number;
+  duplicateCheckIns?: number;
   createdAt?: { toDate?: () => Date };
 }
 
@@ -70,6 +73,20 @@ export async function updateEventRegistrationStatus(
   status: EventRegistrationStatus,
 ): Promise<{ status: EventRegistrationStatus; emailStatus?: 'sent' | 'failed' | 'sending' | 'uncertain'; emailError?: string }> {
   return eventRequest({ action: 'review', registrationId: id, status });
+}
+
+export interface EventArrivalResult {
+  outcome: 'arrived' | 'already-arrived' | 'undone';
+  arrivedAt: string | null;
+  arrivalRevision: number;
+  duplicateCheckIns: number;
+}
+
+export async function updateEventArrival(entry: EventRegistration, arrived: boolean): Promise<EventArrivalResult> {
+  return eventRequest({
+    action: 'arrival', registrationId: entry.id, arrived,
+    expectedRevision: entry.arrivalRevision ?? 0,
+  });
 }
 
 export function subscribeEventRegistrations(

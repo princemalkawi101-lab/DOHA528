@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { FieldValue, type DocumentData, type QueryDocumentSnapshot, type Transaction } from "firebase-admin/firestore";
+import { FieldValue, Timestamp, type DocumentData, type QueryDocumentSnapshot, type Transaction } from "firebase-admin/firestore";
 import { z } from "zod";
 import { eventFirebase } from "./event-firebase.js";
 import { sendEventConfirmation } from "./event-email.js";
@@ -224,6 +224,47 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
     await reconcilePayment(orderId, payment);
     return { captureStatus: "COMPLETED", registration: publicRegistration(registrationRef.id, (await registrationRef.get()).data()!) };
   }
+  if (body.action === "arrival") {
+    if (!isEventAdmin(user)) throw new EventError(403, "Administrator access required.");
+    const input = z.object({
+      registrationId: idSchema,
+      arrived: z.boolean(),
+      expectedRevision: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+    }).parse(body);
+    const ref = registrations.doc(input.registrationId);
+    return db.runTransaction(async (tx: Transaction) => {
+      const data = (await tx.get(ref)).data();
+      if (!data || data.eventId !== EVENT_ID) throw new EventError(404, "Registration not found.");
+      const revision = data.arrivalRevision ?? 0;
+      if (input.arrived && (data.status !== "approved" || data.attendance !== "in-person")) {
+        throw new EventError(409, "Arrival requires an approved in-person base ticket. VIP membership alone does not grant entry.");
+      }
+      const alreadyArrived = input.arrived && !!data.arrivedAt;
+      // A stale undo must never clear a newer arrival from another staff member.
+      if (!alreadyArrived && revision !== input.expectedRevision) {
+        throw new EventError(409, "Arrival status changed. Refresh the registration and try again.");
+      }
+      const now = Timestamp.now();
+      const patch = alreadyArrived ? {
+        duplicateCheckIns: (data.duplicateCheckIns ?? 0) + 1,
+        lastDuplicateCheckInAt: now,
+      } : {
+        arrivedAt: input.arrived ? now : null,
+        arrivedBy: input.arrived ? user.uid : null,
+        arrivalRevision: revision + 1,
+        arrivalUpdatedAt: now,
+        arrivalUpdatedBy: user.uid,
+      };
+      tx.update(ref, patch);
+      const current = { ...data, ...patch };
+      return {
+        outcome: alreadyArrived ? "already-arrived" : input.arrived ? "arrived" : "undone",
+        arrivedAt: current.arrivedAt?.toDate().toISOString() ?? null,
+        arrivalRevision: current.arrivalRevision ?? 0,
+        duplicateCheckIns: current.duplicateCheckIns ?? 0,
+      };
+    });
+  }
   if (body.action === "review" || body.action === "retry-email") {
     if (!isEventAdmin(user)) throw new EventError(403, "Administrator access required.");
     const ref = registrations.doc(idSchema.parse(body.registrationId));
@@ -234,7 +275,14 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
       throw new EventError(409, "سجل PayPal قديم غير موثّق من الخادم؛ يرجى مطابقة العملية قبل نقله إلى التسجيل الجديد.");
     }
     if (body.action === "review") {
-      await ref.update({ status, reviewedAt: FieldValue.serverTimestamp(), reviewedBy: user.uid });
+      await db.runTransaction(async (tx: Transaction) => {
+        const current = (await tx.get(ref)).data();
+        if (!current || current.eventId !== EVENT_ID) throw new EventError(404, "Registration not found.");
+        if (status === "rejected" && current.arrivedAt) {
+          throw new EventError(409, "Undo arrival before rejecting this ticket.");
+        }
+        tx.update(ref, { status, reviewedAt: FieldValue.serverTimestamp(), reviewedBy: user.uid });
+      });
     }
     if (status !== "approved") {
       if (body.action === "retry-email") throw new EventError(409, "Approve the registration before sending a confirmation.");

@@ -120,7 +120,7 @@ export const useEventPaymentWebhook = <
 };
 
 /**
- * @summary Authenticated event registration, payments, and administrator review
+ * @summary Authenticated event registration, payments, administrator review and arrival
  */
 export const getEventWorkflowUrl = () => {
   return `/api/event`;
@@ -183,7 +183,7 @@ export type EventWorkflowMutationBody = BodyType<EventActionRequest>;
 export type EventWorkflowMutationError = ErrorType<void>;
 
 /**
- * @summary Authenticated event registration, payments, and administrator review
+ * @summary Authenticated event registration, payments, administrator review and arrival
  */
 export const useEventWorkflow = <
   TError = ErrorType<void>,

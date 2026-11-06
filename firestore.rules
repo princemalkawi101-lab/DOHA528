@@ -113,7 +113,7 @@ service cloud.firestore {
     }
 
     match /eventRegistrations/{registrationId} {
-      // Only the verified backend creates bookings and changes approval/VIP.
+      // Only the verified backend changes bookings, approval/VIP, or arrival.
       allow create, update: if false;
       allow read, delete: if isAdmin();
     }

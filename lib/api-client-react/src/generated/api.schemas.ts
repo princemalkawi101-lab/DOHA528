@@ -25,6 +25,7 @@ export const EventActionRequestAction = {
   review: "review",
   "retry-email": "retry-email",
   "email-readiness": "email-readiness",
+  arrival: "arrival",
 } as const;
 
 export type EventActionRequestTier =
@@ -45,6 +46,14 @@ export const EventActionRequestStatus = {
 
 export interface EventActionRequest {
   action: EventActionRequestAction;
+  /** Administrator-only arrival action; requires an approved in-person base ticket when true. */
+  arrived?: boolean;
+  /**
+   * Required for arrival actions; missing legacy arrivalRevision is zero. Stale changes return 409; repeated check-ins return already-arrived without replacing the original arrival.
+   * @minimum 0
+   * @maximum 9007199254740991
+   */
+  expectedRevision?: number;
   tier?: EventActionRequestTier;
   registrationId?: string;
   orderId?: string;
