@@ -25,6 +25,11 @@ import {
   deleteEventRegistration,
 } from '@/lib/eventRegistrations';
 import {
+  downloadEventRegistrationCsv,
+  selectEventExportEntries,
+  EventExportSelection,
+} from '@/lib/eventRegistrationExport';
+import {
   normalizeSocialDestination,
   newSocialLinkTemplate,
   platformDefaults,
@@ -167,6 +172,9 @@ export default function Admin() {
   const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>([]);
   const [eventFeedback, setEventFeedback] = useState('');
   const [eventReviewBusy, setEventReviewBusy] = useState<string | null>(null);
+  const [eventExportSelection, setEventExportSelection] = useState<EventExportSelection>('approved-standard');
+  const [eventRegistrationsReady, setEventRegistrationsReady] = useState(false);
+  const eventExportCount = selectEventExportEntries(eventRegistrations, eventExportSelection).length;
 
   // ── These MUST stay above early returns to obey Rules of Hooks ──
   const [importing, setImporting] = useState(false);
@@ -212,6 +220,8 @@ export default function Admin() {
   }, []);
 
   useEffect(() => {
+    setEventRegistrationsReady(false);
+    setEventRegistrations([]);
     if (!isAdmin) return;
     fetchItems().then((list) => {
       setItems(list);
@@ -234,7 +244,11 @@ export default function Admin() {
       .catch(() => setPurchases([]))
       .finally(() => setLoadingPurchases(false));
     fetchAdSliderConfig().then(setAdSliderCfg).catch(() => {});
-    return subscribeEventRegistrations(setEventRegistrations, () => {
+    return subscribeEventRegistrations((entries) => {
+      setEventRegistrations(entries);
+      setEventRegistrationsReady(true);
+    }, () => {
+      setEventRegistrationsReady(false);
       setEventFeedback('تعذّر تحميل تسجيلات الفعالية. يرجى تحديث الصفحة.');
     });
   }, [isAdmin]);
@@ -435,6 +449,15 @@ export default function Admin() {
       setEventRegistrations((prev) => prev.filter((item) => item.id !== entry.id));
     } catch {
       setEventFeedback(lang === 'ar' ? 'تعذّر حذف التسجيل.' : 'Could not delete registration.');
+    }
+  };
+
+  const handleEventExport = () => {
+    if (!user || !isAdmin || !eventRegistrationsReady || eventReviewBusy || !eventExportCount) return;
+    try {
+      downloadEventRegistrationCsv(eventRegistrations, eventExportSelection);
+    } catch {
+      setEventFeedback(lang === 'ar' ? 'تعذّر تنزيل القائمة. يرجى المحاولة مجددًا.' : 'Could not download the list. Please try again.');
     }
   };
 
@@ -1021,6 +1044,33 @@ export default function Admin() {
           </section>
           <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
             <h2 className="text-white text-lg font-black mb-4">{lang === 'ar' ? `تسجيلات الفعالية (${eventRegistrations.length})` : `Event registrations (${eventRegistrations.length})`}</h2>
+            <div className="mb-5 space-y-3">
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="text-sm text-white" htmlFor="event-export-selection">
+                  {lang === 'ar' ? 'قائمة التنزيل' : 'Download list'}
+                  <select id="event-export-selection" className="adm-input mt-1" value={eventExportSelection} onChange={(e) => setEventExportSelection(e.target.value as EventExportSelection)} data-testid="select-event-export">
+                    <option value="approved-standard">{lang === 'ar' ? 'التذاكر العادية المقبولة' : 'Approved standard attendees'}</option>
+                    <option value="verified-vip">{lang === 'ar' ? 'أعضاء VIP المؤكدون' : 'Verified VIP members'}</option>
+                    <option value="pending-cliq">{lang === 'ar' ? 'طلبات CliQ قيد المراجعة' : 'Pending CliQ receipts'}</option>
+                  </select>
+                </label>
+                <button type="button" onClick={handleEventExport} disabled={!eventRegistrationsReady || !!eventReviewBusy || eventExportCount === 0} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" data-testid="button-download-event-csv">
+                  {lang === 'ar' ? 'تنزيل CSV' : 'Download CSV'}
+                </button>
+                <p className="text-sm text-white/70" role="status" data-testid="status-event-export-count">
+                  {!eventRegistrationsReady
+                    ? (lang === 'ar' ? 'بانتظار تحميل القائمة بنجاح.' : 'Waiting for the list to load successfully.')
+                    : eventExportCount === 0
+                      ? (lang === 'ar' ? 'لا توجد تسجيلات مطابقة.' : 'No matching registrations.')
+                      : (lang === 'ar' ? `${eventExportCount} تسجيلات مطابقة` : `${eventExportCount} matching registrations`)}
+                </p>
+              </div>
+              <p className="text-xs text-white/60" data-testid="text-event-export-privacy">
+                {lang === 'ar'
+                  ? 'عضوية VIP لا تعني قبول التذكرة الأساسية؛ تُعرض الحالتان منفصلتين. القوائم تحتوي بيانات اتصال شخصية، فاحفظيها بأمان. لا تتضمن الإيصالات أو الروابط الخاصة أو بيانات الدفع.'
+                  : 'VIP membership does not approve the base ticket; both statuses are exported separately. Lists contain personal contact details; store them securely. Receipts, private links, and payment data are excluded.'}
+              </p>
+            </div>
             {!eventRegistrations.length ? <p className="text-[rgba(255,255,255,0.55)] text-sm">{lang === 'ar' ? 'لا توجد تسجيلات حتى الآن.' : 'No registrations yet.'}</p> : (
               <div className="grid gap-4">
                 {eventRegistrations.map((entry) => (
