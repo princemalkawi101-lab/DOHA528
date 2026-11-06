@@ -4,6 +4,7 @@ import dohaAmmanImage from '../assets/doha-amman.webp';
 import dohaGardenImage from '../assets/doha-mentor-garden.webp';
 import dohaSeatedImage from '../assets/doha-mentor-seated.webp';
 import dohaDeskImage from '../assets/doha-mentor-desk.webp';
+import EventExperienceSection from './EventExperienceSection';
 import './Event.css';
 
 export type EventMode = 'in-person' | 'online';
@@ -199,6 +200,7 @@ export default function Event(p: EventPageProps) {
                 <p>احجز مكانك الآن، وكن جزء من تجربة تجسيد النجاح</p>
               </div>
               <a href="#register" className="ev-closing-cta" data-testid="link-register">أريد حجز مكاني <ArrowLeft aria-hidden="true" /></a>
+              <EventExperienceSection />
             </section>
           </div>
         </section>
