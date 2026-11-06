@@ -72,24 +72,20 @@ export default function Event(p: EventPageProps) {
 
   return (
     <div dir="rtl" className="ev" data-testid="page-event">
+      <div className="ev-wash" aria-hidden="true"><i className="ev-wash-a" /><i className="ev-wash-b" /><i className="ev-wash-c" /><i className="ev-wash-d" /></div>
       <header className="ev-hero" id="top">
-        <div className="ev-hero-glow" aria-hidden="true" />
-        <div className="ev-hero-inner">
-          <figure className="ev-hero-portrait">
-            <div className="ev-portrait-frame">
-              <img
-                src={p.portraitUrl || dohaAmmanImage}
-                alt="Master Doha Malkawi in Amman, Jordan"
-                className="ev-portrait-image"
-                data-testid="img-portrait"
-              />
-              <figcaption className="ev-portrait-caption">
-                <MapPin aria-hidden="true" />
-                <span>Amman, Jordan</span>
-              </figcaption>
-            </div>
-          </figure>
-        </div>
+        <figure className="ev-hero-portrait">
+          <img
+            src={p.portraitUrl || dohaAmmanImage}
+            alt="Master Doha Malkawi in Amman, Jordan"
+            className="ev-portrait-image"
+            data-testid="img-portrait"
+          />
+          <figcaption className="ev-portrait-caption" dir="ltr" data-testid="text-location">
+            <span className="ev-loc-country">JORDAN</span>
+            <span className="ev-loc-city">AMMAN</span>
+          </figcaption>
+        </figure>
       </header>
 
       <main>
@@ -207,7 +203,7 @@ export default function Event(p: EventPageProps) {
 
         <section className="ev-facts-section" aria-label="تفاصيل الورشة">
           <div className="ev-facts-header">
-            <span className="ev-eyebrow">كل ما تحتاجين معرفته</span>
+            <span className="ev-eyebrow">كل ما تحتاج معرفته</span>
             <span className="ev-facts-rule" />
             <span className="ev-facts-date">السبت 21 نوفمبر 2026</span>
           </div>
@@ -228,7 +224,7 @@ export default function Event(p: EventPageProps) {
             <div className="ev-section-index ev-section-index-light"><span>02</span><i /></div>
             <p className="ev-eyebrow">ما يرافقك</p>
             <h2>أكثر من ثلاث ساعات.<br /><em>رحلة تكمل معك بعدها.</em></h2>
-            <p className="ev-includes-intro">مع حضورك، تحصلين على هذه المزايا:</p>
+            <p className="ev-includes-intro">مع حضورك، تحصل على هذه المزايا:</p>
           </div>
           <ul className="ev-perks">
             {perks.map((k, i) => (
@@ -248,9 +244,9 @@ export default function Event(p: EventPageProps) {
             <div className="ev-section-index"><span>03</span><i /></div>
             <div>
               <p className="ev-eyebrow">موعدنا في 21 نوفمبر</p>
-              <h2>اختاري طريقة<br /><em>حضورك.</em></h2>
+              <h2>اختر طريقة<br /><em>حضورك.</em></h2>
             </div>
-            <p className="ev-register-lead">مكانك في اللقاء يبدأ من هنا.<br />أكملي التسجيل بالطريقة الأنسب لك.</p>
+            <p className="ev-register-lead">مكانك في اللقاء يبدأ من هنا.<br />أكمل التسجيل بالطريقة الأنسب لك.</p>
           </div>
 
           {!enabled ? (
@@ -278,7 +274,7 @@ export default function Event(p: EventPageProps) {
 
               <div id="ev-registration-panel" role="tabpanel" key={mode} className="ev-form-panel ev-rise">
                 <div className="ev-panel-heading">
-                  <div><span className="ev-eyebrow">{mode === 'in-person' ? 'حضور في عمّان' : 'حضور أونلاين'}</span><h3>أكملي بيانات التسجيل</h3></div>
+                  <div><span className="ev-eyebrow">{mode === 'in-person' ? 'حضور في عمّان' : 'حضور أونلاين'}</span><h3>أكمل بيانات التسجيل</h3></div>
                   <span className="ev-panel-price">{mode === 'in-person' ? '25 دينار' : '30 دولار'}</span>
                 </div>
                 {mode === 'in-person' ? (
@@ -291,7 +287,7 @@ export default function Event(p: EventPageProps) {
                   ) : (
                     <form onSubmit={submit} className="ev-form">
                       <div className="ev-payment-instructions">
-                        <div className="ev-cliq-label"><span className="ev-cliq-mark">CliQ</span><span>ادفعي 25 دينار عبر CliQ إلى</span></div>
+                        <div className="ev-cliq-label"><span className="ev-cliq-mark">CliQ</span><span>ادفع 25 دينار عبر CliQ إلى</span></div>
                         <div className="ev-cliq-account">
                           <div>
                             <strong dir="ltr" data-testid="text-cliq-alias">{p.cliqAlias || '—'}</strong>
@@ -314,7 +310,7 @@ export default function Event(p: EventPageProps) {
                       </div>
                       <label className="ev-upload" htmlFor="ev-receipt">
                         <span className="ev-upload-icon"><Upload aria-hidden="true" /></span>
-                        <span className="ev-upload-copy"><strong>{p.receiptFile ? p.receiptFile.name : 'ارفعي صورة إيصال التحويل'}</strong><small>صورة الإيصال مطلوبة لإرسال طلب الحجز</small></span>
+                        <span className="ev-upload-copy"><strong>{p.receiptFile ? p.receiptFile.name : 'ارفع صورة إيصال التحويل'}</strong><small>صورة الإيصال مطلوبة لإرسال طلب الحجز</small></span>
                         <span className="ev-upload-action">اختيار صورة</span>
                         <input id="ev-receipt" type="file" accept="image/*" className="ev-file-input" onChange={e => p.onReceiptChange(e.target.files?.[0] ?? null)} data-testid="input-receipt" aria-label="رفع صورة إيصال التحويل" />
                       </label>
@@ -322,7 +318,7 @@ export default function Event(p: EventPageProps) {
                       <button type="submit" disabled={p.submitting || !p.name.trim() || !p.phone.trim() || !p.receiptFile}
                         className="ev-submit" data-testid="button-submit">
                         {p.submitting && <Loader2 className="ev-spinner" aria-hidden="true" />}
-                        {p.submitting ? 'جارٍ الإرسال' : 'أرسلي طلب الحجز'}<ArrowLeft aria-hidden="true" />
+                        {p.submitting ? 'جارٍ الإرسال' : 'أرسل طلب الحجز'}<ArrowLeft aria-hidden="true" />
                       </button>
                       <p className="ev-form-footnote">بعد مراجعة الإيصال، سنتواصل معك لتأكيد مقعدك.</p>
                     </form>
@@ -338,7 +334,7 @@ export default function Event(p: EventPageProps) {
                       <label className="ev-field" htmlFor="ev-name-online"><span>الاسم الكامل</span><input id="ev-name-online" className="ev-in" value={p.name} onChange={e => p.onNameChange(e.target.value)} required autoComplete="name" /></label>
                       <label className="ev-field" htmlFor="ev-phone-online"><span>رقم الهاتف</span><input id="ev-phone-online" className="ev-in" dir="ltr" type="tel" value={p.phone} onChange={e => p.onPhoneChange(e.target.value)} required autoComplete="tel" /></label>
                     </div>
-                    <p className="ev-paypal-copy">ادفعي 30 دولارًا بأمان عبر PayPal، وستصلك تفاصيل الدخول.</p>
+                    <p className="ev-paypal-copy">ادفع 30 دولارًا بأمان عبر PayPal، وستصلك تفاصيل الدخول.</p>
                     {p.paypalSlot ?? (p.onPayPal && (
                       <button type="button" onClick={p.onPayPal} disabled={p.paypalPending} className="ev-submit" data-testid="button-paypal">
                         {p.paypalPending && <Loader2 className="ev-spinner" aria-hidden="true" />}الدفع عبر PayPal<ArrowLeft aria-hidden="true" />

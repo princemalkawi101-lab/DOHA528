@@ -61,18 +61,18 @@ export default function EventRoute() {
     setBusy(true);
     setSubmitError('');
     try {
-      if (!settings.cliqAlias.trim()) throw new Error('إعداد حساب CliQ غير مكتمل. تواصلي معنا أو حاولي لاحقًا.');
-      if (!receipt) throw new Error('أرفقي صورة إيصال التحويل.');
+      if (!settings.cliqAlias.trim()) throw new Error('إعداد حساب CliQ غير مكتمل. يرجى التواصل معنا أو المحاولة لاحقًا.');
+      if (!receipt) throw new Error('يرجى إرفاق صورة إيصال التحويل.');
       const receiptDataUrl = await compressReceiptToDataUrl(receipt);
       await createCliqRegistration({ name, phone, receiptDataUrl });
       setSubmitted(true);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       setSubmitError(message === 'IMAGE_TOO_LARGE'
-        ? 'الصورة كبيرة؛ اختاري صورة أصغر أو قللي دقتها.'
+        ? 'الصورة كبيرة؛ يرجى اختيار صورة أصغر أو تقليل دقتها.'
         : message === 'INVALID_IMAGE'
           ? 'يرجى اختيار صورة للإيصال.'
-          : message || 'تعذّر إرسال الطلب. تحققي من الاتصال ثم حاولي مجددًا.');
+          : message || 'تعذّر إرسال الطلب. يرجى التحقق من الاتصال ثم المحاولة مجددًا.');
     } finally {
       setBusy(false);
     }

@@ -31,7 +31,7 @@ export const DEFAULT_EVENT_SETTINGS: EventSettings = {
   ammanImageUrl: '',
   cliqAccountName: '',
   cliqAlias: '',
-  cliqInstructions: 'حوّلي 25 دينارًا أردنيًا عبر CliQ ثم أرفقي صورة واضحة لإيصال التحويل.',
+  cliqInstructions: 'يرجى تحويل 25 دينارًا أردنيًا عبر CliQ ثم إرفاق صورة واضحة لإيصال التحويل.',
 };
 
 export interface AboutContent {

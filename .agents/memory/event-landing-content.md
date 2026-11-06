@@ -14,3 +14,9 @@ The event landing page and its homepage announcement are temporary and must be r
 **Why:** The user explicitly said both the announcement and the entire landing page are temporary and will be removed later.
 
 **How to apply:** Keep promotion lifecycle controls available to the administrator. Disabling the promotion must not delete bookings or receipts.
+
+Use general Arabic addressing on the event landing page, not female-only wording.
+
+**Why:** The user explicitly requested that the page not address women only.
+
+**How to apply:** Apply this to future event copy, registration prompts, and error messages; keep feminine descriptions of Doha herself unchanged.
