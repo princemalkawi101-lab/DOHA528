@@ -20,3 +20,9 @@ Use shared Node and DOM ambient typings across the workspace, including the API 
 **Why:** The user explicitly requested workspace-wide recognition of `process`, `fetch`, and `Response` rather than repeated per-file fixes.
 
 **How to apply:** Keep Node in `compilerOptions.types`, DOM in `compilerOptions.lib`, and `skipLibCheck` enabled. Check leaf overrides so they retain these globals. Match serverless compatibility checks to this shared library set; these declarations do not provide browser APIs at runtime.
+
+Cross the root CommonJS serverless adapter to the API artifact's ESM package using native dynamic imports.
+
+**Why:** The live Vercel log confirmed `ERR_REQUIRE_ESM`: compiled static imports became `require()` calls against the ESM artifact and crashed before authentication. Type checks alone did not expose it; newer local Node versions can also accept `require(ESM)` and conceal the incompatibility.
+
+**How to apply:** Preserve native `import()` in emitted CommonJS adapters and cover all event entry points, including webhooks. Verify the real emitted dependency graph with `--no-experimental-require-module` as well as TypeScript checks, without changing the entire workspace module format.

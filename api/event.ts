@@ -1,6 +1,4 @@
 // Vercel adapter: shares the same verified event implementation as the Replit API.
-import { eventFirebase } from "../artifacts/api-server/src/lib/event-firebase.js";
-import { eventAction, EventError } from "../artifacts/api-server/src/lib/event-workflow.js";
 
 type Request = { method?: string; headers: Record<string, string | string[] | undefined>; body?: unknown };
 type Response = { setHeader(name: string, value: string): void; status(code: number): Response; json(body: unknown): void; end(): void };
@@ -9,6 +7,10 @@ export default async function handler(req: Request, res: Response) {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
   const token = String(req.headers.authorization || "").match(/^Bearer (.+)$/i)?.[1];
   if (!token) { res.status(401).json({ error: "Authentication required" }); return; }
+  // This adapter is CommonJS on Vercel; the API artifact is an ESM package.
+  // Native import() crosses that boundary without compiling to require(ESM).
+  const { eventFirebase } = await import("../artifacts/api-server/src/lib/event-firebase.js");
+  const { eventAction, EventError } = await import("../artifacts/api-server/src/lib/event-workflow.js");
   let user;
   try { user = await eventFirebase().auth.verifyIdToken(token, true); }
   catch { res.status(401).json({ error: "Invalid or expired authentication" }); return; }
