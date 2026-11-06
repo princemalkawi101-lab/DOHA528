@@ -96,6 +96,31 @@ export default function Event(p: EventPageProps) {
               <p>تجربة انتقال من عالم الروح إلى عالم المادة.</p>
               <span>مع <bdi dir="ltr">Master Doha Malkawi</bdi></span>
             </div>
+            <section className="ev-content-block" aria-labelledby="ev-waiting-title">
+              <h2 id="ev-waiting-title">هل تشعر انك هناك شيء اكبر ينتظرك</h2>
+              <div className="ev-content-body">
+                <p>ربما تعرف أنك تحمل إمكانيات عظيمة، لكن واقعك الحالي لا يعكس بالكامل ما تشعر به في أعماقك.</p>
+                <p>ربما لديك أحلام، طموحات، ورغبة في التوسع، لكنك ما زلت تتساءل:</p>
+                <ul className="ev-question-list">
+                  <li>لماذا أشعر أن النجاح قريب مني، لكنه لم يتجسد بالكامل في حياتي؟</li>
+                  <li>ماذا لو كان النجاح أوسع بكثير من المفهوم الذي اعتدت عليه؟</li>
+                  <li>هل يمكنني أن أعيش خبرات جديدة من النجاح، بدلًا من تكرار نفس الأنماط والنتائج؟</li>
+                  <li>كيف أسمح لإمكانياتي الروحية أن تصبح اختيارات وتجارب ملموسة في حياتي؟</li>
+                  <li>ماذا لو أن النسخة التي أعيشها اليوم قادرة على استقبال مستوى جديد من النجاح؟</li>
+                </ul>
+                <p>هذه الورشة مساحة لاستكشاف هذه الأسئلة، وتوسيع إدراكك لما هو ممكن، والانفتاح على طريقة جديدة في خلق واقعك.</p>
+              </div>
+            </section>
+            <section className="ev-content-block ev-experience-block" aria-labelledby="ev-experience-title">
+              <h2 id="ev-experience-title">ماذا سنختبر معا؟</h2>
+              <ul className="ev-experience-list">
+                <li>✨ استكشاف مكتبتك الروحية وإمكانيات النجاح.</li>
+                <li>✨ تفعيل شيفرات وكودات النجاح ضمن تجربتك الحالية.</li>
+                <li>✨ توسيع وعيك بالنجاح من منظور روحي مختلف.</li>
+                <li>✨ فتح احتمالات جديدة للمال، الاستقبال، الخلق، والتوسع.</li>
+                <li>✨ الانتقال من الوعي بالنجاح إلى اختيارات وتجارب تجسّده في واقعك.</li>
+              </ul>
+            </section>
             <a href="#register" className="ev-text-link" data-testid="link-register">اختاري طريقة حضورك <ArrowLeft aria-hidden="true" /></a>
           </div>
         </section>
