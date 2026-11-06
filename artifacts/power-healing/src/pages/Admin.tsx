@@ -964,6 +964,12 @@ export default function Admin() {
                 {lang === 'ar' ? 'إظهار شريط الإعلان في الصفحة الرئيسية' : 'Show the homepage announcement'}
               </label>
             </div>
+            <div className="mt-5 rounded-xl border border-[rgba(212,160,23,0.25)] bg-black/20 p-4 text-sm leading-7 text-[rgba(255,255,255,0.8)]">
+              <p className="font-bold text-[hsl(var(--g300))]">{lang === 'ar' ? 'إيقاف الإعلان والصفحة بعد انتهاء الفعالية' : 'Remove the promotion after the event'}</p>
+              <p>{lang === 'ar' ? 'لإخفاء الإعلان فقط: أزيلي علامة «إظهار شريط الإعلان في الصفحة الرئيسية»، ثم احفظي الإعدادات.' : 'To hide only the announcement, uncheck “Show the homepage announcement” and save.'}</p>
+              <p>{lang === 'ar' ? 'لإيقاف الفعالية كاملة: أزيلي علامة «نشر صفحة الفعالية / تفعيل التسجيل»، ثم احفظي. سيختفي الإعلان أيضًا، وسيعود زوار رابط /event إلى الصفحة الرئيسية.' : 'To disable the entire event, uncheck “Publish event page and enable registration” and save. The announcement also disappears and /event redirects to the homepage.'}</p>
+              <p>{lang === 'ar' ? 'تبقى بيانات الحجوزات والإيصالات محفوظة في لوحة الإدارة. يمكنك إعادة التفعيل لاحقًا من نفس الخيارات.' : 'Bookings and receipts remain in the admin panel. You can re-enable the event using the same controls.'}</p>
+            </div>
             <button onClick={handleSaveEventSettings} disabled={settingsSaving === 'about'} className="mt-5 bg-gradient-to-br from-[hsl(var(--g500))] to-[hsl(var(--g400))] text-[hsl(var(--p900))] font-black py-2.5 px-5 rounded-lg text-sm disabled:opacity-50">
               {settingsSaving === 'about' ? (lang === 'ar' ? 'جاري الحفظ…' : 'Saving…') : (lang === 'ar' ? 'حفظ إعدادات الفعالية' : 'Save Event Settings')}
             </button>

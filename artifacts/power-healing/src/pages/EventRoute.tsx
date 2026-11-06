@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { PayPalButtons, PayPalScriptProvider, type ReactPayPalScriptOptions } from '@paypal/react-paypal-js';
 import { useAuth } from '@/lib/auth';
 import { auth } from '@/lib/firebase';
-import { DEFAULT_EVENT_SETTINGS, fetchSiteSettings, type EventSettings } from '@/lib/siteSettings';
+import { DEFAULT_EVENT_SETTINGS, subscribeSiteSettings, type EventSettings } from '@/lib/siteSettings';
 import { compressReceiptToDataUrl, createCliqRegistration, createOnlineEventRegistration } from '@/lib/eventRegistrations';
 import { serverApi } from '@/lib/serverApi';
 import EventPage from './Event';
@@ -12,9 +12,10 @@ const CLIENT_ID = (import.meta.env.VITE_PAYPAL_CLIENT_ID as string | undefined)?
   (typeof process !== 'undefined' ? process.env.PAYPAL_CLIENT_ID?.trim() : undefined) || '';
 
 export default function EventRoute() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [settings, setSettings] = useState<EventSettings>(DEFAULT_EVENT_SETTINGS);
+  const [settingsStatus, setSettingsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [receipt, setReceipt] = useState<File | null>(null);
@@ -25,15 +26,21 @@ export default function EventRoute() {
   const [paypalDone, setPaypalDone] = useState(false);
 
   useEffect(() => {
-    fetchSiteSettings().then((s) => setSettings({
-      ...DEFAULT_EVENT_SETTINGS,
-      ...(s.event || {}),
-      portraitUrl: s.event?.portraitUrl || '',
-    }));
+    return subscribeSiteSettings((s) => {
+      setSettings({
+        ...DEFAULT_EVENT_SETTINGS,
+        ...(s.event || {}),
+        portraitUrl: s.event?.portraitUrl || '',
+      });
+      setSettingsStatus('ready');
+    }, (error) => {
+      console.error('Could not load the event page settings', error);
+      setSettingsStatus('error');
+    });
   }, []);
   useEffect(() => {
-    if (!loading && settings.enabled === false) setLocation('/');
-  }, [loading, settings.enabled, setLocation]);
+    if (settingsStatus === 'ready' && settings.enabled === false) setLocation('/', { replace: true });
+  }, [settingsStatus, settings.enabled, setLocation]);
 
   const paypalOptions = useMemo<ReactPayPalScriptOptions | null>(() => CLIENT_ID ? ({
     clientId: CLIENT_ID,
@@ -109,6 +116,16 @@ export default function EventRoute() {
       />
     </PayPalScriptProvider>
   ) : null;
+
+  if (settingsStatus === 'error') {
+    return <div dir="rtl" className="min-h-screen grid place-content-center gap-5 p-6 text-center">
+      <p role="alert">تعذّر تحميل إعدادات الورشة. يرجى إعادة المحاولة لاحقًا.</p>
+      <a href={import.meta.env.BASE_URL} className="underline">العودة إلى الصفحة الرئيسية</a>
+    </div>;
+  }
+  if (settingsStatus === 'loading' || !settings.enabled) {
+    return <div dir="rtl" role="status" className="min-h-screen grid place-content-center p-6">جارٍ تحميل الصفحة…</div>;
+  }
 
   return <EventPage
     enabled={settings.enabled}
