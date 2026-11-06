@@ -494,3 +494,53 @@
 @media(prefers-reduced-motion:reduce){
   .ev-bio-image{animation:none}
 }
+.ev-closing-block{
+  padding:30px;
+  border:1px solid hsl(var(--terracotta)/.35);
+  background:hsl(var(--sand)/.55);
+}
+.ev-closing-name{
+  margin:22px 0 4px;
+  color:hsl(var(--wine));
+  font-size:clamp(1.8rem,4vw,2.5rem);
+  font-weight:900;
+}
+.ev-closing-tagline{
+  margin:0 0 20px;
+  color:hsl(var(--terracotta-dark));
+  font-weight:800;
+}
+.ev-closing-details-title{margin:22px 0 12px;color:hsl(var(--wine));font-size:17px;font-weight:900}
+.ev-closing-details{
+  display:grid;
+  gap:12px;
+  margin:0 0 25px;
+  padding:20px;
+  list-style:none;
+  border-right:3px solid hsl(var(--terracotta));
+  background:hsl(var(--paper));
+  color:hsl(var(--ink));
+  font-size:14px;
+}
+.ev-content-body .ev-closing-question{margin-top:28px;color:hsl(var(--wine));font-size:18px;font-weight:900}
+.ev-closing-cta{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+  margin-top:12px;
+  padding:15px 26px;
+  background:hsl(var(--wine));
+  color:hsl(var(--paper))!important;
+  border:1px solid hsl(var(--terracotta));
+  font-weight:900;
+  transition:background-color .2s;
+}
+.ev-closing-cta:hover{background:hsl(var(--wine-deep))}
+.ev-closing-cta svg{width:18px;height:18px;color:hsl(var(--sun))}
+@media(max-width:650px){
+  .ev-closing-block{padding:22px 17px}
+  .ev-closing-details{padding:15px 12px;font-size:12px}
+  .ev-content-body .ev-closing-question{font-size:16px}
+  .ev-closing-cta{width:100%;font-size:14px}
+}

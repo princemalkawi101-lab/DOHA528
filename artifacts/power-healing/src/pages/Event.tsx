@@ -179,7 +179,29 @@ export default function Event(p: EventPageProps) {
                 </div>
               </div>
             </section>
-            <a href="#register" className="ev-text-link" data-testid="link-register">اختاري طريقة حضورك <ArrowLeft aria-hidden="true" /></a>
+            <section className="ev-content-block ev-closing-block" aria-labelledby="ev-closing-title">
+              <h2 id="ev-closing-title">احجز مكانك في تجربة النجاح التجسيد</h2>
+              <p className="ev-closing-name">تجسيد النجاح</p>
+              <p className="ev-closing-tagline">من عالم الروح إلى عالم المادة</p>
+              <div className="ev-content-body">
+                <p>تجربة حضورية في الأردن مع <bdi dir="ltr">Master Doha Malkawi</bdi>.</p>
+                <h3 className="ev-closing-details-title">التفاصيل:</h3>
+                <ul className="ev-closing-details">
+                  <li>📍 المكان: الاردن - عمان - زيزفون</li>
+                  <li>📅 التاريخ: 21 نوفمبر 2026</li>
+                  <li>🕰️ الوقت: من 1 مساءاً - 3 مساءاً</li>
+                  <li>⏳ مدة الورشة: 3 ساعات</li>
+                  <li>🎟️ قيمة الاستثمار: للحضور 25 دينار للشخص الواحد</li>
+                </ul>
+                <p>عدد المقاعد محدود لضمان مساحة مريحة وعميقة لجميع المشاركين.</p>
+                <p className="ev-closing-question">هل أنت مستعد لفتح احتمالات جديدة للنجاح؟</p>
+                <p>قد لا تحتاج إلى أن تصبح شخص آخر كي تعيش النجاح.</p>
+                <p>ربما تحتاج أن تسمح لإمكانيات جديدة أن تظهر من خلالك، وأن تختار أن تعيشها في هذا الجسد، في هذه الحياة، وفي واقعك الحالي.</p>
+                <p className="ev-closing-tagline">من عالم الروح… إلى عالم المادة.</p>
+                <p>احجز مكانك الآن، وكن جزء من تجربة تجسيد النجاح</p>
+              </div>
+              <a href="#register" className="ev-closing-cta" data-testid="link-register">أريد حجز مكاني <ArrowLeft aria-hidden="true" /></a>
+            </section>
           </div>
         </section>
 
