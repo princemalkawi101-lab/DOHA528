@@ -10,18 +10,18 @@ if (!process.env.FIRESTORE_EMULATOR_HOST) throw new Error('Use the Firestore emu
 const requireApi = createRequire(resolve('artifacts/api-server/package.json'));
 const { build } = requireApi('esbuild');
 const outfile = resolve('artifacts/api-server/node_modules/.cache/event-workflow-test.mjs');
-globalThis.__eventTestPayments = { orders: new Map(), captures: 0, amountOverride: null, stateOverride: null };
+globalThis.__eventTestPayments = { orders: new Map(), captures: 0, amountOverride: null, stateOverride: null, signatureValid: true, reads: 0 };
 globalThis.__eventTestEmail = { sent: new Map(), attempts: 0, fail: false, ambiguous: false };
 await build({
   stdin: {
-    contents: `export {eventAction,EVENT_ID} from './lib/event-workflow'; export {eventFirebase} from './lib/event-firebase';`,
+    contents: `export {eventAction,eventPayPalWebhook,EVENT_ID} from './lib/event-workflow'; export {eventFirebase} from './lib/event-firebase';`,
     resolveDir: resolve('artifacts/api-server/src'), loader: 'ts',
   },
   outfile, platform: 'node', format: 'esm', bundle: true, packages: 'external',
   plugins: [{
     name: 'fake-providers',
     setup(b) {
-      b.onResolve({ filter: /^\.\/paypal$/ }, (args) =>
+      b.onResolve({ filter: /^\.\/paypal(?:\.js)?$/ }, (args) =>
         args.importer.endsWith('/event-workflow.ts') ? { path: 'paypal', namespace: 'fake' } : undefined);
       b.onResolve({ filter: /^@replit\/connectors-sdk$/ }, () => ({ path: 'email', namespace: 'fake' }));
       b.onLoad({ filter: /.*/, namespace: 'fake' }, ({ path }) => ({
@@ -38,7 +38,12 @@ await build({
             const o=state.orders.get(id);
             return {captureStatus:'COMPLETED',paymentStatus:state.stateOverride||'COMPLETED',orderId:id,captureId:'CAPTURE-'+id,amount:(state.amountOverride??o.amount).toFixed(2),currency:'USD'};
           }
-          export const getPayPalOrder=capturePayPalOrder;
+          export async function getPayPalOrder(id) {
+            globalThis.__eventTestPayments.reads++;
+            const state=globalThis.__eventTestPayments, o=state.orders.get(id);
+            return {captureStatus:'COMPLETED',paymentStatus:state.stateOverride||'COMPLETED',orderId:id,captureId:'CAPTURE-'+id,amount:(state.amountOverride??o.amount).toFixed(2),currency:'USD'};
+          }
+          export async function verifyPayPalWebhook(){return globalThis.__eventTestPayments.signatureValid;}
           export function isPayPalApiError(){return false;}
         ` : `
           export class ReplitConnectors {
@@ -63,7 +68,7 @@ await build({
     },
   }],
 });
-const { eventAction, eventFirebase, EVENT_ID } = await import(pathToFileURL(outfile).href);
+const { eventAction, eventPayPalWebhook, eventFirebase, EVENT_ID } = await import(pathToFileURL(outfile).href);
 const { db } = eventFirebase();
 const run = randomUUID().slice(0, 8);
 const user = { uid: `event-test-${run}`, email: 'attendee@example.test' };
@@ -138,10 +143,77 @@ await assert.rejects(eventAction(other, { action: 'register-cliq', ...attendee, 
 await assert.rejects(eventAction(other, { action: 'create-order', tier: 'online', ...attendee }));
 assert.ok((await eventAction(user, { action: 'mine' })).registration.telegramUrl);
 await db.doc('siteSettings/config').update({ 'event.enabled': true });
+
+// No browser approval callback: completed provider payments recover via webhook.
+const recoveryUsers = [];
+async function checkout(tier = 'online') {
+  const u = { uid: `recover-${run}-${recoveryUsers.length}`, email: attendee.email };
+  recoveryUsers.push(u);
+  let registration;
+  if (tier === 'vip') registration = (await eventAction(u, { action: 'register-cliq', ...attendee, receiptDataUrl })).registration;
+  const order = await eventAction(u, { action: 'create-order', tier, ...attendee, registrationId: registration?.id });
+  return { u, order, registration };
+}
+function webhook(order, amount = '30.00', overrides = {}) {
+  return {
+    id: 'WH-'+order.id, event_type: 'PAYMENT.CAPTURE.COMPLETED',
+    resource: { id: 'CAPTURE-'+order.id, status: 'COMPLETED', amount: { value: amount, currency_code: 'USD' },
+      supplementary_data: { related_ids: { order_id: order.id } }, ...overrides },
+  };
+}
+const recovered = await checkout();
+const delivery = webhook(recovered.order);
+globalThis.__eventTestPayments.signatureValid = false;
+const readsBefore = globalThis.__eventTestPayments.reads;
+await assert.rejects(eventPayPalWebhook({}, delivery), /signature/);
+assert.equal(globalThis.__eventTestPayments.reads, readsBefore);
+assert.equal((await eventAction(recovered.u, { action: 'mine' })).registration, null);
+globalThis.__eventTestPayments.signatureValid = true;
+await assert.rejects(eventPayPalWebhook({}, webhook(recovered.order, '1.00')));
+await assert.rejects(eventPayPalWebhook({}, webhook(recovered.order, '30.00', { id: 'WRONG-CAPTURE' })));
+await assert.rejects(eventPayPalWebhook({}, webhook(recovered.order, '30.00', { amount: { value: '30.00', currency_code: 'EUR' } })));
+globalThis.__eventTestPayments.stateOverride = 'PENDING';
+await assert.rejects(eventPayPalWebhook({}, delivery));
+globalThis.__eventTestPayments.stateOverride = null;
+await db.doc('siteSettings/config').update({ 'event.enabled': false });
+const capturesBeforeWebhook = globalThis.__eventTestPayments.captures;
+await Promise.all(Array.from({ length: 4 }, () => eventPayPalWebhook({}, delivery)));
+assert.equal(globalThis.__eventTestPayments.captures, capturesBeforeWebhook, 'Webhook never charges a customer');
+const recoveredRegistration = (await eventAction(recovered.u, { action: 'mine' })).registration;
+assert.equal(recoveredRegistration.status, 'approved');
+assert.equal(recoveredRegistration.membershipStatus, 'Standard');
+await eventAction(recovered.u, { action: 'capture-order', orderId: recovered.order.id });
+assert.equal(globalThis.__eventTestPayments.captures, capturesBeforeWebhook, 'Browser retry after webhook must not capture');
+await db.doc('siteSettings/config').update({ 'event.enabled': true });
+const vipRecovery = await checkout('vip');
+await Promise.all([
+  eventPayPalWebhook({}, webhook(vipRecovery.order, '49.00')),
+  eventAction(vipRecovery.u, { action: 'capture-order', orderId: vipRecovery.order.id }),
+]);
+const recoveredVip = (await eventAction(vipRecovery.u, { action: 'mine' })).registration;
+assert.equal(recoveredVip.membershipStatus, 'VIP Member');
+assert.equal(recoveredVip.status, 'pending');
+assert.ok(recoveredVip.telegramUrl);
+// Changed fixed amount, unknown tier, and a conflicting CliQ booking are rejected.
+const tampered = await checkout();
+const tamperedRef = db.doc(`eventPaymentOrders/${tampered.order.id}`);
+await tamperedRef.update({ tier: 'other' });
+await assert.rejects(eventPayPalWebhook({}, webhook(tampered.order)));
+await tamperedRef.update({ tier: 'online', amount: 1 });
+globalThis.__eventTestPayments.amountOverride = 1;
+await assert.rejects(eventPayPalWebhook({}, webhook(tampered.order, '1.00')));
+globalThis.__eventTestPayments.amountOverride = null;
+await tamperedRef.update({ amount: 30 });
+await eventAction(tampered.u, { action: 'register-cliq', ...attendee, receiptDataUrl });
+await assert.rejects(eventPayPalWebhook({}, webhook(tampered.order)));
+assert.equal((await eventAction(tampered.u, { action: 'mine' })).registration.status, 'pending');
+assert.equal((await tamperedRef.get()).data().status, 'created', 'Conflict leaves payment available for manual recovery');
+assert.equal((await eventPayPalWebhook({}, { id: 'WH-IGNORED', event_type: 'PAYMENT.CAPTURE.PENDING' })).ignored, true);
+assert.equal((await eventPayPalWebhook({}, webhook({ id: 'UNKNOWN-ORDER' }))).ignored, true);
 for (const collection of ['eventRegistrations', 'eventPaymentOrders', 'eventCheckoutSessions']) {
-  for (const u of [user, onlineUser]) {
+  for (const u of [user, onlineUser, ...recoveryUsers]) {
     const rows = await db.collection(collection).where('userId', '==', u.uid).get();
     for (const row of rows.docs) await row.ref.delete();
   }
 }
-console.log('Event workflow tests passed: pending/approved bookings, fixed prices, VIP isolation, ownership, idempotency, email retry/readback, disabled event.');
+console.log('Event workflow tests passed: bookings, fixed prices, VIP/CliQ isolation, ownership, email recovery, webhook-only recovery, invalid signatures, duplicate/concurrent delivery and browser races.');

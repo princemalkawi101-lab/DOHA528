@@ -20,7 +20,40 @@ type PayPalResponseBody = {
   status?: unknown;
   purchase_units?: unknown;
   details?: unknown;
+  verification_status?: unknown;
 };
+
+export type PayPalWebhookHeaders = Record<string, string | string[] | undefined>;
+
+// Verify through PayPal rather than trusting the event body or fetching a
+// caller-supplied certificate URL. The webhook ID belongs to this REST app.
+export async function verifyPayPalWebhook(headers: PayPalWebhookHeaders, event: unknown): Promise<boolean> {
+  const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+  if (!webhookId) throw new PayPalConfigurationError("PAYPAL_WEBHOOK_ID is not configured.");
+  const fields = {
+    auth_algo: "paypal-auth-algo",
+    cert_url: "paypal-cert-url",
+    transmission_id: "paypal-transmission-id",
+    transmission_sig: "paypal-transmission-sig",
+    transmission_time: "paypal-transmission-time",
+  };
+  const verification: Record<string, unknown> = { webhook_id: webhookId, webhook_event: event };
+  for (const [field, header] of Object.entries(fields)) {
+    const value = headers[header];
+    if (typeof value !== "string" || !value || value.length > 4096) return false;
+    verification[field] = value;
+  }
+  const config = getPayPalConfig();
+  const token = await getPayPalAccessToken();
+  const response = await fetch(`${config.baseUrl}/v1/notifications/verify-webhook-signature`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(verification),
+  });
+  const body = await readResponseBody(response);
+  if (!response.ok) throw new PayPalApiError("verify-webhook", response.status, body);
+  return body.verification_status === "SUCCESS";
+}
 
 export class PayPalConfigurationError extends Error {
   constructor(message: string) {

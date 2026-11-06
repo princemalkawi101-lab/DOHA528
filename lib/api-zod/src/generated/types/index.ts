@@ -12,3 +12,5 @@ export * from "./eventActionRequestStatus";
 export * from "./eventActionRequestTier";
 export * from "./eventWorkflow200";
 export * from "./healthStatus";
+export * from "./payPalWebhookEvent";
+export * from "./payPalWebhookEventResource";

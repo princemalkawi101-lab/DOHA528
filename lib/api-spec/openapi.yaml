@@ -11,6 +11,29 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /event-webhook:
+    post:
+      operationId: eventPaymentWebhook
+      summary: Reconcile completed event payments verified with PayPal
+      security: []
+      description: Requires PayPal transmission headers verified against PAYPAL_WEBHOOK_ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayPalWebhookEvent"
+      responses:
+        "200":
+          description: Reconciled or ignored non-event payment
+        "400":
+          description: Invalid event
+        "401":
+          description: Invalid PayPal signature
+        "409":
+          description: Payment mismatch or registration conflict; requires investigation
+        "503":
+          description: Configuration or temporary provider/database failure; retry delivery
   /event:
     post:
       operationId: eventWorkflow
@@ -59,6 +82,18 @@ components:
       scheme: bearer
       bearerFormat: Firebase ID token
   schemas:
+    PayPalWebhookEvent:
+      type: object
+      additionalProperties: true
+      required: [id, event_type]
+      properties:
+        id:
+          type: string
+        event_type:
+          type: string
+        resource:
+          type: object
+          additionalProperties: true
     EventActionRequest:
       type: object
       additionalProperties: true

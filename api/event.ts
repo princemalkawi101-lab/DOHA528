@@ -1,6 +1,6 @@
 // Vercel adapter: shares the same verified event implementation as the Replit API.
-import { eventFirebase } from "../artifacts/api-server/src/lib/event-firebase";
-import { eventAction, EventError } from "../artifacts/api-server/src/lib/event-workflow";
+import { eventFirebase } from "../artifacts/api-server/src/lib/event-firebase.js";
+import { eventAction, EventError } from "../artifacts/api-server/src/lib/event-workflow.js";
 
 type Request = { method?: string; headers: Record<string, string | string[] | undefined>; body?: unknown };
 type Response = { setHeader(name: string, value: string): void; status(code: number): Response; json(body: unknown): void; end(): void };

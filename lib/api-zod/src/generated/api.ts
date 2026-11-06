@@ -8,6 +8,16 @@
 import * as zod from "zod";
 
 /**
+ * Requires PayPal transmission headers verified against PAYPAL_WEBHOOK_ID.
+ * @summary Reconcile completed event payments verified with PayPal
+ */
+export const EventPaymentWebhookBody = zod.object({
+  id: zod.string(),
+  event_type: zod.string(),
+  resource: zod.record(zod.string(), zod.unknown()).optional(),
+});
+
+/**
  * @summary Authenticated event registration, payments, and administrator review
  */
 export const EventWorkflowBody = zod.object({

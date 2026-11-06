@@ -5,6 +5,15 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type PayPalWebhookEventResource = { [key: string]: unknown };
+
+export interface PayPalWebhookEvent {
+  id: string;
+  event_type: string;
+  resource?: PayPalWebhookEventResource;
+  [key: string]: unknown;
+}
+
 export type EventActionRequestAction =
   (typeof EventActionRequestAction)[keyof typeof EventActionRequestAction];
 

@@ -20,6 +20,7 @@ import type {
   EventActionRequest,
   EventWorkflow200,
   HealthStatus,
+  PayPalWebhookEvent,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -30,6 +31,93 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+/**
+ * Requires PayPal transmission headers verified against PAYPAL_WEBHOOK_ID.
+ * @summary Reconcile completed event payments verified with PayPal
+ */
+export const getEventPaymentWebhookUrl = () => {
+  return `/api/event-webhook`;
+};
+
+export const eventPaymentWebhook = async (
+  payPalWebhookEvent: PayPalWebhookEvent,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getEventPaymentWebhookUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(payPalWebhookEvent),
+  });
+};
+
+export const getEventPaymentWebhookMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof eventPaymentWebhook>>,
+    TError,
+    { data: BodyType<PayPalWebhookEvent> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof eventPaymentWebhook>>,
+  TError,
+  { data: BodyType<PayPalWebhookEvent> },
+  TContext
+> => {
+  const mutationKey = ["eventPaymentWebhook"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof eventPaymentWebhook>>,
+    { data: BodyType<PayPalWebhookEvent> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return eventPaymentWebhook(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type EventPaymentWebhookMutationResult = NonNullable<
+  Awaited<ReturnType<typeof eventPaymentWebhook>>
+>;
+export type EventPaymentWebhookMutationBody = BodyType<PayPalWebhookEvent>;
+export type EventPaymentWebhookMutationError = ErrorType<void>;
+
+/**
+ * @summary Reconcile completed event payments verified with PayPal
+ */
+export const useEventPaymentWebhook = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof eventPaymentWebhook>>,
+    TError,
+    { data: BodyType<PayPalWebhookEvent> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof eventPaymentWebhook>>,
+  TError,
+  { data: BodyType<PayPalWebhookEvent> },
+  TContext
+> => {
+  return useMutation(getEventPaymentWebhookMutationOptions(options));
+};
 
 /**
  * @summary Authenticated event registration, payments, and administrator review

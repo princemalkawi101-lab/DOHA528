@@ -3,7 +3,7 @@ import { FieldValue, type DocumentData, type QueryDocumentSnapshot, type Transac
 import { z } from "zod";
 import { eventFirebase } from "./event-firebase.js";
 import { sendEventConfirmation } from "./event-email.js";
-import { capturePayPalOrder, createPayPalOrder, getPayPalOrder, isPayPalApiError, type PayPalErrorDetail } from "./paypal.js";
+import { capturePayPalOrder, createPayPalOrder, getPayPalOrder, isPayPalApiError, verifyPayPalWebhook, type PayPalWebhookHeaders, type PayPalErrorDetail } from "./paypal.js";
 
 export const EVENT_ID = "success-workshop-amman-2026";
 const TELEGRAM_URL = "https://t.me/+dl3H-ZKTnqg2N2Y0";
@@ -42,6 +42,84 @@ async function ownedRegistration(user: EventUser, id: string) {
   const data = snapshot.data();
   if (!data || data.userId !== user.uid || data.eventId !== EVENT_ID) throw new EventError(404, "Registration not found.");
   return { ref, data };
+}
+
+type CompletedPayment = Awaited<ReturnType<typeof getPayPalOrder>>;
+
+// The browser and webhook must commit exactly the same payment invariants.
+async function reconcilePayment(orderId: string, payment: CompletedPayment) {
+  const { db } = eventFirebase();
+  const ref = db.collection("eventPaymentOrders").doc(orderId);
+  return db.runTransaction(async (tx: Transaction) => {
+    const order = (await tx.get(ref)).data();
+    if (!order) throw new EventError(404, "Payment order not found.");
+    if (!["online", "vip"].includes(order.tier)
+      || order.amount !== (order.tier === "vip" ? 49 : 30) || order.currency !== "USD"
+      || payment.orderId !== orderId || payment.captureStatus !== "COMPLETED"
+      || payment.paymentStatus !== "COMPLETED" || !payment.captureId
+      || payment.currency !== "USD" || payment.amount !== order.amount.toFixed(2)) {
+      throw new EventError(409, "لم يتم التحقق من مبلغ وحالة الدفع. يرجى التواصل معنا وعدم الدفع مرة أخرى.");
+    }
+    const registrationRef = db.collection("eventRegistrations").doc(idSchema.parse(order.registrationId));
+    const existing = await tx.get(registrationRef);
+    const data = existing.data();
+    if (order.status === "captured") {
+      if (order.captureId !== payment.captureId || !data || data.userId !== order.userId || data.eventId !== EVENT_ID) {
+        throw new EventError(409, "Payment recovery requires support.");
+      }
+      return registrationRef;
+    }
+    if (order.tier === "vip") {
+      if (!data || data.userId !== order.userId || data.eventId !== EVENT_ID
+        || (isVip(data) && data.vipPaypalOrderId !== orderId)) {
+        throw new EventError(409, "Registration conflict. Contact support to recover your payment.");
+      }
+      // Membership never changes the independently-reviewed CliQ status.
+      tx.update(registrationRef, {
+        membershipStatus: "VIP Member", vipAmountUsd: 49, vipPaypalOrderId: orderId,
+        vipCaptureId: payment.captureId, vipPaidAt: FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Never overwrite a CliQ booking, another owner, or existing VIP access.
+      if (data && (data.status !== "rejected" || isVip(data)
+        || data.userId !== order.userId || data.eventId !== EVENT_ID)) {
+        throw new EventError(409, "يوجد تسجيل آخر. يرجى التواصل معنا لتسوية الدفع.");
+      }
+      tx.set(registrationRef, {
+        ...attendee.parse(order.attendee), userId: order.userId, eventId: EVENT_ID, attendance: "online",
+        paymentMethod: "paypal", amountUsd: 30, paypalOrderId: orderId,
+        paypalCaptureId: payment.captureId, status: "approved", membershipStatus: "Standard",
+        confirmationEmailStatus: "not_sent", createdAt: FieldValue.serverTimestamp(),
+      });
+    }
+    tx.update(ref, { status: "captured", captureId: payment.captureId, capturedAt: FieldValue.serverTimestamp() });
+    return registrationRef;
+  });
+}
+
+export async function eventPayPalWebhook(headers: PayPalWebhookHeaders, raw: unknown) {
+  // Authenticate before any database lookup or trusting event identifiers.
+  if (!await verifyPayPalWebhook(headers, raw)) throw new EventError(401, "Invalid PayPal webhook signature.");
+  const envelope = z.object({ id: z.string().min(1).max(200), event_type: z.string() }).passthrough().parse(raw);
+  if (envelope.event_type !== "PAYMENT.CAPTURE.COMPLETED") return { received: true, ignored: true };
+  const event = z.object({
+    resource: z.object({
+      id: orderIdSchema, status: z.literal("COMPLETED"),
+      amount: z.object({ value: z.string(), currency_code: z.string() }),
+      supplementary_data: z.object({ related_ids: z.object({ order_id: orderIdSchema }) }),
+    }),
+  }).parse(raw);
+  const orderId = event.resource.supplementary_data.related_ids.order_id;
+  // This REST app may also receive non-event store payments.
+  const order = await eventFirebase().db.collection("eventPaymentOrders").doc(orderId).get();
+  if (!order.exists) return { received: true, ignored: true };
+  const payment = await getPayPalOrder(orderId);
+  if (payment.captureId !== event.resource.id || payment.amount !== event.resource.amount.value
+    || payment.currency !== event.resource.amount.currency_code) {
+    throw new EventError(409, "Webhook does not match the provider capture.");
+  }
+  await reconcilePayment(orderId, payment);
+  return { received: true };
 }
 
 export async function eventAction(user: EventUser, raw: unknown): Promise<Record<string, unknown>> {
@@ -143,31 +221,7 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
         || error.details.some((d: PayPalErrorDetail) => d.issue === "ORDER_ALREADY_CAPTURED"))) throw error;
       payment = await getPayPalOrder(orderId);
     }
-    if (payment.captureStatus !== "COMPLETED" || payment.paymentStatus !== "COMPLETED" || !payment.captureId || payment.currency !== "USD"
-      || payment.amount !== Number(order.amount).toFixed(2) || order.amount !== (order.tier === "vip" ? 49 : 30)) {
-      throw new EventError(409, "لم يتم التحقق من مبلغ وحالة الدفع. يرجى التواصل معنا وعدم الدفع مرة أخرى.");
-    }
-    await db.runTransaction(async (tx: Transaction) => {
-      const [latestOrder, existing] = await Promise.all([tx.get(ref), tx.get(registrationRef)]);
-      if (latestOrder.data()?.status === "captured") return;
-      if (order.tier === "vip") {
-        if (!existing.exists || existing.data()?.userId !== user.uid) throw new EventError(409, "Registration missing. Contact support to recover your payment.");
-        tx.update(registrationRef, {
-          membershipStatus: "VIP Member", vipAmountUsd: 49, vipPaypalOrderId: orderId,
-          vipCaptureId: payment.captureId, vipPaidAt: FieldValue.serverTimestamp(),
-        });
-      } else {
-        // Never replace a concurrently-created CliQ booking or erase VIP access.
-        if (existing.exists && existing.data()?.status !== "rejected") throw new EventError(409, "يوجد تسجيل آخر. يرجى التواصل معنا لتسوية الدفع.");
-        tx.set(registrationRef, {
-          ...order.attendee, userId: user.uid, eventId: EVENT_ID, attendance: "online",
-          paymentMethod: "paypal", amountUsd: 30, paypalOrderId: orderId,
-          paypalCaptureId: payment.captureId, status: "approved", membershipStatus: "Standard",
-          confirmationEmailStatus: "not_sent", createdAt: FieldValue.serverTimestamp(),
-        });
-      }
-      tx.update(ref, { status: "captured", captureId: payment.captureId, capturedAt: FieldValue.serverTimestamp() });
-    });
+    await reconcilePayment(orderId, payment);
     return { captureStatus: "COMPLETED", registration: publicRegistration(registrationRef.id, (await registrationRef.get()).data()!) };
   }
   if (body.action === "review" || body.action === "retry-email") {
