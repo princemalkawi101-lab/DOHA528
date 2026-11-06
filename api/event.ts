@@ -5,17 +5,16 @@ type Response = { setHeader(name: string, value: string): void; status(code: num
 export default async function handler(req: Request, res: Response) {
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
-  const token = String(req.headers.authorization || "").match(/^Bearer (.+)$/i)?.[1];
-  if (!token) { res.status(401).json({ error: "Authentication required" }); return; }
+  const authorization = String(req.headers.authorization || "");
+  if (!/^(?:Bearer .+|Guest [a-f0-9]{64})$/.test(authorization)) {
+    res.status(401).json({ error: "Authentication required" }); return;
+  }
   // This adapter is CommonJS on Vercel; the API artifact is an ESM package.
   // Native import() crosses that boundary without compiling to require(ESM).
-  const { eventFirebase } = await import("../artifacts/api-server/src/lib/event-firebase.js");
+  const { eventIdentity } = await import("../artifacts/api-server/src/lib/event-identity.js");
   const { eventAction, EventError } = await import("../artifacts/api-server/src/lib/event-workflow.js");
-  let user;
-  try { user = await eventFirebase().auth.verifyIdToken(token, true); }
-  catch { res.status(401).json({ error: "Invalid or expired authentication" }); return; }
   try {
-    res.json(await eventAction({ uid: user.uid, email: user.email, admin: user.admin === true }, req.body));
+    res.json(await eventAction(await eventIdentity(authorization), req.body));
   } catch (error) {
     const status = error instanceof EventError ? error.status : error instanceof Error && error.name === "ZodError" ? 400 : 500;
     res.status(status).json({ error: status < 500 && error instanceof Error ? error.message : "تعذّر إكمال العملية. يرجى المحاولة مجددًا؛ لا تدفع مرة أخرى إذا تم خصم المبلغ." });

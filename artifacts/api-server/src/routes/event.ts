@@ -1,7 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
-import { requireFirebaseUser } from "../lib/firebase-auth";
+import { eventIdentity } from "../lib/event-identity.js";
 import { eventAction, eventPayPalWebhook, EventError } from "../lib/event-workflow";
 
 const router = Router();
@@ -16,11 +16,11 @@ router.post("/event-webhook", async (req, res): Promise<void> => {
     res.status(status).json({ error: status < 500 && error instanceof Error ? error.message : "Payment reconciliation unavailable. Retry delivery." });
   }
 });
-router.post("/event", limiter, requireFirebaseUser, async (req, res): Promise<void> => {
+router.post("/event", limiter, async (req, res): Promise<void> => {
   res.setHeader("Cache-Control", "no-store");
   try {
-    const u = req.firebaseUser!;
-    res.json(await eventAction({ uid: u.sub, email: u.email, admin: u.admin }, req.body));
+    const user = await eventIdentity(req.get("authorization") || "");
+    res.json(await eventAction(user, req.body));
   } catch (error) {
     const status = error instanceof EventError ? error.status : error instanceof z.ZodError ? 400 : 500;
     req.log.error({ action: req.body?.action, status, errorType: error instanceof Error ? error.name : "Unknown" }, "Event workflow request failed");

@@ -21,6 +21,12 @@ Use general Arabic addressing on the event landing page, not female-only wording
 
 **How to apply:** Apply this to future event copy, registration prompts, and error messages; keep feminine descriptions of Doha herself unchanged.
 
+Event checkout is direct guest booking, without a website account or password.
+
+**Why:** The user explicitly chose «حجز مباشر بدون حساب» after clarifying that this is a landing page; the name, phone, and email are booking/contact details, not account creation.
+
+**How to apply:** Keep event checkout independent of Firebase sign-in and retain account authentication for administration. An email address alone must not unlock another person's reservation or VIP access; guest recovery needs proof of ownership.
+
 The workshop time is 1:00–4:00 PM Jordan time on 21 November 2026.
 
 **Why:** The user explicitly confirmed this to resolve the earlier conflict between a 1–3 PM time range and a three-hour duration.

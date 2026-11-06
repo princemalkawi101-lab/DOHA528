@@ -16,6 +16,7 @@ function requestWith(serverApi) {
     TypeError, SyntaxError, setTimeout, clearTimeout,
     require(name) {
       if (name === './serverApi') return { serverApi };
+      if (name === './eventGuest') return { guestAuthorization: () => `Guest ${'a'.repeat(64)}` };
       if (name === './firebase') return { db: {} };
       if (name === 'firebase/firestore') return { collection: () => ({}) };
       throw new Error(`Unexpected import: ${name}`);
@@ -35,14 +36,19 @@ test('same-origin event URLs ignore an external API base without changing other 
   }).outputText;
   const exports = {};
   const urls = [];
+  const authorizations = [];
+  let tokenRequests = 0;
   vm.runInNewContext(compiled, {
     exports, module: { exports }, Headers,
-    require: () => ({ auth: { currentUser: null } }),
-    fetch: async (url) => { urls.push(url); return json({}); },
+    require: () => ({ auth: { currentUser: { getIdToken: async () => { tokenRequests += 1; return 'admin-fixture-token'; } } } }),
+    fetch: async (url, init) => { urls.push(url); authorizations.push(init.headers.get('Authorization')); return json({}); },
   });
   await exports.serverApi('/api/event', {}, { sameOrigin: true });
   await exports.serverApi('/api/other');
-  assert.deepEqual(urls, ['/api/event', 'https://external.example.test/api/other']);
+  await exports.serverApi('/api/event', {}, { sameOrigin: true, authorization: `Guest ${'b'.repeat(64)}` });
+  assert.deepEqual(urls, ['/api/event', 'https://external.example.test/api/other', '/api/event']);
+  assert.deepEqual(authorizations, ['Bearer admin-fixture-token', 'Bearer admin-fixture-token', `Guest ${'b'.repeat(64)}`]);
+  assert.equal(tokenRequests, 2, 'Guest checkout must not wait for or use a Firebase identity');
 });
 
 test('uses the backend event endpoint and passes an abort signal', async () => {
@@ -55,6 +61,14 @@ test('uses the backend event endpoint and passes an abort signal', async () => {
     return json({ registration: null });
   });
   assert.equal((await request({ action: 'mine' })).registration, null);
+});
+
+test('guest bookings supply an independent capability rather than requiring Firebase sign-in', async () => {
+  const request = requestWith(async (_, init, options) => {
+    assert.equal(options.authorization, `Guest ${'a'.repeat(64)}`);
+    return json({ registration: null });
+  });
+  assert.equal((await request({ action: 'mine' }, { guest: true })).registration, null);
 });
 
 test('bounds a stalled network or Firebase-token request and permits retry', async () => {

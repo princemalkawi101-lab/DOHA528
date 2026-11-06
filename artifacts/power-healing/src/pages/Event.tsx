@@ -266,7 +266,7 @@ export default function Event(p: EventPageProps) {
               <p className="ev-eyebrow">موعدنا في 21 نوفمبر</p>
               <h2>اختر طريقة<br /><em>حضورك.</em></h2>
             </div>
-            <p className="ev-register-lead">مكانك في اللقاء يبدأ من هنا.<br />أكمل التسجيل بالطريقة الأنسب لك.</p>
+            <p className="ev-register-lead">مكانك في اللقاء يبدأ من هنا.<br />احجز مباشرة بالاسم والهاتف والإيميل، بدون حساب أو كلمة مرور.</p>
           </div>
 
           {p.registrationError && !p.registrationLoading && (

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes } from 'node:crypto';
 
 if (!process.env.FIRESTORE_EMULATOR_HOST) throw new Error('Use the Firestore emulator, never a live database.');
 const requireApi = createRequire(resolve('artifacts/api-server/package.json'));
@@ -14,7 +14,7 @@ globalThis.__eventTestPayments = { orders: new Map(), captures: 0, amountOverrid
 globalThis.__eventTestEmail = { sent: new Map(), attempts: 0, fail: false, ambiguous: false };
 await build({
   stdin: {
-    contents: `export {eventAction,eventPayPalWebhook,EVENT_ID} from './lib/event-workflow'; export {eventFirebase} from './lib/event-firebase';`,
+    contents: `export {eventAction,eventPayPalWebhook,EVENT_ID} from './lib/event-workflow'; export {eventFirebase} from './lib/event-firebase'; export {eventIdentity} from './lib/event-identity';`,
     resolveDir: resolve('artifacts/api-server/src'), loader: 'ts',
   },
   outfile, platform: 'node', format: 'esm', bundle: true, packages: 'external',
@@ -68,12 +68,20 @@ await build({
     },
   }],
 });
-const { eventAction, eventPayPalWebhook, eventFirebase, EVENT_ID } = await import(pathToFileURL(outfile).href);
+const { eventAction, eventPayPalWebhook, eventFirebase, eventIdentity, EVENT_ID } = await import(pathToFileURL(outfile).href);
 const { db } = eventFirebase();
 const run = randomUUID().slice(0, 8);
-const user = { uid: `event-test-${run}`, email: 'attendee@example.test' };
-const onlineUser = { uid: `online-test-${run}`, email: 'online@example.test' };
-const other = { uid: `other-test-${run}` };
+const capability = `Guest ${randomBytes(32).toString('hex')}`;
+const user = await eventIdentity(capability);
+const onlineUser = await eventIdentity(`Guest ${randomBytes(32).toString('hex')}`);
+const other = await eventIdentity(`Guest ${randomBytes(32).toString('hex')}`);
+assert.deepEqual(await eventIdentity(capability), user, 'Guest resumes using the same capability');
+assert.notEqual(user.uid, other.uid);
+assert.equal(user.admin, undefined);
+assert.equal(user.email, undefined);
+assert.ok(!user.uid.includes(capability.slice(6)), 'Store only a digest, not the secret');
+await assert.rejects(eventIdentity(''), /booking session/);
+await assert.rejects(eventIdentity('Guest predictable'), /booking session/);
 const admin = { uid: `admin-test-${run}`, admin: true };
 const attendee = { name: 'Workflow Test', phone: '+962790000001', email: 'attendee@example.test' };
 const receiptDataUrl = `data:image/jpeg;base64,${'A'.repeat(120)}`;

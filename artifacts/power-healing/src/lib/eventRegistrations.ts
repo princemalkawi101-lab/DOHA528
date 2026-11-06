@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { serverApi } from './serverApi';
+import { guestAuthorization } from './eventGuest';
 
 export type EventRegistrationStatus = 'pending' | 'approved' | 'rejected';
 
@@ -45,7 +46,7 @@ export async function createCliqRegistration(input: {
   email: string;
   receiptDataUrl: string;
 }): Promise<{ registration: MyEventRegistration }> {
-  return eventRequest({ action: 'register-cliq', ...input });
+  return guestEventRequest({ action: 'register-cliq', ...input });
 }
 
 export interface MyEventRegistration {
@@ -61,7 +62,7 @@ export interface MyEventRegistration {
 
 export async function eventRequest<T>(
   body: Record<string, unknown>,
-  options: { signal?: AbortSignal; timeoutMs?: number } = {},
+  options: { signal?: AbortSignal; timeoutMs?: number; guest?: boolean } = {},
 ): Promise<T> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -84,7 +85,7 @@ export async function eventRequest<T>(
       if (controller.signal.aborted) throw new DOMException('Request cancelled', 'AbortError');
       const response = await serverApi('/api/event', {
         method: 'POST', body: JSON.stringify(body), signal: controller.signal,
-      }, { sameOrigin: true });
+      }, { sameOrigin: true, ...(options.guest ? { authorization: guestAuthorization() } : {}) });
       if (!response.headers.get('content-type')?.includes('application/json')) {
         throw new Error('خدمة التسجيل غير متاحة حاليًا. يرجى إعادة المحاولة بعد قليل.');
       }
@@ -104,6 +105,13 @@ export async function eventRequest<T>(
     clearTimeout(timer);
     options.signal?.removeEventListener('abort', cancel);
   }
+}
+
+export function guestEventRequest<T>(
+  body: Record<string, unknown>,
+  options: { signal?: AbortSignal; timeoutMs?: number } = {},
+): Promise<T> {
+  return eventRequest<T>(body, { ...options, guest: true });
 }
 
 export async function fetchEventRegistrations(): Promise<EventRegistration[]> {

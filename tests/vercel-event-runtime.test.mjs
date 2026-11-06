@@ -47,6 +47,10 @@ const child = `
     assert.equal(typeof firebase.eventFirebase, 'function');
     assert.equal(typeof workflow.eventAction, 'function');
     assert.equal(typeof workflow.eventPayPalWebhook, 'function');
+    const identity = await import(pathToFileURL(path.join(root, 'artifacts/api-server/src/lib/event-identity.js')));
+    const guest = await identity.eventIdentity('Guest ' + 'a'.repeat(64));
+    assert.match(guest.uid, /^guest_[a-f0-9]{64}$/);
+    assert.equal(guest.admin, undefined);
     const registration = require(path.join(root, 'api/event.js')).default;
     const webhook = require(path.join(root, 'api/event-webhook.js')).default;
     let res = response();

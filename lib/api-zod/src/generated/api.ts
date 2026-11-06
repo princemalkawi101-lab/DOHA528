@@ -18,7 +18,7 @@ export const EventPaymentWebhookBody = zod.object({
 });
 
 /**
- * @summary Authenticated event registration, payments, administrator review and arrival
+ * @summary Guest event bookings and payments, with Firebase-authenticated administrator review
  */
 export const eventWorkflowBodyExpectedRevisionMin = 0;
 export const eventWorkflowBodyExpectedRevisionMax = 9007199254740991;

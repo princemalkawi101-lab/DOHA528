@@ -5,12 +5,13 @@ const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) || '').re
 export async function serverApi(
   path: string,
   init: RequestInit = {},
-  options: { sameOrigin?: boolean } = {},
+  options: { sameOrigin?: boolean; authorization?: string } = {},
 ): Promise<Response> {
-  const token = await auth.currentUser?.getIdToken();
+  const token = options.authorization === undefined ? await auth.currentUser?.getIdToken() : undefined;
   const headers = new Headers(init.headers);
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (options.authorization !== undefined) headers.set('Authorization', options.authorization);
   return fetch(`${options.sameOrigin ? '' : API_BASE}${path}`, { ...init, headers });
 }
 

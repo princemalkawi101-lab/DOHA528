@@ -37,9 +37,10 @@ paths:
   /event:
     post:
       operationId: eventWorkflow
-      summary: Authenticated event registration, payments, administrator review and arrival
+      summary: Guest event bookings and payments, with Firebase-authenticated administrator review
       security:
         - firebaseBearer: []
+        - eventGuest: []
       requestBody:
         required: true
         content:
@@ -57,7 +58,7 @@ paths:
         "400":
           description: Invalid input
         "401":
-          description: Missing or invalid Firebase token
+          description: Missing or invalid booking capability or Firebase token
         "403":
           description: Administrator access required
         "404":
@@ -79,6 +80,11 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 components:
   securitySchemes:
+    eventGuest:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: "Guest <256-bit random hex capability>; identifies only the browser's bookings and never grants administrator access."
     firebaseBearer:
       type: http
       scheme: bearer

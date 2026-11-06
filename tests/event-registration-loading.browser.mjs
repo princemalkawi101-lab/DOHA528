@@ -13,22 +13,13 @@ const page = await browser.newPage({ viewport: { width: 402, height: 874 } });
 const output = 'generated-artifacts/event-loading';
 await mkdir(output, { recursive: true });
 try {
-  await page.addInitScript(() => {
-    window.__eventStatusUser = { uid: 'browser-status-fixture', email: 'fixture@example.test' };
-  });
-  await page.route('**/src/lib/auth.tsx*', async route => {
-    const response = await route.fetch();
-    const source = await response.text();
-    assert.ok(source.includes('return ctx;'), 'Auth fixture must match the real module');
-    await route.fulfill({
-      response,
-      body: source.replace('return ctx;', 'return {user: window.__eventStatusUser, loading: false, isAdmin: false};'),
-    });
-  });
+  // A fresh browser context is signed out. Do not fabricate a Firebase user.
+  let capability;
   let mode = 'stall';
   let count = 0;
   let heldStatus;
   let receiptSubmitted = false;
+  let fixtureRegistration = null;
   await page.route('**/node_modules/.vite/deps/@paypal_react-paypal-js.js*', async route => {
     await route.fulfill({ contentType: 'application/javascript', body: `
       import React from '/node_modules/.vite/deps/react.js';
@@ -43,14 +34,19 @@ try {
   await page.route('**/api/event', async route => {
     assert.equal(new URL(route.request().url()).pathname, '/api/event');
     const body = route.request().postDataJSON();
+    const authorization = route.request().headers().authorization;
+    assert.match(authorization, /^Guest [a-f0-9]{64}$/);
+    capability ??= authorization;
+    assert.equal(authorization, capability, 'The same guest must own lookup, receipt and payment');
     if (body.action === 'register-cliq') {
       assert.match(body.receiptDataUrl, /^data:image\/jpeg;base64,/);
       assert.ok(body.receiptDataUrl.length > 100);
       receiptSubmitted = true;
-      return route.fulfill({ json: { registration: {
+      fixtureRegistration = {
         id: 'fixture-pending', name: body.name, phone: body.phone, email: body.email,
         attendance: 'in-person', status: 'pending', membershipStatus: 'Standard',
-      } } });
+      };
+      return route.fulfill({ json: { registration: fixtureRegistration } });
     }
     assert.equal(body.action, 'mine', 'Never create real PayPal orders in this test');
     count += 1;
@@ -58,7 +54,7 @@ try {
     if (mode === 'stall') return; // Intentionally unanswered until the app aborts.
     if (mode === 'html') return route.fulfill({ status: 200, contentType: 'text/html', body: '<html>Fallback</html>' });
     if (mode === 'server-error') return route.fulfill({ status: 500, json: { error: 'Fixture backend failure' } });
-    return route.fulfill({ json: { registration: null } });
+    return route.fulfill({ json: { registration: fixtureRegistration } });
   });
   await page.goto(`${process.env.EVENT_TEST_URL || 'http://localhost:80'}/event`);
   const error = page.getByTestId('event-registration-error');
@@ -117,7 +113,10 @@ try {
   await page.getByTestId('button-submit').click();
   await page.getByText('تم استلام طلبك وهو قيد المراجعة، وسنرسل لك بريداً للتأكيد فور التحقق.', { exact: false }).waitFor({ state: 'visible' });
   assert.equal(receiptSubmitted, true);
-  console.log('PASS: timeout/HTML/HTTP500 ticket fallback; specific PayPal error survives SDK onError; picker focus preserves input and selected receipt; blank-MIME image compresses and submits to fixture. No real writes/payments.');
+  assert.ok(page.url().endsWith('/event'), 'Guest checkout must not redirect to login');
+  await page.reload();
+  await page.getByTestId('event-registration-status').getByText(/قيد المراجعة/).waitFor({ state: 'visible' });
+  console.log('PASS: signed-out guest receipt booking, persistent capability, timeout/HTML/HTTP500 ticket fallback, specific PayPal error, and mobile image focus/compression. No account creation, real writes or payments.');
 } finally {
   await browser.close();
 }

@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { PayPalButtons, PayPalScriptProvider, type ReactPayPalScriptOptions } from '@paypal/react-paypal-js';
-import { useAuth } from '@/lib/auth';
 import { DEFAULT_EVENT_SETTINGS, subscribeSiteSettings, type EventSettings } from '@/lib/siteSettings';
-import { compressReceiptToDataUrl, createCliqRegistration, eventRequest, type MyEventRegistration } from '@/lib/eventRegistrations';
+import { compressReceiptToDataUrl, createCliqRegistration, guestEventRequest as eventRequest, type MyEventRegistration } from '@/lib/eventRegistrations';
 import EventPage from './Event';
 import EventPostRegistration from './EventPostRegistration';
 
@@ -12,7 +11,6 @@ type Stage = 'offer' | 'standard' | 'vip';
 type Captured = { captureStatus: string; registration: MyEventRegistration };
 
 export default function EventRoute() {
-  const { user, loading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [settings, setSettings] = useState<EventSettings>(DEFAULT_EVENT_SETTINGS);
   const [settingsStatus, setSettingsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -26,7 +24,6 @@ export default function EventRoute() {
   const [registration, setRegistration] = useState<MyEventRegistration | null>(null);
   const [registrationLoading, setRegistrationLoading] = useState(false);
   const [registrationError, setRegistrationError] = useState('');
-  const [authTimedOut, setAuthTimedOut] = useState(false);
   const retryRegistration = useRef<() => void>(() => {});
   const [stage, setStage] = useState<Stage | null>(null);
   const [showVipPaypal, setShowVipPaypal] = useState(false);
@@ -35,9 +32,9 @@ export default function EventRoute() {
   const paymentBusy = useRef(false);
   const paymentFailure = useRef({ online: '', vip: '' });
   const registrationRevision = useRef(0);
-  const activeUser = useRef(user?.uid);
-  activeUser.current = user?.uid;
-  const recoveryKey = user ? `event-payment-recovery:${user.uid}` : '';
+  const active = useRef(true);
+  const recoveryKey = 'event-guest-payment-recovery';
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setSettingsStatus('error'), 12000);
@@ -49,12 +46,6 @@ export default function EventRoute() {
     return () => { clearTimeout(timer); unsubscribe(); };
   }, []);
   useEffect(() => {
-    setAuthTimedOut(false);
-    if (!authLoading) return;
-    const timer = window.setTimeout(() => setAuthTimedOut(true), 12000);
-    return () => clearTimeout(timer);
-  }, [authLoading]);
-  useEffect(() => {
     if (settingsStatus === 'ready' && !settings.enabled) setLocation('/', { replace: true });
   }, [settingsStatus, settings.enabled, setLocation]);
 
@@ -64,11 +55,10 @@ export default function EventRoute() {
     const controller = new AbortController();
     registrationRevision.current += 1;
     setRegistration(null); setStage(null); setShowVipPaypal(false);
-    setName(''); setPhone(''); setEmail(user?.email || ''); setReceipt(null);
+    setName(''); setPhone(''); setEmail(''); setReceipt(null);
     setSubmitError(''); setPaypalError(''); setVipError(''); setRegistrationError('');
-    setRecoverOrder(recoveryKey ? sessionStorage.getItem(recoveryKey) || '' : '');
+    try { setRecoverOrder(localStorage.getItem(recoveryKey) || ''); } catch { /* guest session reports blocked storage */ }
     retryRegistration.current = () => {};
-    if (!user) { setRegistrationLoading(false); return; }
     setRegistrationLoading(true);
     const load = async (background = false) => {
       if (inFlight || cancelled) return;
@@ -84,7 +74,7 @@ export default function EventRoute() {
         setRegistration(result.registration);
         if (result.registration?.status === 'rejected' && result.registration.membershipStatus !== 'VIP Member') setStage(null);
         if (result.registration) {
-          setName(result.registration.name); setPhone(result.registration.phone); setEmail(result.registration.email || user.email || '');
+          setName(result.registration.name); setPhone(result.registration.phone); setEmail(result.registration.email || '');
         }
         setRegistrationError('');
       } catch (error) {
@@ -98,18 +88,12 @@ export default function EventRoute() {
     retryRegistration.current = refresh;
     window.addEventListener('focus', refresh);
     return () => { cancelled = true; controller.abort(); window.removeEventListener('focus', refresh); };
-  }, [user?.uid, recoveryKey]);
+  }, []);
 
   const paypalOptions = useMemo<ReactPayPalScriptOptions | null>(() => CLIENT_ID ? ({
     clientId: CLIENT_ID, currency: 'USD', intent: 'capture', components: 'buttons',
   }) : null, []);
 
-  const requireLogin = () => {
-    if (user) return true;
-    sessionStorage.setItem('dh_redirect_after_login', '/event');
-    setLocation('/login');
-    return false;
-  };
   const openRegistration = (entry: MyEventRegistration) => {
     registrationRevision.current += 1;
     setRegistrationError('');
@@ -125,28 +109,26 @@ export default function EventRoute() {
     setShowVipPaypal(false); setVipError('');
   };
   const submitInPerson = async () => {
-    if (!requireLogin() || busy) return;
-    const uid = user!.uid;
+    if (busy) return;
     setBusy(true); setSubmitError('');
     try {
-      if (authLoading || registrationLoading || registrationError) throw new Error('يرجى إعادة التحقق من حالة تسجيلك قبل تأكيد الحجز لتجنب تكرار الدفع.');
+      if (registrationLoading || registrationError) throw new Error('يرجى إعادة التحقق من حالة تسجيلك قبل تأكيد الحجز لتجنب تكرار الدفع.');
       if (!receipt) throw new Error('يرجى إرفاق صورة إيصال التحويل.');
       const receiptDataUrl = await compressReceiptToDataUrl(receipt);
       const result = await createCliqRegistration({ name, phone, email, receiptDataUrl });
-      if (activeUser.current === uid) openRegistration(result.registration);
+      if (active.current) openRegistration(result.registration);
     } catch (error) {
-      if (activeUser.current === uid) setSubmitError(error instanceof Error ? error.message : 'تعذّر إرسال طلبك.');
+      if (active.current) setSubmitError(error instanceof Error ? error.message : 'تعذّر إرسال طلبك.');
     } finally { setBusy(false); }
   };
   const finishCapture = async (orderId: string) => {
-    if (!user || paymentBusy.current) return;
-    const uid = user.uid;
+    if (paymentBusy.current) return;
     paymentBusy.current = true; setBusy(true);
     try {
       const result = await eventRequest<Captured>({ action: 'capture-order', orderId });
       if (result.captureStatus !== 'COMPLETED') throw new Error('لم يتم تأكيد الدفع بعد.');
-      sessionStorage.removeItem(`event-payment-recovery:${uid}`);
-      if (activeUser.current === uid) {
+      localStorage.removeItem(recoveryKey);
+      if (active.current) {
         setRecoverOrder(''); setPaypalError(''); setVipError('');
         openRegistration(result.registration);
       }
@@ -163,7 +145,6 @@ export default function EventRoute() {
           try {
             paymentFailure.current[tier] = '';
             report('');
-            if (!requireLogin()) throw new Error('يرجى تسجيل الدخول لإكمال الحجز.');
             if (registrationLoading || registrationError) throw new Error('تعذّر التحقق من تسجيلك، لذلك لم تبدأ عملية الدفع. اضغط «إعادة التحقق من التسجيل» ثم حاول مجددًا.');
             if (tier === 'online' && (name.trim().length < 2 || phone.trim().length < 7 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))) {
               throw new Error('يرجى إدخال الاسم ورقم الهاتف والبريد الإلكتروني الصحيح أولاً.');
@@ -171,7 +152,7 @@ export default function EventRoute() {
             const result = await eventRequest<{ id: string }>({
               action: 'create-order', tier, name, phone, email, registrationId: registration?.id,
             });
-            if (recoveryKey) sessionStorage.setItem(recoveryKey, result.id);
+            localStorage.setItem(recoveryKey, result.id);
             setRecoverOrder(result.id);
             return result.id;
           } catch (error) {
@@ -223,9 +204,9 @@ export default function EventRoute() {
       submitted={registration?.attendance === 'in-person' && registration.status !== 'rejected'}
       paypalSlot={paymentButtons('online')} paypalError={paypalError}
       paypalDone={registration?.attendance === 'online' && registration.status !== 'rejected'}
-      registrationLoading={(authLoading && !authTimedOut) || registrationLoading}
-      registrationError={authTimedOut ? 'تعذّر التحقق من تسجيل الدخول. يرجى إعادة المحاولة.' : registrationError}
-      onRetryRegistration={() => { if (authTimedOut) window.location.reload(); else retryRegistration.current(); }}
+      registrationLoading={registrationLoading}
+      registrationError={registrationError}
+      onRetryRegistration={() => retryRegistration.current()}
       onVipOffer={onVipOffer}
     />
     {(registrationError || recoverOrder || registration) && <aside dir="rtl" className="mx-auto max-w-3xl border border-amber-600/30 bg-[#fff8e7] p-5 text-[#174c3c]" data-testid="event-registration-status">
