@@ -62,8 +62,8 @@
 .ev-discover{display:flex;align-items:center;gap:12px;width:max-content;margin-top:26px;color:hsl(var(--paper)/.7)!important;font-size:11px}
 .ev-discover svg{width:14px;height:14px;color:hsl(var(--sun-pale))}
 .ev-hero-portrait{position:relative;width:min(100%,520px);margin:0}
-.ev-portrait-frame{position:relative;overflow:hidden;border:1px solid hsl(var(--sun)/.78);border-radius:270px 270px 6px 6px;background:hsl(var(--wine-deep));box-shadow:0 24px 75px hsl(160 50% 5%/.32),0 0 0 8px hsl(var(--sun)/.08)}
-.ev-portrait-image{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;object-position:center 28%}
+.ev-portrait-frame{position:relative;overflow:hidden;border:1px solid hsl(var(--sun)/.78);border-radius:0;background:hsl(var(--wine-deep));box-shadow:0 24px 75px hsl(160 50% 5%/.32),0 0 0 8px hsl(var(--sun)/.08)}
+.ev-portrait-image{display:block;width:100%;height:auto;aspect-ratio:auto;object-fit:contain}
 .ev-portrait-caption{position:absolute;z-index:2;left:20px;bottom:20px;display:flex;align-items:center;gap:9px;padding:10px 14px;border:1px solid hsl(var(--sun)/.65);background:hsl(var(--paper)/.96);color:hsl(var(--wine-deep));font-family:Georgia,serif;font-size:13px;font-weight:700;letter-spacing:.03em}
 .ev-portrait-caption svg{width:15px;height:15px;color:hsl(var(--terracotta-dark))}
 .ev-portrait-note{position:absolute;z-index:2;left:-17px;top:17%;display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid hsl(var(--sun-pale)/.48);background:hsl(350 36% 20%/.56);color:hsl(var(--sun-pale));font-size:10px;font-weight:700;line-height:1.55}
@@ -238,7 +238,7 @@
   .ev-date-year{font-size:8px}
   .ev-date-weekday{position:static;bottom:auto;padding:2px 6px;font-size:8px}
   .ev-hero-portrait{position:absolute;top:200px;right:31%;bottom:75px;width:67%;height:auto;min-height:0;justify-self:auto;margin:0;opacity:.93}
-  .ev-portrait-frame{inset:0 0 0 0;border-radius:49% 49% 0 0;border-color:hsl(var(--sun-pale)/.43)}
+  .ev-portrait-frame{inset:0 0 0 0;border-radius:0;border-color:hsl(var(--sun-pale)/.43)}
   .ev-portrait-image{object-position:center top}
   .ev-portrait-caption{right:auto;left:-12px;bottom:47px;gap:7px;padding:8px 10px;font-size:10px}
   .ev-portrait-caption i{width:13px}
@@ -318,9 +318,9 @@
 .ev-hero-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,hsl(var(--sun)/.08),transparent 56%)}
 .ev-hero-inner{width:min(1120px,100%);height:auto;min-height:0;margin:auto;padding:0;display:flex;justify-content:center}
 .ev-hero-portrait{position:relative;top:auto;right:auto;bottom:auto;left:auto;width:min(100%,520px);height:auto;min-height:0;margin:0;opacity:1}
-.ev-portrait-frame{position:relative;inset:auto;overflow:hidden;border:1px solid hsl(var(--sun)/.78);border-radius:270px 270px 6px 6px;background:hsl(var(--wine-deep));box-shadow:0 24px 75px hsl(160 50% 5%/.32),0 0 0 8px hsl(var(--sun)/.08)}
+.ev-portrait-frame{position:relative;inset:auto;overflow:hidden;border:1px solid hsl(var(--sun)/.78);border-radius:0;background:hsl(var(--wine-deep));box-shadow:0 24px 75px hsl(160 50% 5%/.32),0 0 0 8px hsl(var(--sun)/.08)}
 .ev-portrait-frame:after{background:linear-gradient(0deg,hsl(var(--wine-deep)/.5),transparent 35%)}
-.ev-portrait-image{display:block;width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;object-position:center 28%;filter:none}
+.ev-portrait-image{display:block;width:100%;height:auto;aspect-ratio:auto;object-fit:contain;filter:none}
 .ev-portrait-caption{position:absolute;left:20px;right:auto;bottom:20px;display:flex;align-items:center;gap:9px;padding:10px 14px;border:1px solid hsl(var(--sun)/.65);background:hsl(var(--paper)/.96);color:hsl(var(--wine-deep));font-family:Georgia,serif;font-size:13px;font-weight:700;letter-spacing:.03em;direction:ltr}
 .ev-portrait-caption svg{width:15px;height:15px;color:hsl(var(--terracotta-dark))}
 .ev-intro{width:min(1000px,100%);margin:auto;padding:105px 7% 115px;display:grid;grid-template-columns:64px minmax(0,1fr);gap:28px;align-items:start}
@@ -346,7 +346,7 @@
   .ev-hero{min-height:0;height:auto;padding:24px 18px 34px}
   .ev-hero-inner{display:flex;min-height:0;padding:0}
   .ev-hero-portrait{position:relative;inset:auto;width:min(100%,390px);height:auto;min-height:0;margin:0 auto;opacity:1}
-  .ev-portrait-frame{inset:auto;border-radius:200px 200px 5px 5px}
+  .ev-portrait-frame{inset:auto;border-radius:0}
   .ev-portrait-caption{left:12px;right:auto;bottom:12px;gap:7px;padding:8px 11px;font-size:11px}
   .ev-portrait-caption svg{width:13px;height:13px}
   .ev-intro{grid-template-columns:1fr;gap:15px;padding:75px 23px 80px}
