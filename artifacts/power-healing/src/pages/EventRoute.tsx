@@ -126,6 +126,7 @@ export default function EventRoute() {
     const uid = user!.uid;
     setBusy(true); setSubmitError('');
     try {
+      if (authLoading || registrationLoading || registrationError) throw new Error('يرجى إعادة التحقق من حالة تسجيلك قبل تأكيد الحجز لتجنب تكرار الدفع.');
       if (!receipt) throw new Error('يرجى إرفاق صورة إيصال التحويل.');
       const receiptDataUrl = await compressReceiptToDataUrl(receipt);
       const result = await createCliqRegistration({ name, phone, email, receiptDataUrl });

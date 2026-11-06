@@ -37,7 +37,7 @@ An unavailable registration-status service is an unknown booking state, not proo
 
 **Why:** Treating an outage as an empty registration could invite a second payment. The user requested graceful recovery from stalled loading, not bypassing payment safeguards.
 
-**How to apply:** End loading with a retryable error and keep new payments blocked until status is verified. Do not fall back to attendee Firestore reads, which are intentionally administrator-only.
+**How to apply:** The user subsequently requested that failed status checks still show selectable CliQ/PayPal tickets. Keep the notice non-blocking for browsing, while requiring verification before confirming a booking. Do not fall back to attendee Firestore reads, which are intentionally administrator-only.
 
 Event confirmation emails use the connected Gmail account, not Resend by default.
 

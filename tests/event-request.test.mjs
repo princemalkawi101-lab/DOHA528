@@ -27,12 +27,31 @@ const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status, headers: { 'Content-Type': 'application/json' },
 });
 
+test('same-origin event URLs ignore an external API base without changing other API calls', async () => {
+  const source = readFileSync(new URL('../artifacts/power-healing/src/lib/serverApi.ts', import.meta.url), 'utf8')
+    .replace('import.meta.env.VITE_API_URL', '"https://external.example.test"');
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const exports = {};
+  const urls = [];
+  vm.runInNewContext(compiled, {
+    exports, module: { exports }, Headers,
+    require: () => ({ auth: { currentUser: null } }),
+    fetch: async (url) => { urls.push(url); return json({}); },
+  });
+  await exports.serverApi('/api/event', {}, { sameOrigin: true });
+  await exports.serverApi('/api/other');
+  assert.deepEqual(urls, ['/api/event', 'https://external.example.test/api/other']);
+});
+
 test('uses the backend event endpoint and passes an abort signal', async () => {
-  const request = requestWith(async (path, init) => {
+  const request = requestWith(async (path, init, options) => {
     assert.equal(path, '/api/event');
     assert.equal(init.method, 'POST');
     assert.deepEqual(JSON.parse(init.body), { action: 'mine' });
     assert.ok(init.signal instanceof AbortSignal);
+    assert.equal(options.sameOrigin, true, 'Event requests must bypass any external VITE_API_URL');
     return json({ registration: null });
   });
   assert.equal((await request({ action: 'mine' })).registration, null);

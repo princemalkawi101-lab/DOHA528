@@ -34,14 +34,19 @@ try {
     count += 1;
     if (mode === 'stall') return; // Intentionally unanswered until the app aborts.
     if (mode === 'html') return route.fulfill({ status: 200, contentType: 'text/html', body: '<html>Fallback</html>' });
+    if (mode === 'server-error') return route.fulfill({ status: 500, json: { error: 'Fixture backend failure' } });
     return route.fulfill({ json: { registration: null } });
   });
   await page.goto(`${process.env.EVENT_TEST_URL || 'http://localhost:80'}/event`);
   const error = page.getByTestId('event-registration-error');
   await error.waitFor({ state: 'visible', timeout: 25000 });
   await error.scrollIntoViewIfNeeded();
-  assert.match(await error.innerText(), /الوقت المحدد/);
-  assert.equal(await page.getByTestId('input-name').count(), 0, 'Do not permit a duplicate payment during an outage');
+  assert.match(await error.innerText(), /استعراض التذاكر/);
+  await page.getByTestId('input-name').waitFor({ state: 'visible' });
+  await page.getByTestId('tab-online').click();
+  assert.equal(await page.getByTestId('tab-online').getAttribute('aria-selected'), 'true');
+  await page.getByTestId('tab-in-person').click();
+  assert.equal(await page.getByTestId('tab-in-person').getAttribute('aria-selected'), 'true');
   await page.screenshot({ path: `${output}/timeout.jpg` });
   mode = 'success';
   await error.getByRole('button', { name: 'إعادة المحاولة' }).click();
@@ -51,12 +56,17 @@ try {
   mode = 'html';
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
   await error.waitFor({ state: 'visible' });
-  assert.match(await error.innerText(), /غير متاحة/);
+  assert.match(await error.innerText(), /استعراض التذاكر/);
+  await page.getByTestId('input-name').waitFor({ state: 'visible' });
+  mode = 'server-error';
+  await error.getByRole('button', { name: 'إعادة المحاولة' }).click();
+  await error.waitFor({ state: 'visible' });
+  await page.getByTestId('input-name').waitFor({ state: 'visible' });
   mode = 'success';
   await error.getByRole('button', { name: 'إعادة المحاولة' }).click();
   await page.getByTestId('input-name').waitFor({ state: 'visible' });
-  assert.ok(count >= 4);
-  console.log('PASS: stalled request → timed error → inline retry → restored form; HTML fallback → error → retry. Correct /api/event endpoint; no writes/payments.');
+  assert.ok(count >= 5);
+  console.log('PASS: timeout, HTML fallback, and HTTP500 preserve selectable tickets; inline retry recovers. Same-origin /api/event; no writes/payments.');
 } finally {
   await browser.close();
 }

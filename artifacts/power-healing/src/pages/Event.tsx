@@ -259,13 +259,14 @@ export default function Event(p: EventPageProps) {
             <p className="ev-register-lead">مكانك في اللقاء يبدأ من هنا.<br />أكمل التسجيل بالطريقة الأنسب لك.</p>
           </div>
 
-          {p.registrationLoading ? <p role="status">جارٍ تحميل حالة التسجيل…</p> : p.registrationError ? (
-            <div className="ev-closed" role="alert" data-testid="event-registration-error">
+          {p.registrationError && !p.registrationLoading && (
+            <div className="ev-closed" role="status" data-testid="event-registration-error">
               <AlertCircle aria-hidden="true" />
-              <p>{p.registrationError}</p>
+              <p>يمكنك استعراض التذاكر واختيار طريقة الحضور أدناه. سنحتاج للتحقق من حالة تسجيلك قبل تأكيد الحجز لتجنب تكرار الدفع.</p>
               <button type="button" className="font-bold underline" onClick={p.onRetryRegistration}>إعادة المحاولة</button>
             </div>
-          ) : !enabled ? (
+          )}
+          {p.registrationLoading ? <p role="status">جارٍ تحميل حالة التسجيل…</p> : !enabled ? (
             <div className="ev-closed" data-testid="status-closed">
               <AlertCircle aria-hidden="true" />
               <p>التسجيل مغلق حاليًا. تابعونا للإعلان القادم.</p>

@@ -84,7 +84,7 @@ export async function eventRequest<T>(
       if (controller.signal.aborted) throw new DOMException('Request cancelled', 'AbortError');
       const response = await serverApi('/api/event', {
         method: 'POST', body: JSON.stringify(body), signal: controller.signal,
-      });
+      }, { sameOrigin: true });
       if (!response.headers.get('content-type')?.includes('application/json')) {
         throw new Error('خدمة التسجيل غير متاحة حاليًا. يرجى إعادة المحاولة بعد قليل.');
       }
