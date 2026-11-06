@@ -4,6 +4,11 @@ import { FieldValue, type Transaction } from "firebase-admin/firestore";
 import { eventFirebase } from "./event-firebase.js";
 
 type EmailEntry = { name?: string; email?: string; attendance?: string };
+// Keep the connector boundary independent of ambient DOM/fetch Response types.
+type EmailHttpResponse = {
+  readonly ok: boolean;
+  json(): Promise<unknown>;
+};
 const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (s) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[s]!);
 const validAddress = (value: string) => /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(value);
 
@@ -33,7 +38,7 @@ export async function sendEventConfirmation(id: string, entry: EmailEntry) {
     const connectors = new ReplitConnectors();
     let emailId: string;
     if (provider === "gmail") {
-      const profile = await connectors.proxy("google-mail", "/gmail/v1/users/me/profile", { method: "GET" });
+      const profile = await connectors.proxy("google-mail", "/gmail/v1/users/me/profile", { method: "GET" }) as unknown as EmailHttpResponse;
       const account = await profile.json() as { emailAddress?: string };
       if (!profile.ok || !account.emailAddress) throw new Error("Gmail sender is unavailable. Reconnect the sending account.");
       const from = String(settings.confirmationEmailFrom || account.emailAddress).trim();
@@ -41,7 +46,7 @@ export async function sendEventConfirmation(id: string, entry: EmailEntry) {
       const messageId = `event-approved-${createHash("sha256").update(id).digest("hex").slice(0, 32)}@power-healing.local`;
       // Gmail has no idempotency header: read back a deterministic Message-ID
       // before retrying a potentially successful send.
-      const sent = await connectors.proxy("google-mail", `/gmail/v1/users/me/messages?q=${encodeURIComponent(`in:sent rfc822msgid:${messageId}`)}&maxResults=1`, { method: "GET" });
+      const sent = await connectors.proxy("google-mail", `/gmail/v1/users/me/messages?q=${encodeURIComponent(`in:sent rfc822msgid:${messageId}`)}&maxResults=1`, { method: "GET" }) as unknown as EmailHttpResponse;
       const found = await sent.json() as { messages?: { id: string }[] };
       if (!sent.ok) throw new Error("Unable to check previously sent confirmations. No duplicate email was sent.");
       if (found.messages?.[0]) {
@@ -59,7 +64,7 @@ export async function sendEventConfirmation(id: string, entry: EmailEntry) {
         const response = await connectors.proxy("google-mail", "/gmail/v1/users/me/messages/send", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ raw: Buffer.from(mime).toString("base64url") }),
-        });
+        }) as unknown as EmailHttpResponse;
         const result = await response.json() as { id?: string };
         if (!response.ok) { deliveryMayHaveSucceeded = false; throw new Error("Gmail rejected the confirmation. Check the account and sending limits."); }
         if (!result.id) throw new Error("Gmail response was incomplete. Delivery needs verification.");
@@ -73,12 +78,12 @@ export async function sendEventConfirmation(id: string, entry: EmailEntry) {
         html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:2;color:#174c3c">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`,
       };
       const headers = { "Content-Type": "application/json", "Idempotency-Key": `event-approved-${id}` };
-      const response = process.env.RESEND_API_KEY
+      const response = (process.env.RESEND_API_KEY
         ? await fetch("https://api.resend.com/emails", {
             method: "POST", headers: { ...headers, Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
             body: JSON.stringify(payload), signal: AbortSignal.timeout(15000),
           })
-        : await connectors.proxy("resend", "/emails", { method: "POST", headers, body: JSON.stringify(payload) });
+        : await connectors.proxy("resend", "/emails", { method: "POST", headers, body: JSON.stringify(payload) })) as unknown as EmailHttpResponse;
       const result = await response.json() as { id?: string; message?: string };
       if (!response.ok || !result.id) throw new Error(result.message || "Resend rejected the confirmation.");
       emailId = result.id;
