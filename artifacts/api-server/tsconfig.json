@@ -3,6 +3,8 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "skipLibCheck": true,
     "types": ["node"]
   },
   "include": ["src"],

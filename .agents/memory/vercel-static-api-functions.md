@@ -15,8 +15,8 @@ Root serverless handlers and their backend imports must have Node typings availa
 
 **How to apply:** Preserve root-visible Node typings and check the root serverless entry point as well as the workspace build when changing TypeScript configuration. Include strict NodeNext module resolution: the workspace's bundler resolution accepts extensionless imports that Vercel's ESM compilation can reject. Follow the imported server dependency chain, not only the entry file.
 
-Do server-only compatibility checks without the DOM library (`--lib es2022`).
+Use shared Node and DOM ambient typings across the workspace, including the API server.
 
-**Why:** Default TypeScript libraries include DOM fetch declarations, which can hide connector SDK response-typing problems that appear in Node-only builds.
+**Why:** The user explicitly requested workspace-wide recognition of `process`, `fetch`, and `Response` rather than repeated per-file fixes.
 
-**How to apply:** Verify connector-consuming server entry points with Node types and the server's library set; do not add browser libraries just to silence backend response errors.
+**How to apply:** Keep Node in `compilerOptions.types`, DOM in `compilerOptions.lib`, and `skipLibCheck` enabled. Check leaf overrides so they retain these globals. Match serverless compatibility checks to this shared library set; these declarations do not provide browser APIs at runtime.
