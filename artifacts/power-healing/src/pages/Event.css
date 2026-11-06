@@ -141,6 +141,21 @@
 .ev-package.is-selected .ev-package-note{color:hsl(var(--paper)/.62)}
 .ev-package-check{position:absolute;top:21px;left:20px;display:grid;place-items:center;width:21px;height:21px;border:1px solid hsl(var(--terracotta)/.5);border-radius:50%;color:hsl(var(--wine))}
 .ev-package.is-selected .ev-package-check{border-color:hsl(var(--sun)/.7);color:hsl(var(--sun))}
+.ev-package.ev-package-online{
+  border-color:#b48a37;
+  background:linear-gradient(135deg,#ead095 0%,#d6af5b 42%,#c99b42 72%,#e1bf77 100%);
+  color:#163e32;
+  box-shadow:inset 0 1px 0 #fff2c980,0 8px 24px #a77c261a;
+}
+.ev-package.ev-package-online .ev-package-top,
+.ev-package.ev-package-online .ev-package-note{color:#3e4626}
+.ev-package.ev-package-online .ev-package-check{border-color:#635322;color:#163e32}
+.ev-package.ev-package-online:hover{border-color:#805d1e}
+.ev-package.ev-package-online.is-selected{
+  border-color:#163e32;
+  box-shadow:inset 0 0 0 2px #163e32,0 12px 28px #a77c2633;
+}
+.ev-package.ev-package-online:focus-visible{outline:3px solid #163e32;outline-offset:3px}
 .ev-package-check svg{width:13px;height:13px}
 .ev-form-panel{min-height:427px;padding:31px 34px 26px;border:1px solid hsl(var(--wine)/.13);background:hsl(35 39% 95%)}
 .ev-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-bottom:21px;border-bottom:1px solid hsl(var(--wine)/.13)}

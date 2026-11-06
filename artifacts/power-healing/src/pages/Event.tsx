@@ -3,6 +3,7 @@ import { CalendarDays, Clock, MapPin, Video, Crown, BookOpen, Gift, MessageCircl
 import dohaAmmanImage from '../assets/doha-amman.webp';
 import dohaGardenImage from '../assets/doha-mentor-garden.webp';
 import dohaSeatedImage from '../assets/doha-mentor-seated.webp';
+import dohaDeskImage from '../assets/doha-mentor-desk.webp';
 import './Event.css';
 
 export type EventMode = 'in-person' | 'online';
@@ -46,6 +47,7 @@ const perks = [
 const bioImages = [
   { src: dohaGardenImage, alt: 'ضحى ملكاوي في صورة خارجية' },
   { src: dohaSeatedImage, alt: 'ضحى ملكاوي جالسة على كرسي' },
+  { src: dohaDeskImage, alt: 'ضحى ملكاوي جالسة على مكتب وتكتب في دفتر' },
 ];
 
 export default function Event(p: EventPageProps) {
@@ -262,7 +264,7 @@ export default function Event(p: EventPageProps) {
                   { m: 'online', icon: Video, t: 'أونلاين', price: '30', currency: 'دولار', note: 'بث مباشر' },
                 ] as const).map(o => (
                   <button key={o.m} type="button" role="tab" aria-selected={mode === o.m} aria-controls="ev-registration-panel" onClick={() => setMode(o.m)} data-testid={`tab-${o.m}`}
-                    className={`ev-package ${mode === o.m ? 'is-selected' : ''}`}>
+                    className={`ev-package ${o.m === 'online' ? 'ev-package-online' : ''} ${mode === o.m ? 'is-selected' : ''}`}>
                     <span className="ev-package-top"><o.icon aria-hidden="true" /><span>{mode === o.m ? 'اختيارك' : 'طريقة الحضور'}</span></span>
                     <span className="ev-package-title">{o.t}</span>
                     <span className="ev-package-price"><strong>{o.price}</strong><span>{o.currency}</span></span>
