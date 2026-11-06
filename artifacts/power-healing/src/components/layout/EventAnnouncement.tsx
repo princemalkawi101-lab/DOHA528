@@ -19,7 +19,7 @@ export function EventAnnouncement() {
       <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-right">
         <div>
           <p className="text-lg font-black">ورشة تجسيد النجاح مع Master Doha Malkawi</p>
-          <p className="mt-1 text-sm font-bold">عمّان · زيزفون · السبت 21 نوفمبر 2026</p>
+          <p className="mt-1 text-sm font-bold">عمان الأردن · السبت 21 نوفمبر 2026</p>
         </div>
         <Link href="/event" className="inline-flex shrink-0 items-center justify-center gap-3 rounded-lg bg-[#103b2c] px-6 py-3 text-sm font-black text-[#fff9eb] transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#103b2c]" data-testid="link-event-announcement">
           أريد حجز مكاني <span aria-hidden>←</span>
