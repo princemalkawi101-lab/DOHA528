@@ -187,7 +187,7 @@ export default function Event(p: EventPageProps) {
                 <p>تجربة حضورية في الأردن مع <bdi dir="ltr">Master Doha Malkawi</bdi>.</p>
                 <h3 className="ev-closing-details-title">التفاصيل:</h3>
                 <ul className="ev-closing-details">
-                  <li>📍 المكان: الاردن - عمان - زيزفون</li>
+                  <li>📍 المكان: الاردن - عمان</li>
                   <li>📅 التاريخ: 21 نوفمبر 2026</li>
                   <li>🕰️ الوقت: من 1 مساءاً - 3 مساءاً</li>
                   <li>⏳ مدة الورشة: 3 ساعات</li>
