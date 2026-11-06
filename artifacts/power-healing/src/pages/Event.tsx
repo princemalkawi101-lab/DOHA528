@@ -1,6 +1,8 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { CalendarDays, Clock, MapPin, Video, Crown, BookOpen, Gift, MessageCircle, Upload, Loader2, AlertCircle, CheckCircle2, Copy, Sparkles, ArrowLeft, Check } from 'lucide-react';
 import dohaAmmanImage from '../assets/doha-amman.webp';
+import dohaGardenImage from '../assets/doha-mentor-garden.webp';
+import dohaSeatedImage from '../assets/doha-mentor-seated.webp';
 import './Event.css';
 
 export type EventMode = 'in-person' | 'online';
@@ -41,11 +43,23 @@ const perks = [
   { icon: Gift, t: 'دفتر امتنان مجاني', d: 'رفيقك اليومي لترسيخ التجسيد بعد الورشة.' },
   { icon: MessageCircle, t: 'جلسة أسئلة خاصة عبر Zoom', d: 'لقاء مباشر مع دوحة للإجابة عن أسئلتك.' },
 ];
+const bioImages = [
+  { src: dohaGardenImage, alt: 'ضحى ملكاوي في صورة خارجية' },
+  { src: dohaSeatedImage, alt: 'ضحى ملكاوي جالسة على كرسي' },
+];
 
 export default function Event(p: EventPageProps) {
   const [mode, setMode] = useState<EventMode>('in-person');
   const [copied, setCopied] = useState(false);
+  const [bioImageIndex, setBioImageIndex] = useState(0);
   const enabled = p.enabled !== false;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setBioImageIndex(current => (current + 1) % bioImages.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -120,6 +134,50 @@ export default function Event(p: EventPageProps) {
                 <li>✨ فتح احتمالات جديدة للمال، الاستقبال، الخلق، والتوسع.</li>
                 <li>✨ الانتقال من الوعي بالنجاح إلى اختيارات وتجارب تجسّده في واقعك.</li>
               </ul>
+            </section>
+            <section className="ev-content-block ev-takeaway-block" aria-labelledby="ev-takeaway-title">
+              <h2 id="ev-takeaway-title">ماذا ستأخذ معك من الورشة؟</h2>
+              <div className="ev-content-body">
+                <p>هذه التجربة ليست مجرد معلومات عن النجاح، بل مساحة للعمل الداخلي والتأمل والتوسع.</p>
+                <p>ستخرج منها وأنت تحمل:</p>
+                <ul className="ev-experience-list">
+                  <li>✨ وعيًا أوسع بمفهوم النجاح الروحي والتجسيد.</li>
+                  <li>✨ تجربة لاستكشاف مكتبتك الروحية وإمكانيات النجاح التي تحملها.</li>
+                  <li>✨ مساحة جديدة لاستقبال شيفرات وكودات النجاح ضمن ممارستك الروحية.</li>
+                  <li>✨ إدراكًا أعمق للعلاقة بين الوعي، الاختيار، والفعل.</li>
+                  <li>✨ أدوات وأسئلة تساعدك على استكشاف احتمالات جديدة في حياتك.</li>
+                  <li>✨ بداية جديدة لعلاقتك مع النجاح، من الداخل إلى الخارج.</li>
+                </ul>
+              </div>
+            </section>
+            <section className="ev-content-block ev-bio-block" aria-labelledby="ev-bio-title">
+              <h2 id="ev-bio-title">من هي ضحى؟</h2>
+              <div className="ev-bio-layout">
+                <figure className="ev-bio-photo" aria-label="صور ضحى ملكاوي">
+                  <div className="ev-bio-photo-frame">
+                    <img
+                      key={bioImageIndex}
+                      src={bioImages[bioImageIndex].src}
+                      alt={bioImages[bioImageIndex].alt}
+                      className="ev-bio-image"
+                      data-testid="img-bio-portrait"
+                    />
+                    <span className="ev-bio-photo-caption"><bdi dir="ltr">Master Doha Malkawi</bdi></span>
+                  </div>
+                  <div className="ev-bio-photo-dots" aria-hidden="true">
+                    {bioImages.map((image, index) => (
+                      <span key={image.src} className={index === bioImageIndex ? 'is-active' : ''} />
+                    ))}
+                  </div>
+                </figure>
+                <div className="ev-bio-copy">
+                  <p className="ev-bio-name"><bdi dir="ltr">Master Doha Malkawi</bdi></p>
+                  <p className="ev-bio-role">مرشدة الحب والنور | <bdi dir="ltr">Spiritual Mentor</bdi></p>
+                  <p>ضحى ملكاوي، مرشدة ومدربة في علوم الوعي والطاقة والتحول الروحي، بخبرة تمتد لسنوات في مرافقة الأشخاص نحو استكشاف إمكانياتهم، وتوسيع إدراكهم، وخلق مساحات جديدة في حياتهم.</p>
+                  <p>من خلال رحلتها في علوم الوعي والبحث المستمر عن التجسيد والتحول والقفز الكمي ، تقدم ضحى تجارب تجمع بين العمق الروحي، استكشاف الذات، وفتح احتمالات جديدة للخلق والتجسيد.</p>
+                  <p>في ورشة «تجسيد النجاح »، تدعوك ضحى إلى تجربة مختلفة؛ رحلة تبدأ من الداخل، وتفتح مساحة للنجاح كي يصبح جزءاً من واقعك.</p>
+                </div>
+              </div>
             </section>
             <a href="#register" className="ev-text-link" data-testid="link-register">اختاري طريقة حضورك <ArrowLeft aria-hidden="true" /></a>
           </div>
