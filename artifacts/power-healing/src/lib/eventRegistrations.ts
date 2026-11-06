@@ -146,24 +146,38 @@ export async function deleteEventRegistration(id: string): Promise<void> {
 }
 
 export async function compressReceiptToDataUrl(file: File): Promise<string> {
-  if (!file.type.startsWith('image/')) throw new Error('INVALID_IMAGE');
-  if (file.size > 12 * 1024 * 1024) throw new Error('IMAGE_TOO_LARGE');
+  if (file.type && !file.type.startsWith('image/')) throw new Error('يرجى اختيار صورة إيصال بصيغة JPG أو PNG أو WebP.');
+  if (file.size > 12 * 1024 * 1024) throw new Error('حجم الصورة كبير. يرجى اختيار صورة أصغر من 12 ميغابايت.');
+  // Android providers can omit MIME metadata; validate by decoding the image.
+  // HTMLImageElement also works in browsers without createImageBitmap.
+  const url = URL.createObjectURL(file);
+  try {
+    const bitmap = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      const timer = setTimeout(() => {
+        image.onload = image.onerror = null;
+        reject(new Error('استغرق فتح الصورة وقتًا طويلًا. يرجى اختيار صورة أخرى.'));
+      }, 12000);
+      image.onload = () => { clearTimeout(timer); resolve(image); };
+      image.onerror = () => { clearTimeout(timer); reject(new Error('تعذّر فتح الصورة. يرجى اختيار صورة بصيغة JPG أو PNG أو WebP.')); };
+      image.src = url;
+    });
+    const maxSide = 1200;
+    const ratio = Math.min(maxSide / bitmap.width, maxSide / bitmap.height, 1);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * ratio));
+    canvas.height = Math.max(1, Math.round(bitmap.height * ratio));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('تعذّر تجهيز الصورة في هذا المتصفح. يرجى استخدام متصفح آخر.');
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 
-  const bitmap = await createImageBitmap(file);
-  const maxSide = 1200;
-  const ratio = Math.min(maxSide / bitmap.width, maxSide / bitmap.height, 1);
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(bitmap.width * ratio));
-  canvas.height = Math.max(1, Math.round(bitmap.height * ratio));
-  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-
-  let quality = 0.82;
-  let dataUrl = canvas.toDataURL('image/jpeg', quality);
-  while (dataUrl.length > 520_000 && quality > 0.42) {
-    quality -= 0.1;
-    dataUrl = canvas.toDataURL('image/jpeg', quality);
-  }
-  if (dataUrl.length > 600_000) throw new Error('IMAGE_TOO_LARGE');
-  return dataUrl;
+    let quality = 0.82;
+    let dataUrl = canvas.toDataURL('image/jpeg', quality);
+    while (dataUrl.length > 520_000 && quality > 0.42) {
+      quality -= 0.1;
+      dataUrl = canvas.toDataURL('image/jpeg', quality);
+    }
+    if (dataUrl.length > 600_000) throw new Error('الصورة ما زالت كبيرة بعد الضغط. يرجى اختيار صورة أصغر.');
+    return dataUrl;
+  } finally { URL.revokeObjectURL(url); }
 }

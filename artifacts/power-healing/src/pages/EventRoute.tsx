@@ -33,6 +33,7 @@ export default function EventRoute() {
   const [vipError, setVipError] = useState('');
   const [recoverOrder, setRecoverOrder] = useState('');
   const paymentBusy = useRef(false);
+  const paymentFailure = useRef({ online: '', vip: '' });
   const registrationRevision = useRef(0);
   const activeUser = useRef(user?.uid);
   activeUser.current = user?.uid;
@@ -69,10 +70,10 @@ export default function EventRoute() {
     retryRegistration.current = () => {};
     if (!user) { setRegistrationLoading(false); return; }
     setRegistrationLoading(true);
-    const load = async () => {
+    const load = async (background = false) => {
       if (inFlight || cancelled) return;
       inFlight = true;
-      setRegistrationLoading(true);
+      if (!background) setRegistrationLoading(true);
       const revision = registrationRevision.current;
       try {
         const result = await eventRequest<{ registration: MyEventRegistration | null }>({ action: 'mine' }, { signal: controller.signal });
@@ -88,10 +89,12 @@ export default function EventRoute() {
         setRegistrationError('');
       } catch (error) {
         if (!cancelled && revision === registrationRevision.current) setRegistrationError(error instanceof Error ? error.message : 'تعذّر تحميل التسجيل الحالي.');
-      } finally { inFlight = false; if (!cancelled) setRegistrationLoading(false); }
+      } finally { inFlight = false; if (!cancelled && !background) setRegistrationLoading(false); }
     };
     void load();
-    const refresh = () => { void load(); };
+    // Mobile file pickers and PayPal windows both cause focus events. Never
+    // unmount their form/input while refreshing status on return to the page.
+    const refresh = () => { void load(true); };
     retryRegistration.current = refresh;
     window.addEventListener('focus', refresh);
     return () => { cancelled = true; controller.abort(); window.removeEventListener('focus', refresh); };
@@ -158,9 +161,10 @@ export default function EventRoute() {
         createOrder={async () => {
           const report = tier === 'vip' ? setVipError : setPaypalError;
           try {
+            paymentFailure.current[tier] = '';
             report('');
             if (!requireLogin()) throw new Error('يرجى تسجيل الدخول لإكمال الحجز.');
-            if (registrationLoading || registrationError) throw new Error('يرجى تحديث حالة تسجيلك أولاً.');
+            if (registrationLoading || registrationError) throw new Error('تعذّر التحقق من تسجيلك، لذلك لم تبدأ عملية الدفع. اضغط «إعادة التحقق من التسجيل» ثم حاول مجددًا.');
             if (tier === 'online' && (name.trim().length < 2 || phone.trim().length < 7 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))) {
               throw new Error('يرجى إدخال الاسم ورقم الهاتف والبريد الإلكتروني الصحيح أولاً.');
             }
@@ -171,7 +175,9 @@ export default function EventRoute() {
             setRecoverOrder(result.id);
             return result.id;
           } catch (error) {
-            report(error instanceof Error ? error.message : 'تعذّر تجهيز الدفع.');
+            const message = error instanceof Error ? error.message : 'تعذّر تجهيز الدفع.';
+            paymentFailure.current[tier] = message;
+            report(message);
             throw error;
           }
         }}
@@ -179,6 +185,7 @@ export default function EventRoute() {
           try { await finishCapture(orderID); }
           catch (error) {
             const message = error instanceof Error ? error.message : 'تعذّر تأكيد الدفع. استخدم استعادة التأكيد دون الدفع مجددًا.';
+            paymentFailure.current[tier] = message;
             if (tier === 'vip') { setVipError(message); setShowVipPaypal(false); }
             else setPaypalError(message);
           }
@@ -187,8 +194,9 @@ export default function EventRoute() {
           if (tier === 'vip') setShowVipPaypal(false);
         }}
         onError={() => {
-          if (tier === 'vip') { setVipError('تعذّر إتمام الدفع عبر PayPal. يمكنك إعادة المحاولة.'); setShowVipPaypal(false); }
-          else setPaypalError('تعذّر إتمام الدفع عبر PayPal. يرجى المحاولة مجددًا.');
+          const message = paymentFailure.current[tier] || 'تعذّر الاتصال بـ PayPal. تحقق من اتصالك وحاول مجددًا. إذا وافقت على دفعة سابقة فاستخدم استعادة التأكيد ولا تدفع مرة أخرى.';
+          if (tier === 'vip') { setVipError(message); setShowVipPaypal(false); }
+          else setPaypalError(message);
         }}
       />
     </PayPalScriptProvider>;
@@ -210,7 +218,7 @@ export default function EventRoute() {
       backgroundUrl={settings.ammanImageUrl || undefined}
       cliqAlias={settings.cliqAlias} cliqName={settings.cliqAccountName}
       name={name} phone={phone} email={email} onNameChange={setName} onPhoneChange={setPhone} onEmailChange={setEmail}
-      receiptFile={receipt} onReceiptChange={setReceipt} onSubmitInPerson={submitInPerson}
+      receiptFile={receipt} onReceiptChange={(file) => { setReceipt(file); setSubmitError(''); }} onSubmitInPerson={submitInPerson}
       submitting={busy} submitError={submitError}
       submitted={registration?.attendance === 'in-person' && registration.status !== 'rejected'}
       paypalSlot={paymentButtons('online')} paypalError={paypalError}

@@ -61,7 +61,17 @@ export default function Event(p: EventPageProps) {
   const [mode, setMode] = useState<EventMode>('in-person');
   const [copied, setCopied] = useState(false);
   const [bioImageIndex, setBioImageIndex] = useState(0);
+  const [receiptPreview, setReceiptPreview] = useState('');
+  const [receiptPreviewError, setReceiptPreviewError] = useState(false);
   const enabled = p.enabled !== false;
+
+  useEffect(() => {
+    setReceiptPreviewError(false);
+    if (!p.receiptFile) { setReceiptPreview(''); return; }
+    const url = URL.createObjectURL(p.receiptFile);
+    setReceiptPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [p.receiptFile]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -262,8 +272,8 @@ export default function Event(p: EventPageProps) {
           {p.registrationError && !p.registrationLoading && (
             <div className="ev-closed" role="status" data-testid="event-registration-error">
               <AlertCircle aria-hidden="true" />
-              <p>يمكنك استعراض التذاكر واختيار طريقة الحضور أدناه. سنحتاج للتحقق من حالة تسجيلك قبل تأكيد الحجز لتجنب تكرار الدفع.</p>
-              <button type="button" className="font-bold underline" onClick={p.onRetryRegistration}>إعادة المحاولة</button>
+              <p>تعذّر التحقق من تسجيلك حاليًا. يمكنك استعراض التذاكر واختيار طريقة الحضور أدناه، لكن يجب التحقق قبل بدء الدفع أو تأكيد الحجز لتجنب تكرار الدفع.</p>
+              <button type="button" className="font-bold underline" onClick={p.onRetryRegistration}>إعادة التحقق من التسجيل</button>
             </div>
           )}
           {p.registrationLoading ? <p role="status">جارٍ تحميل حالة التسجيل…</p> : !enabled ? (
@@ -332,8 +342,17 @@ export default function Event(p: EventPageProps) {
                         <span className="ev-upload-icon"><Upload aria-hidden="true" /></span>
                         <span className="ev-upload-copy"><strong>{p.receiptFile ? p.receiptFile.name : 'ارفع صورة إيصال التحويل'}</strong><small>صورة الإيصال مطلوبة لإرسال طلب الحجز</small></span>
                         <span className="ev-upload-action">اختيار صورة</span>
-                        <input id="ev-receipt" type="file" accept="image/*" className="ev-file-input" onChange={e => p.onReceiptChange(e.target.files?.[0] ?? null)} data-testid="input-receipt" aria-label="رفع صورة إيصال التحويل" />
+                        <input id="ev-receipt" type="file" accept="image/*" className="ev-file-input" onChange={e => {
+                          const file = e.currentTarget.files?.[0];
+                          if (file) p.onReceiptChange(file);
+                          e.currentTarget.value = '';
+                        }} data-testid="input-receipt" aria-label="رفع صورة إيصال التحويل" />
                       </label>
+                      {p.receiptFile && <div className="ev-receipt-preview" data-testid="receipt-preview">
+                        <p role="status">تم اختيار الصورة: {p.receiptFile.name}. تُرسل مع طلب الحجز عند الضغط على «أرسل طلب الحجز».</p>
+                        {receiptPreview && !receiptPreviewError && <img src={receiptPreview} alt="معاينة إيصال التحويل المختار" onError={() => setReceiptPreviewError(true)} />}
+                        {receiptPreviewError && <p role="alert">تعذّر فتح الصورة. يرجى اختيار صورة بصيغة JPG أو PNG أو WebP.</p>}
+                      </div>}
                       {p.submitError && <p role="alert" className="ev-error" data-testid="text-submit-error"><AlertCircle aria-hidden="true" />{p.submitError}</p>}
                       <button type="submit" disabled={p.submitting || !p.name.trim() || !p.phone.trim() || !p.email.trim() || !p.receiptFile}
                         className="ev-submit" data-testid="button-submit">

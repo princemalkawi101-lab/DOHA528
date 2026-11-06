@@ -27,11 +27,34 @@ try {
   });
   let mode = 'stall';
   let count = 0;
+  let heldStatus;
+  let receiptSubmitted = false;
+  await page.route('**/node_modules/.vite/deps/@paypal_react-paypal-js.js*', async route => {
+    await route.fulfill({ contentType: 'application/javascript', body: `
+      import React from '/node_modules/.vite/deps/react.js';
+      const jsx = React.createElement;
+      export function PayPalScriptProvider({children}) { return children; }
+      export function PayPalButtons(props) {
+        return jsx('button', {'data-testid':'fixture-paypal', children:'PayPal fixture',
+          onClick:async()=>{ try { await props.createOrder(); } catch(e) { props.onError(e); } }
+        });
+      }` });
+  });
   await page.route('**/api/event', async route => {
     assert.equal(new URL(route.request().url()).pathname, '/api/event');
     const body = route.request().postDataJSON();
-    assert.equal(body.action, 'mine', 'No mutations are allowed in this test');
+    if (body.action === 'register-cliq') {
+      assert.match(body.receiptDataUrl, /^data:image\/jpeg;base64,/);
+      assert.ok(body.receiptDataUrl.length > 100);
+      receiptSubmitted = true;
+      return route.fulfill({ json: { registration: {
+        id: 'fixture-pending', name: body.name, phone: body.phone, email: body.email,
+        attendance: 'in-person', status: 'pending', membershipStatus: 'Standard',
+      } } });
+    }
+    assert.equal(body.action, 'mine', 'Never create real PayPal orders in this test');
     count += 1;
+    if (mode === 'hold') { heldStatus = route; return; }
     if (mode === 'stall') return; // Intentionally unanswered until the app aborts.
     if (mode === 'html') return route.fulfill({ status: 200, contentType: 'text/html', body: '<html>Fallback</html>' });
     if (mode === 'server-error') return route.fulfill({ status: 500, json: { error: 'Fixture backend failure' } });
@@ -45,11 +68,14 @@ try {
   await page.getByTestId('input-name').waitFor({ state: 'visible' });
   await page.getByTestId('tab-online').click();
   assert.equal(await page.getByTestId('tab-online').getAttribute('aria-selected'), 'true');
+  await page.getByTestId('fixture-paypal').click();
+  const paypalMessage = page.getByText(/تعذّر التحقق من تسجيلك، لذلك لم تبدأ عملية الدفع/);
+  await paypalMessage.waitFor({ state: 'visible' });
   await page.getByTestId('tab-in-person').click();
   assert.equal(await page.getByTestId('tab-in-person').getAttribute('aria-selected'), 'true');
   await page.screenshot({ path: `${output}/timeout.jpg` });
   mode = 'success';
-  await error.getByRole('button', { name: 'إعادة المحاولة' }).click();
+  await error.getByRole('button', { name: 'إعادة التحقق من التسجيل' }).click();
   await page.getByTestId('input-name').waitFor({ state: 'visible' });
   assert.equal(await error.count(), 0);
   await page.screenshot({ path: `${output}/recovered.jpg` });
@@ -59,14 +85,39 @@ try {
   assert.match(await error.innerText(), /استعراض التذاكر/);
   await page.getByTestId('input-name').waitFor({ state: 'visible' });
   mode = 'server-error';
-  await error.getByRole('button', { name: 'إعادة المحاولة' }).click();
+  await error.getByRole('button', { name: 'إعادة التحقق من التسجيل' }).click();
   await error.waitFor({ state: 'visible' });
   await page.getByTestId('input-name').waitFor({ state: 'visible' });
   mode = 'success';
-  await error.getByRole('button', { name: 'إعادة المحاولة' }).click();
+  await error.getByRole('button', { name: 'إعادة التحقق من التسجيل' }).click();
   await page.getByTestId('input-name').waitFor({ state: 'visible' });
   assert.ok(count >= 5);
-  console.log('PASS: timeout, HTML fallback, and HTTP500 preserve selectable tickets; inline retry recovers. Same-origin /api/event; no writes/payments.');
+  await page.getByTestId('input-name').fill('Synthetic Receipt Test');
+  await page.getByTestId('input-phone').fill('00962790000000');
+  await page.getByTestId('input-event-email').fill('receipt-fixture@example.test');
+  const input = page.getByTestId('input-receipt');
+  await input.evaluate(node => { node.__pickerFixture = true; });
+  mode = 'hold';
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await page.waitForFunction(() => document.querySelector('[data-testid="input-receipt"]')?.__pickerFixture === true);
+  await input.setInputFiles({
+    name: 'synthetic-receipt.png', mimeType: '',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64'),
+  });
+  await page.getByTestId('receipt-preview').waitFor({ state: 'visible' });
+  assert.equal(await input.evaluate(node => node.__pickerFixture), true, 'Focus must not unmount the file input');
+  await page.waitForFunction(() => {
+    const img = document.querySelector('[data-testid="receipt-preview"] img');
+    return img?.complete && img.naturalWidth > 0;
+  });
+  while (!heldStatus) await page.waitForTimeout(20);
+  await heldStatus.fulfill({ json: { registration: null } });
+  mode = 'success';
+  await page.screenshot({ path: `${output}/receipt-preview.jpg` });
+  await page.getByTestId('button-submit').click();
+  await page.getByText('تم استلام طلبك وهو قيد المراجعة، وسنرسل لك بريداً للتأكيد فور التحقق.', { exact: false }).waitFor({ state: 'visible' });
+  assert.equal(receiptSubmitted, true);
+  console.log('PASS: timeout/HTML/HTTP500 ticket fallback; specific PayPal error survives SDK onError; picker focus preserves input and selected receipt; blank-MIME image compresses and submits to fixture. No real writes/payments.');
 } finally {
   await browser.close();
 }
