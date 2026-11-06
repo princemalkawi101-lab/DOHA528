@@ -18,6 +18,10 @@ export interface EventPageProps {
   announcement?: EventAnnouncement | null;
   name: string;
   phone: string;
+  email: string;
+  onEmailChange: (v: string) => void;
+  onVipOffer?: () => void;
+  registrationLoading?: boolean;
   onNameChange: (v: string) => void;
   onPhoneChange: (v: string) => void;
   receiptFile?: File | null;
@@ -66,7 +70,7 @@ export default function Event(p: EventPageProps) {
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!p.submitting && p.name.trim() && p.phone.trim() && p.receiptFile) p.onSubmitInPerson();
+    if (!p.submitting && p.name.trim() && p.phone.trim() && p.email.trim() && p.receiptFile) p.onSubmitInPerson();
   };
   const copy = async () => {
     if (!p.cliqAlias) return;
@@ -188,7 +192,7 @@ export default function Event(p: EventPageProps) {
                 <ul className="ev-closing-details">
                   <li>📍 المكان: الاردن - عمان</li>
                   <li>📅 التاريخ: 21 نوفمبر 2026</li>
-                  <li>🕰️ الوقت: من 1 مساءاً - 3 مساءاً</li>
+                  <li>🕰️ الوقت: من 1 مساءً - 4 مساءً بتوقيت الأردن</li>
                   <li>⏳ مدة الورشة: 3 ساعات</li>
                   <li>🎟️ قيمة الاستثمار: للحضور 25 دينار للشخص الواحد</li>
                 </ul>
@@ -200,7 +204,7 @@ export default function Event(p: EventPageProps) {
                 <p>احجز مكانك الآن، وكن جزء من تجربة تجسيد النجاح</p>
               </div>
               <a href="#register" className="ev-closing-cta" data-testid="link-register">أريد حجز مكاني <ArrowLeft aria-hidden="true" /></a>
-              <EventExperienceSection />
+              <EventExperienceSection onVipOffer={p.onVipOffer} />
             </section>
           </div>
         </section>
@@ -253,7 +257,7 @@ export default function Event(p: EventPageProps) {
             <p className="ev-register-lead">مكانك في اللقاء يبدأ من هنا.<br />أكمل التسجيل بالطريقة الأنسب لك.</p>
           </div>
 
-          {!enabled ? (
+          {p.registrationLoading ? <p role="status">جارٍ تحميل حالة التسجيل…</p> : !enabled ? (
             <div className="ev-closed" data-testid="status-closed">
               <AlertCircle aria-hidden="true" />
               <p>التسجيل مغلق حاليًا. تابعونا للإعلان القادم.</p>
@@ -312,6 +316,9 @@ export default function Event(p: EventPageProps) {
                           <input id="ev-phone" className="ev-in" dir="ltr" type="tel" value={p.phone} onChange={e => p.onPhoneChange(e.target.value)} required autoComplete="tel" data-testid="input-phone" />
                         </label>
                       </div>
+                      <label className="ev-field" htmlFor="ev-email"><span>البريد الإلكتروني للتأكيد</span>
+                        <input id="ev-email" className="ev-in" dir="ltr" type="email" value={p.email} onChange={e => p.onEmailChange(e.target.value)} required autoComplete="email" data-testid="input-event-email" />
+                      </label>
                       <label className="ev-upload" htmlFor="ev-receipt">
                         <span className="ev-upload-icon"><Upload aria-hidden="true" /></span>
                         <span className="ev-upload-copy"><strong>{p.receiptFile ? p.receiptFile.name : 'ارفع صورة إيصال التحويل'}</strong><small>صورة الإيصال مطلوبة لإرسال طلب الحجز</small></span>
@@ -319,7 +326,7 @@ export default function Event(p: EventPageProps) {
                         <input id="ev-receipt" type="file" accept="image/*" className="ev-file-input" onChange={e => p.onReceiptChange(e.target.files?.[0] ?? null)} data-testid="input-receipt" aria-label="رفع صورة إيصال التحويل" />
                       </label>
                       {p.submitError && <p role="alert" className="ev-error" data-testid="text-submit-error"><AlertCircle aria-hidden="true" />{p.submitError}</p>}
-                      <button type="submit" disabled={p.submitting || !p.name.trim() || !p.phone.trim() || !p.receiptFile}
+                      <button type="submit" disabled={p.submitting || !p.name.trim() || !p.phone.trim() || !p.email.trim() || !p.receiptFile}
                         className="ev-submit" data-testid="button-submit">
                         {p.submitting && <Loader2 className="ev-spinner" aria-hidden="true" />}
                         {p.submitting ? 'جارٍ الإرسال' : 'أرسل طلب الحجز'}<ArrowLeft aria-hidden="true" />
@@ -338,6 +345,9 @@ export default function Event(p: EventPageProps) {
                       <label className="ev-field" htmlFor="ev-name-online"><span>الاسم الكامل</span><input id="ev-name-online" className="ev-in" value={p.name} onChange={e => p.onNameChange(e.target.value)} required autoComplete="name" /></label>
                       <label className="ev-field" htmlFor="ev-phone-online"><span>رقم الهاتف</span><input id="ev-phone-online" className="ev-in" dir="ltr" type="tel" value={p.phone} onChange={e => p.onPhoneChange(e.target.value)} required autoComplete="tel" /></label>
                     </div>
+                    <label className="ev-field" htmlFor="ev-email-online"><span>البريد الإلكتروني للتأكيد</span>
+                      <input id="ev-email-online" className="ev-in" dir="ltr" type="email" value={p.email} onChange={e => p.onEmailChange(e.target.value)} required autoComplete="email" data-testid="input-event-email-online" />
+                    </label>
                     <p className="ev-paypal-copy">ادفع 30 دولارًا بأمان عبر PayPal، وستصلك تفاصيل الدخول.</p>
                     {p.paypalSlot ?? (p.onPayPal && (
                       <button type="button" onClick={p.onPayPal} disabled={p.paypalPending} className="ev-submit" data-testid="button-paypal">

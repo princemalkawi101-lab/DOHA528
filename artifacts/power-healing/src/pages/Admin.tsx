@@ -19,7 +19,8 @@ import {
 } from '@/lib/siteSettings';
 import {
   EventRegistration,
-  fetchEventRegistrations,
+  subscribeEventRegistrations,
+  eventRequest,
   updateEventRegistrationStatus,
   deleteEventRegistration,
 } from '@/lib/eventRegistrations';
@@ -165,6 +166,7 @@ export default function Admin() {
   const [eventSettings, setEventSettings] = useState<EventSettings>(DEFAULT_EVENT_SETTINGS);
   const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>([]);
   const [eventFeedback, setEventFeedback] = useState('');
+  const [eventReviewBusy, setEventReviewBusy] = useState<string | null>(null);
 
   // ── These MUST stay above early returns to obey Rules of Hooks ──
   const [importing, setImporting] = useState(false);
@@ -232,7 +234,9 @@ export default function Admin() {
       .catch(() => setPurchases([]))
       .finally(() => setLoadingPurchases(false));
     fetchAdSliderConfig().then(setAdSliderCfg).catch(() => {});
-    fetchEventRegistrations().then(setEventRegistrations).catch(() => setEventRegistrations([]));
+    return subscribeEventRegistrations(setEventRegistrations, () => {
+      setEventFeedback('تعذّر تحميل تسجيلات الفعالية. يرجى تحديث الصفحة.');
+    });
   }, [isAdmin]);
 
   if (loading) {
@@ -401,12 +405,27 @@ export default function Admin() {
   };
 
   const handleEventRegistrationStatus = async (entry: EventRegistration, status: 'approved' | 'rejected') => {
+    if (eventReviewBusy) return;
+    setEventReviewBusy(entry.id);
     try {
-      await updateEventRegistrationStatus(entry.id, status);
+      const result = await updateEventRegistrationStatus(entry.id, status);
       setEventRegistrations((prev) => prev.map((item) => item.id === entry.id ? { ...item, status } : item));
-    } catch {
-      setEventFeedback(lang === 'ar' ? 'تعذّر تحديث حالة التسجيل.' : 'Could not update registration status.');
-    }
+      setEventFeedback(result.emailStatus === 'failed'
+        ? `تم قبول التسجيل، لكن تعذّر إرسال البريد: ${result.emailError}. استخدم زر إعادة إرسال التأكيد بعد تصحيح الإعدادات.`
+        : status === 'approved' ? 'تم قبول التسجيل وإرسال بريد التأكيد.' : 'تم رفض التسجيل.');
+    } catch (error) {
+      setEventFeedback(error instanceof Error ? error.message : 'تعذّر تحديث حالة التسجيل.');
+    } finally { setEventReviewBusy(null); }
+  };
+
+  const handleRetryEventEmail = async (entry: EventRegistration) => {
+    if (eventReviewBusy) return;
+    setEventReviewBusy(entry.id);
+    try {
+      const result = await eventRequest<{ emailStatus: string; emailError?: string }>({ action: 'retry-email', registrationId: entry.id });
+      setEventFeedback(result.emailStatus === 'sent' ? 'تم إرسال بريد التأكيد.' : `تعذّر إرسال البريد: ${result.emailError}`);
+    } catch (error) { setEventFeedback(error instanceof Error ? error.message : 'تعذّر إرسال البريد.'); }
+    finally { setEventReviewBusy(null); }
   };
 
   const handleEventRegistrationDelete = async (entry: EventRegistration) => {
@@ -976,6 +995,26 @@ export default function Admin() {
             {eventFeedback && <p className="mt-3 text-sm text-[hsl(var(--g300))]">{eventFeedback}</p>}
           </section>
           <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
+            <h2 className="text-white text-lg font-black mb-4">إعدادات بريد تأكيد الفعالية</h2>
+            <p className="text-sm text-amber-200 mb-4">استخدم عنوان إرسال من نطاق موثّق في Resend. قبول التسجيل يبقى محفوظًا إذا تعذّر البريد، ويمكن إعادة الإرسال دون تكرار الحجز.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="text-sm text-white">بريد المرسل الموثّق
+                <input type="email" dir="ltr" className="adm-input" value={eventSettings.confirmationEmailFrom} onChange={(e) => setEventSettings((s) => ({ ...s, confirmationEmailFrom: e.target.value }))} data-testid="input-event-sender" />
+              </label>
+              <label className="text-sm text-white">الوقت في رسالة التأكيد
+                <input className="adm-input" value={eventSettings.confirmationTime} onChange={(e) => setEventSettings((s) => ({ ...s, confirmationTime: e.target.value }))} data-testid="input-event-confirmation-time" />
+              </label>
+              <label className="text-sm text-white">معلومات الحضور الحضوري
+                <textarea className="adm-input" value={eventSettings.inPersonAccessInfo} onChange={(e) => setEventSettings((s) => ({ ...s, inPersonAccessInfo: e.target.value }))} />
+              </label>
+              <label className="text-sm text-white">معلومات حضور الأونلاين العامة
+                <textarea className="adm-input" value={eventSettings.onlineAccessInfo} onChange={(e) => setEventSettings((s) => ({ ...s, onlineAccessInfo: e.target.value }))} />
+              </label>
+            </div>
+            <p className="mt-3 text-xs text-white/60">تُحفظ هذه المعلومات ضمن إعدادات الموقع العامة. لا تضع رابط Telegram الخاص أو أسرارًا هنا.</p>
+            <button onClick={handleSaveEventSettings} disabled={settingsSaving === 'about'} className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 font-bold text-white">حفظ إعدادات البريد</button>
+          </section>
+          <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
             <h2 className="text-white text-lg font-black mb-4">{lang === 'ar' ? `تسجيلات الفعالية (${eventRegistrations.length})` : `Event registrations (${eventRegistrations.length})`}</h2>
             {!eventRegistrations.length ? <p className="text-[rgba(255,255,255,0.55)] text-sm">{lang === 'ar' ? 'لا توجد تسجيلات حتى الآن.' : 'No registrations yet.'}</p> : (
               <div className="grid gap-4">
@@ -985,6 +1024,8 @@ export default function Admin() {
                       <div>
                         <p className="font-bold text-white">{entry.name}</p>
                         <p className="text-sm text-[rgba(255,255,255,0.65)]" dir="ltr">{entry.phone}</p>
+                        <p className="text-sm text-white/70" dir="ltr">{entry.email || 'لا يوجد بريد إلكتروني في التسجيل القديم'}</p>
+                        {entry.membershipStatus === 'VIP Member' && <p className="mt-2 font-bold text-amber-300" data-testid="admin-vip-member">VIP Member · $49 · {entry.vipPaypalOrderId}</p>}
                         <p className="text-xs text-[hsl(var(--g300))] mt-1">
                           {entry.attendance === 'online' ? 'Online · PayPal · $30' : 'حضوري · CliQ · 25 JOD'}
                           {entry.paypalOrderId ? ` · ${entry.paypalOrderId}` : ''}
@@ -992,12 +1033,15 @@ export default function Admin() {
                         <p className="text-xs mt-1 text-[rgba(255,255,255,0.55)]">
                           {entry.status === 'pending' ? 'قيد المراجعة' : entry.status === 'approved' ? 'مقبول' : 'مرفوض'}
                         </p>
+                        <p className="text-xs mt-2 text-amber-200">بريد التأكيد: {entry.confirmationEmailStatus === 'sent' ? 'تم الإرسال' : entry.confirmationEmailStatus === 'failed' ? 'تعذّر الإرسال' : 'لم يُرسل'}</p>
+                        {entry.confirmationEmailError && <p className="mt-1 text-xs text-red-200" role="alert">{entry.confirmationEmailError}</p>}
                       </div>
-                      {entry.receiptDataUrl && <a href={entry.receiptDataUrl} target="_blank" rel="noreferrer" className="text-sm text-[hsl(var(--g300))] underline">عرض إيصال CliQ</a>}
+                      {entry.receiptDataUrl && <a href={entry.receiptDataUrl} target="_blank" rel="noreferrer" className="text-sm text-[hsl(var(--g300))] underline"><img src={entry.receiptDataUrl} alt={`إيصال CliQ — ${entry.name}`} className="mb-2 h-32 w-32 rounded-lg object-contain bg-white" loading="lazy" />عرض إيصال CliQ</a>}
                     </div>
                     <div className="flex gap-2 mt-4">
-                      <button onClick={() => handleEventRegistrationStatus(entry, 'approved')} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white">تأكيد التسجيل</button>
-                      <button onClick={() => handleEventRegistrationStatus(entry, 'rejected')} className="rounded-lg bg-red-900 px-4 py-2 text-sm font-bold text-white">رفض</button>
+                      {entry.status !== 'approved' && <button disabled={!!eventReviewBusy} onClick={() => handleEventRegistrationStatus(entry, 'approved')} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" data-testid={`approve-event-${entry.id}`}>{eventReviewBusy === entry.id ? 'جارٍ التأكيد…' : 'Approve · تأكيد التسجيل'}</button>}
+                      {entry.status === 'approved' && entry.confirmationEmailStatus !== 'sent' && <button disabled={!!eventReviewBusy} onClick={() => handleRetryEventEmail(entry)} className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" data-testid={`retry-event-email-${entry.id}`}>إرسال / إعادة إرسال التأكيد</button>}
+                      <button disabled={!!eventReviewBusy} onClick={() => handleEventRegistrationStatus(entry, 'rejected')} className="rounded-lg bg-red-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">رفض</button>
                       <button onClick={() => handleEventRegistrationDelete(entry)} className="rounded-lg border border-red-400/40 px-4 py-2 text-sm font-bold text-red-200">حذف</button>
                     </div>
                   </article>

@@ -9,7 +9,7 @@ const vipItems = [
   'سيبليمنال النجاح .',
 ];
 
-export default function EventExperienceSection() {
+export default function EventExperienceSection({ onVipOffer }: { onVipOffer?: () => void }) {
   return (
     <section className="evx" aria-labelledby="evx-title" data-testid="section-experience-choice">
       <h2 id="evx-title" className="evx-title">اختر تجربتك في النجاح التجسيد</h2>
@@ -40,8 +40,8 @@ export default function EventExperienceSection() {
         <p className="evx-vip-close">مساحة إضافية لك، لتفتح احتمالات أوسع وتمنح تجربتك فرصة للاستمرار.</p>
         <div className="evx-vip-action">
           <div>
-            <button type="button" className="evx-vip-btn" disabled aria-describedby="evx-vip-note" data-testid="button-vip-book">احجز مقعد VIP الآن</button>
-            <small id="evx-vip-note" className="evx-vip-note" data-testid="status-vip-pending">حجز VIP بانتظار التفعيل</small>
+            <button type="button" className="evx-vip-btn" disabled={!onVipOffer} onClick={onVipOffer} aria-describedby="evx-vip-note" data-testid="button-vip-book">احجز مقعد VIP الآن</button>
+            <small id="evx-vip-note" className="evx-vip-note">ترقية اختيارية بعد تسجيل التذكرة الأساسية</small>
           </div>
           <span className="evx-vip-price" data-testid="text-vip-price">السعر <bdi dir="ltr">49$</bdi></span>
         </div>

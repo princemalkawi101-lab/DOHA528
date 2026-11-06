@@ -1,15 +1,14 @@
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
   getDocs,
   orderBy,
   query,
-  serverTimestamp,
-  updateDoc,
+  onSnapshot,
 } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { db } from './firebase';
+import { readJson, serverApi } from './serverApi';
 
 export type EventRegistrationStatus = 'pending' | 'approved' | 'rejected';
 
@@ -21,11 +20,17 @@ export interface EventRegistration {
   paymentMethod: 'cliq' | 'paypal';
   name: string;
   phone: string;
+  email?: string;
   receiptDataUrl: string;
   amountJod: 25;
   status: EventRegistrationStatus;
   paypalOrderId?: string;
   amountUsd?: 30;
+  membershipStatus?: 'Standard' | 'VIP Member';
+  vipAmountUsd?: 49;
+  vipPaypalOrderId?: string;
+  confirmationEmailStatus?: 'not_sent' | 'sent' | 'failed';
+  confirmationEmailError?: string;
   createdAt?: { toDate?: () => Date };
 }
 
@@ -34,45 +39,25 @@ const registrations = collection(db, 'eventRegistrations');
 export async function createCliqRegistration(input: {
   name: string;
   phone: string;
+  email: string;
   receiptDataUrl: string;
-}): Promise<string> {
-  const userId = auth.currentUser?.uid;
-  if (!userId) throw new Error('AUTHENTICATION_REQUIRED');
-  const ref = await addDoc(registrations, {
-    userId,
-    eventId: 'success-workshop-amman-2026',
-    attendance: 'in-person',
-    paymentMethod: 'cliq',
-    name: input.name.trim(),
-    phone: input.phone.trim(),
-    receiptDataUrl: input.receiptDataUrl,
-    amountJod: 25,
-    status: 'pending',
-    createdAt: serverTimestamp(),
-  });
-  return ref.id;
+}): Promise<{ registration: MyEventRegistration }> {
+  return eventRequest({ action: 'register-cliq', ...input });
 }
 
-export async function createOnlineEventRegistration(input: {
+export interface MyEventRegistration {
+  id: string;
   name: string;
   phone: string;
-  paypalOrderId: string;
-}): Promise<string> {
-  const userId = auth.currentUser?.uid;
-  if (!userId) throw new Error('AUTHENTICATION_REQUIRED');
-  const ref = await addDoc(registrations, {
-    userId,
-    eventId: 'success-workshop-amman-2026',
-    attendance: 'online',
-    paymentMethod: 'paypal',
-    name: input.name.trim(),
-    phone: input.phone.trim(),
-    paypalOrderId: input.paypalOrderId,
-    amountUsd: 30,
-    status: 'pending',
-    createdAt: serverTimestamp(),
-  });
-  return ref.id;
+  email: string;
+  attendance: 'in-person' | 'online';
+  status: EventRegistrationStatus;
+  membershipStatus: 'Standard' | 'VIP Member';
+  telegramUrl?: string;
+}
+
+export async function eventRequest<T>(body: Record<string, unknown>): Promise<T> {
+  return readJson<T>(await serverApi('/api/event', { method: 'POST', body: JSON.stringify(body) }));
 }
 
 export async function fetchEventRegistrations(): Promise<EventRegistration[]> {
@@ -83,8 +68,17 @@ export async function fetchEventRegistrations(): Promise<EventRegistration[]> {
 export async function updateEventRegistrationStatus(
   id: string,
   status: EventRegistrationStatus,
-): Promise<void> {
-  await updateDoc(doc(db, 'eventRegistrations', id), { status, reviewedAt: serverTimestamp() });
+): Promise<{ status: EventRegistrationStatus; emailStatus?: 'sent' | 'failed'; emailError?: string }> {
+  return eventRequest({ action: 'review', registrationId: id, status });
+}
+
+export function subscribeEventRegistrations(
+  onChange: (entries: EventRegistration[]) => void,
+  onError: (error: Error) => void,
+) {
+  return onSnapshot(query(registrations, orderBy('createdAt', 'desc')), (snapshot) => {
+    onChange(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() } as EventRegistration)));
+  }, onError);
 }
 
 export async function deleteEventRegistration(id: string): Promise<void> {

@@ -23,7 +23,9 @@
 .evx-vip-list li{padding:10px 14px;border-right:2px solid hsl(var(--sun)/.6);background:hsl(var(--paper)/.06);color:hsl(var(--paper)/.93);font-size:14px;font-weight:700;line-height:1.8}
 .evx-vip-close{margin:18px 0 0;color:hsl(var(--paper)/.85);font-size:14px;font-weight:700;line-height:1.9}
 .evx-vip-action{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-top:24px;padding-top:20px;border-top:1px solid hsl(var(--sun)/.3)}
-.evx-vip-btn{padding:14px 24px;border:0;background:hsl(var(--sun-pale));color:hsl(var(--wine-deep));font-weight:900;opacity:.6;cursor:not-allowed}
+.evx-vip-btn{padding:14px 24px;border:0;background:hsl(var(--sun-pale));color:hsl(var(--wine-deep));font-weight:900;cursor:pointer}
+.evx-vip-btn:disabled{opacity:.6;cursor:not-allowed}
+.evx-vip-btn:focus-visible{outline:3px solid hsl(var(--sun));outline-offset:4px}
 .evx-vip-note{display:block;margin-top:7px;color:hsl(var(--sun-pale)/.85);font-size:12px;font-weight:700}
 .evx-vip-price{color:hsl(var(--sun));font-size:24px;font-weight:900}
 @media(max-width:650px){
