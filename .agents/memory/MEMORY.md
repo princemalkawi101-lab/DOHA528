@@ -7,3 +7,4 @@
 - [Vercel static API functions](vercel-static-api-functions.md) — static artifact output does not execute frontend public files as Serverless Functions; production handlers belong in root api/.
 - [Incremental landing-page copy](event-landing-content.md) — use copy as the user supplies it in batches; don't invent missing sections.
 - [Firebase server runtime](firebase-server-runtime.md) — check SDK Node-engine compatibility and explicitly include Firestore rather than relying on optional installation.
+- [Local browser-test tooling](browser-test-tooling.md) — Firebase rules paths cannot escape the config directory; Replit Chromium needs its Nix-compatible wrapper.

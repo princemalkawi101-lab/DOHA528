@@ -7,14 +7,17 @@
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "test:firestore-rules": "pnpm dlx firebase-tools emulators:exec --only firestore --project demo-power-healing \"node tests/firestore.rules.test.mjs && node tests/event-workflow.test.mjs\"",
     "test:paypal-webhook": "node tests/paypal-webhook.test.mjs",
+    "test:event-registration-browser": "firebase emulators:exec --config firebase.browser-tests.json --project demo-power-healing-browser --only auth,firestore \"playwright test --config tests/browser/playwright.config.mjs\"",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
   "private": true,
   "devDependencies": {
     "@firebase/rules-unit-testing": "5.0.2",
+    "@playwright/test": "1.64.1",
     "@types/node": "catalog:",
     "firebase": "12.15.0",
+    "firebase-tools": "^15.35.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2"
   }
