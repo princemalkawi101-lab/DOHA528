@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { ReplitConnectors } from "@replit/connectors-sdk";
-import { FieldValue } from "firebase-admin/firestore";
-import { eventFirebase } from "./event-firebase";
+import { FieldValue, type Transaction } from "firebase-admin/firestore";
+import { eventFirebase } from "./event-firebase.js";
 
 type EmailEntry = { name?: string; email?: string; attendance?: string };
 const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (s) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[s]!);
@@ -12,7 +12,7 @@ export async function sendEventConfirmation(id: string, entry: EmailEntry) {
   const ref = db.collection("eventRegistrations").doc(id);
   const settings = (await db.doc("siteSettings/config").get()).data()?.event ?? {};
   const provider = settings.confirmationEmailProvider || "gmail";
-  const lock = await db.runTransaction(async (tx) => {
+  const lock = await db.runTransaction(async (tx: Transaction) => {
     const data = (await tx.get(ref)).data()!;
     if (data.confirmationEmailStatus === "sent") return { alreadySent: true, uncertain: false };
     if (data.emailLeaseUntil > Date.now()) return { busy: true, uncertain: false };

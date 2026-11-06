@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { FieldValue, type DocumentData } from "firebase-admin/firestore";
+import { FieldValue, type DocumentData, type QueryDocumentSnapshot, type Transaction } from "firebase-admin/firestore";
 import { z } from "zod";
-import { eventFirebase } from "./event-firebase";
-import { sendEventConfirmation } from "./event-email";
-import { capturePayPalOrder, createPayPalOrder, getPayPalOrder, isPayPalApiError } from "./paypal";
+import { eventFirebase } from "./event-firebase.js";
+import { sendEventConfirmation } from "./event-email.js";
+import { capturePayPalOrder, createPayPalOrder, getPayPalOrder, isPayPalApiError, type PayPalErrorDetail } from "./paypal.js";
 
 export const EVENT_ID = "success-workshop-amman-2026";
 const TELEGRAM_URL = "https://t.me/+dl3H-ZKTnqg2N2Y0";
@@ -51,8 +51,9 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
   if (body.action === "mine") {
     // A single-field query avoids requiring a production composite index.
     const rows = await registrations.where("userId", "==", user.uid).get();
-    const mine = rows.docs.filter((r) => r.data().eventId === EVENT_ID)
-      .sort((a, b) => (b.data().createdAt?.toMillis?.() || 0) - (a.data().createdAt?.toMillis?.() || 0));
+    const mine = rows.docs.filter((r: QueryDocumentSnapshot<DocumentData>) => r.data().eventId === EVENT_ID)
+      .sort((a: QueryDocumentSnapshot<DocumentData>, b: QueryDocumentSnapshot<DocumentData>) =>
+        (b.data().createdAt?.toMillis?.() || 0) - (a.data().createdAt?.toMillis?.() || 0));
     const latest = mine[0];
     return { registration: latest ? publicRegistration(latest.id, latest.data()) : null };
   }
@@ -62,7 +63,7 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
     const event = (await db.doc("siteSettings/config").get()).data()?.event;
     if (!event?.cliqAlias?.trim()) throw new EventError(409, "إعداد حساب CliQ غير مكتمل.");
     const ref = registrations.doc(`${EVENT_ID}_${user.uid}`);
-    await db.runTransaction(async (tx) => {
+    await db.runTransaction(async (tx: Transaction) => {
       const previous = await tx.get(ref);
       if (previous.exists && previous.data()?.status !== "rejected") return;
       if (previous.exists && isVip(previous.data()!)) throw new EventError(409, "يرجى التواصل معنا بخصوص التسجيل الحالي.");
@@ -96,7 +97,7 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
     // Reserve one order per registration/tier before contacting PayPal.
     const session = db.collection("eventCheckoutSessions").doc(`${registrationId}_${tier}`);
     const reservation = randomUUID();
-    const cached = await db.runTransaction(async (tx) => {
+    const cached = await db.runTransaction(async (tx: Transaction) => {
       const snap = await tx.get(session);
       const data = snap.data();
       if (data?.orderId && data.expiresAt > Date.now()) return data.orderId as string;
@@ -115,8 +116,8 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
       });
       await session.set({ reservation, orderId: result.id, userId: user.uid, expiresAt: Date.now() + 2 * 60 * 60 * 1000, busyUntil: 0 });
       return { id: result.id };
-    } catch (error) {
-      await db.runTransaction(async (tx) => {
+    } catch (error: unknown) {
+      await db.runTransaction(async (tx: Transaction) => {
         const current = (await tx.get(session)).data();
         if (current?.reservation === reservation) tx.delete(session);
       });
@@ -134,17 +135,19 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
       if (!data) throw new EventError(409, "يرجى التواصل معنا لاستعادة تسجيلك.");
       return { captureStatus: "COMPLETED", registration: publicRegistration(registrationRef.id, data) };
     }
-    let payment;
+    let payment: Awaited<ReturnType<typeof capturePayPalOrder>>;
     try { payment = await capturePayPalOrder(orderId); }
-    catch (error) {
-      if (!isPayPalApiError(error) || !(error.providerName === "ORDER_ALREADY_CAPTURED" || error.details.some((d) => d.issue === "ORDER_ALREADY_CAPTURED"))) throw error;
+    catch (error: unknown) {
+      if (!isPayPalApiError(error)) throw error;
+      if (!(error.providerName === "ORDER_ALREADY_CAPTURED"
+        || error.details.some((d: PayPalErrorDetail) => d.issue === "ORDER_ALREADY_CAPTURED"))) throw error;
       payment = await getPayPalOrder(orderId);
     }
     if (payment.captureStatus !== "COMPLETED" || payment.paymentStatus !== "COMPLETED" || !payment.captureId || payment.currency !== "USD"
       || payment.amount !== Number(order.amount).toFixed(2) || order.amount !== (order.tier === "vip" ? 49 : 30)) {
       throw new EventError(409, "لم يتم التحقق من مبلغ وحالة الدفع. يرجى التواصل معنا وعدم الدفع مرة أخرى.");
     }
-    await db.runTransaction(async (tx) => {
+    await db.runTransaction(async (tx: Transaction) => {
       const [latestOrder, existing] = await Promise.all([tx.get(ref), tx.get(registrationRef)]);
       if (latestOrder.data()?.status === "captured") return;
       if (order.tier === "vip") {

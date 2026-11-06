@@ -13,4 +13,4 @@ Root serverless handlers and their backend imports must have Node typings availa
 
 **Why:** The API artifact's own type check can pass while Vercel reports missing `process` on the same imported backend source, because the root config previously inherited an empty ambient-types list.
 
-**How to apply:** Preserve root-visible Node typings and check the root serverless entry point as well as the workspace build when changing TypeScript configuration.
+**How to apply:** Preserve root-visible Node typings and check the root serverless entry point as well as the workspace build when changing TypeScript configuration. Include strict NodeNext module resolution: the workspace's bundler resolution accepts extensionless imports that Vercel's ESM compilation can reject. Follow the imported server dependency chain, not only the entry file.
