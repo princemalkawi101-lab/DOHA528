@@ -23,6 +23,7 @@ export interface EventSettings {
   cliqAlias: string;
   cliqInstructions: string;
   confirmationEmailFrom: string;
+  confirmationEmailProvider: 'gmail' | 'resend';
   confirmationTime: string;
   onlineAccessInfo: string;
   inPersonAccessInfo: string;
@@ -37,6 +38,7 @@ export const DEFAULT_EVENT_SETTINGS: EventSettings = {
   cliqAlias: '',
   cliqInstructions: 'يرجى تحويل 25 دينارًا أردنيًا عبر CliQ ثم إرفاق صورة واضحة لإيصال التحويل.',
   confirmationEmailFrom: '',
+  confirmationEmailProvider: 'gmail',
   confirmationTime: 'من 1:00 مساءً إلى 4:00 مساءً بتوقيت الأردن',
   onlineAccessInfo: 'تم تأكيد حضورك أونلاين. ستصلك تفاصيل الدخول قبل موعد الورشة.',
   inPersonAccessInfo: 'الحضور حضوري في الأردن، عمّان. يرجى الاحتفاظ برسالة التأكيد وإبراز الاسم المسجل عند الوصول.',

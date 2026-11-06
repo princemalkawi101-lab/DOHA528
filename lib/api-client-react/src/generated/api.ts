@@ -5,24 +5,117 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  EventActionRequest,
+  EventWorkflow200,
+  HealthStatus,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+/**
+ * @summary Authenticated event registration, payments, and administrator review
+ */
+export const getEventWorkflowUrl = () => {
+  return `/api/event`;
+};
+
+export const eventWorkflow = async (
+  eventActionRequest: EventActionRequest,
+  options?: RequestInit,
+): Promise<EventWorkflow200> => {
+  return customFetch<EventWorkflow200>(getEventWorkflowUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(eventActionRequest),
+  });
+};
+
+export const getEventWorkflowMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof eventWorkflow>>,
+    TError,
+    { data: BodyType<EventActionRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof eventWorkflow>>,
+  TError,
+  { data: BodyType<EventActionRequest> },
+  TContext
+> => {
+  const mutationKey = ["eventWorkflow"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof eventWorkflow>>,
+    { data: BodyType<EventActionRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return eventWorkflow(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type EventWorkflowMutationResult = NonNullable<
+  Awaited<ReturnType<typeof eventWorkflow>>
+>;
+export type EventWorkflowMutationBody = BodyType<EventActionRequest>;
+export type EventWorkflowMutationError = ErrorType<void>;
+
+/**
+ * @summary Authenticated event registration, payments, and administrator review
+ */
+export const useEventWorkflow = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof eventWorkflow>>,
+    TError,
+    { data: BodyType<EventActionRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof eventWorkflow>>,
+  TError,
+  { data: BodyType<EventActionRequest> },
+  TContext
+> => {
+  return useMutation(getEventWorkflowMutationOptions(options));
+};
 
 /**
  * Returns server health status

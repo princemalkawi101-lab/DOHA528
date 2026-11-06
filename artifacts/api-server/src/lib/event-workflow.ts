@@ -140,7 +140,7 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
       if (!isPayPalApiError(error) || !(error.providerName === "ORDER_ALREADY_CAPTURED" || error.details.some((d) => d.issue === "ORDER_ALREADY_CAPTURED"))) throw error;
       payment = await getPayPalOrder(orderId);
     }
-    if (payment.captureStatus !== "COMPLETED" || !payment.captureId || payment.currency !== "USD"
+    if (payment.captureStatus !== "COMPLETED" || payment.paymentStatus !== "COMPLETED" || !payment.captureId || payment.currency !== "USD"
       || payment.amount !== Number(order.amount).toFixed(2) || order.amount !== (order.tier === "vip" ? 49 : 30)) {
       throw new EventError(409, "لم يتم التحقق من مبلغ وحالة الدفع. يرجى التواصل معنا وعدم الدفع مرة أخرى.");
     }
@@ -173,6 +173,9 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
     const data = (await ref.get()).data();
     if (!data || data.eventId !== EVENT_ID) throw new EventError(404, "Registration not found.");
     const status = body.action === "review" ? z.enum(["approved", "rejected"]).parse(body.status) : data.status;
+    if (status === "approved" && data.paymentMethod === "paypal" && !data.paypalCaptureId) {
+      throw new EventError(409, "سجل PayPal قديم غير موثّق من الخادم؛ يرجى مطابقة العملية قبل نقله إلى التسجيل الجديد.");
+    }
     if (body.action === "review") {
       await ref.update({ status, reviewedAt: FieldValue.serverTimestamp(), reviewedBy: user.uid });
     }

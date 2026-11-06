@@ -12,7 +12,7 @@ type Stage = 'offer' | 'standard' | 'vip';
 type Captured = { captureStatus: string; registration: MyEventRegistration };
 
 export default function EventRoute() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [settings, setSettings] = useState<EventSettings>(DEFAULT_EVENT_SETTINGS);
   const [settingsStatus, setSettingsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -31,6 +31,7 @@ export default function EventRoute() {
   const [vipError, setVipError] = useState('');
   const [recoverOrder, setRecoverOrder] = useState('');
   const paymentBusy = useRef(false);
+  const registrationRevision = useRef(0);
   const activeUser = useRef(user?.uid);
   activeUser.current = user?.uid;
   const recoveryKey = user ? `event-payment-recovery:${user.uid}` : '';
@@ -45,6 +46,7 @@ export default function EventRoute() {
 
   useEffect(() => {
     let cancelled = false;
+    registrationRevision.current += 1;
     setRegistration(null); setStage(null); setShowVipPaypal(false);
     setName(''); setPhone(''); setEmail(user?.email || ''); setReceipt(null);
     setSubmitError(''); setPaypalError(''); setVipError(''); setRegistrationError('');
@@ -52,10 +54,12 @@ export default function EventRoute() {
     if (!user) { setRegistrationLoading(false); return; }
     setRegistrationLoading(true);
     const load = async () => {
+      const revision = registrationRevision.current;
       try {
         const result = await eventRequest<{ registration: MyEventRegistration | null }>({ action: 'mine' });
-        if (cancelled) return;
+        if (cancelled || revision !== registrationRevision.current) return;
         setRegistration(result.registration);
+        if (result.registration?.status === 'rejected' && result.registration.membershipStatus !== 'VIP Member') setStage(null);
         if (result.registration) {
           setName(result.registration.name); setPhone(result.registration.phone); setEmail(result.registration.email || user.email || '');
         }
@@ -81,7 +85,14 @@ export default function EventRoute() {
     return false;
   };
   const openRegistration = (entry: MyEventRegistration) => {
+    registrationRevision.current += 1;
     setRegistration(entry);
+    if (entry.status === 'rejected' && entry.membershipStatus !== 'VIP Member') {
+      setStage(null);
+      setSubmitError('تم رفض الطلب السابق. يرجى التواصل معنا أو إعادة إرسال طلب صحيح.');
+      document.getElementById('register')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
     setStage(entry.membershipStatus === 'VIP Member' ? 'vip' : 'offer');
     setShowVipPaypal(false); setVipError('');
   };
@@ -178,7 +189,7 @@ export default function EventRoute() {
       submitted={registration?.attendance === 'in-person' && registration.status !== 'rejected'}
       paypalSlot={paymentButtons('online')} paypalError={paypalError}
       paypalDone={registration?.attendance === 'online' && registration.status !== 'rejected'}
-      registrationLoading={registrationLoading || !!registrationError}
+      registrationLoading={authLoading || registrationLoading || !!registrationError}
       onVipOffer={onVipOffer}
     />
     {(registrationError || recoverOrder || registration) && <aside dir="rtl" className="mx-auto max-w-3xl border border-amber-600/30 bg-[#fff8e7] p-5 text-[#174c3c]" data-testid="event-registration-status">

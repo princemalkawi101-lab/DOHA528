@@ -5,6 +5,50 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type EventActionRequestAction =
+  (typeof EventActionRequestAction)[keyof typeof EventActionRequestAction];
+
+export const EventActionRequestAction = {
+  mine: "mine",
+  "register-cliq": "register-cliq",
+  "create-order": "create-order",
+  "capture-order": "capture-order",
+  review: "review",
+  "retry-email": "retry-email",
+  "email-readiness": "email-readiness",
+} as const;
+
+export type EventActionRequestTier =
+  (typeof EventActionRequestTier)[keyof typeof EventActionRequestTier];
+
+export const EventActionRequestTier = {
+  online: "online",
+  vip: "vip",
+} as const;
+
+export type EventActionRequestStatus =
+  (typeof EventActionRequestStatus)[keyof typeof EventActionRequestStatus];
+
+export const EventActionRequestStatus = {
+  approved: "approved",
+  rejected: "rejected",
+} as const;
+
+export interface EventActionRequest {
+  action: EventActionRequestAction;
+  tier?: EventActionRequestTier;
+  registrationId?: string;
+  orderId?: string;
+  name?: string;
+  phone?: string;
+  email?: string;
+  receiptDataUrl?: string;
+  status?: EventActionRequestStatus;
+  [key: string]: unknown;
+}
+
 export interface HealthStatus {
   status: string;
 }
+
+export type EventWorkflow200 = { [key: string]: unknown };

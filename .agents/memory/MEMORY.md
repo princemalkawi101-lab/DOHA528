@@ -6,3 +6,4 @@
 - [Legacy administrator verification](legacy-admin-verification.md) — do not require Firebase email verification for the legacy admin fallback before provisioning its admin claim.
 - [Vercel static API functions](vercel-static-api-functions.md) — static artifact output does not execute frontend public files as Serverless Functions; production handlers belong in root api/.
 - [Incremental landing-page copy](event-landing-content.md) — use copy as the user supplies it in batches; don't invent missing sections.
+- [Firebase server runtime](firebase-server-runtime.md) — check SDK Node-engine compatibility and explicitly include Firestore rather than relying on optional installation.

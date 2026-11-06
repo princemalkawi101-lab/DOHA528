@@ -20,3 +20,21 @@ Use general Arabic addressing on the event landing page, not female-only wording
 **Why:** The user explicitly requested that the page not address women only.
 
 **How to apply:** Apply this to future event copy, registration prompts, and error messages; keep feminine descriptions of Doha herself unchanged.
+
+The workshop time is 1:00–4:00 PM Jordan time on 21 November 2026.
+
+**Why:** The user explicitly confirmed this to resolve the earlier conflict between a 1–3 PM time range and a three-hour duration.
+
+**How to apply:** Use this time consistently in landing copy, admin defaults, and confirmation emails.
+
+VIP is an additional $49 upgrade after a base booking; a VIP purchase must not approve a pending CliQ receipt.
+
+**Why:** The user requested the VIP offer immediately after receipt submission, while base-ticket confirmation still requires administrator review.
+
+**How to apply:** Preserve separate base-approval and VIP-membership states, and grant VIP access only from server-verified payment.
+
+Event confirmation emails use the connected Gmail account, not Resend by default.
+
+**Why:** The user requested a Gmail sender; Resend cannot verify a gmail.com sending domain.
+
+**How to apply:** Keep Gmail as the event email provider unless the user chooses a verified custom-domain sender. External hosting must have a working email-provider runtime.

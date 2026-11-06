@@ -8,6 +8,31 @@
 import * as zod from "zod";
 
 /**
+ * @summary Authenticated event registration, payments, and administrator review
+ */
+export const EventWorkflowBody = zod.object({
+  action: zod.enum([
+    "mine",
+    "register-cliq",
+    "create-order",
+    "capture-order",
+    "review",
+    "retry-email",
+    "email-readiness",
+  ]),
+  tier: zod.enum(["online", "vip"]).optional(),
+  registrationId: zod.string().optional(),
+  orderId: zod.string().optional(),
+  name: zod.string().optional(),
+  phone: zod.string().optional(),
+  email: zod.string().email().optional(),
+  receiptDataUrl: zod.string().optional(),
+  status: zod.enum(["approved", "rejected"]).optional(),
+});
+
+export const EventWorkflowResponse = zod.record(zod.string(), zod.unknown());
+
+/**
  * Returns server health status
  * @summary Health check
  */

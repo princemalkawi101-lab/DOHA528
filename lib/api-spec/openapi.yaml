@@ -11,6 +11,34 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /event:
+    post:
+      operationId: eventWorkflow
+      summary: Authenticated event registration, payments, and administrator review
+      security:
+        - firebaseBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventActionRequest"
+      responses:
+        "200":
+          description: Action result; private Telegram access is returned only to verified VIP owners
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          description: Invalid input
+        "401":
+          description: Missing or invalid Firebase token
+        "403":
+          description: Administrator access required
+        "409":
+          description: Invalid payment or registration state
   /healthz:
     get:
       operationId: healthCheck
@@ -25,7 +53,39 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 components:
+  securitySchemes:
+    firebaseBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: Firebase ID token
   schemas:
+    EventActionRequest:
+      type: object
+      additionalProperties: true
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [mine, register-cliq, create-order, capture-order, review, retry-email, email-readiness]
+        tier:
+          type: string
+          enum: [online, vip]
+        registrationId:
+          type: string
+        orderId:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        receiptDataUrl:
+          type: string
+        status:
+          type: string
+          enum: [approved, rejected]
     HealthStatus:
       type: object
       properties:

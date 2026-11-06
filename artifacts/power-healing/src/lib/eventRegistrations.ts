@@ -21,15 +21,15 @@ export interface EventRegistration {
   name: string;
   phone: string;
   email?: string;
-  receiptDataUrl: string;
-  amountJod: 25;
+  receiptDataUrl?: string;
+  amountJod?: 25;
   status: EventRegistrationStatus;
   paypalOrderId?: string;
   amountUsd?: 30;
   membershipStatus?: 'Standard' | 'VIP Member';
   vipAmountUsd?: 49;
   vipPaypalOrderId?: string;
-  confirmationEmailStatus?: 'not_sent' | 'sent' | 'failed';
+  confirmationEmailStatus?: 'not_sent' | 'sent' | 'failed' | 'sending' | 'uncertain';
   confirmationEmailError?: string;
   createdAt?: { toDate?: () => Date };
 }
@@ -68,7 +68,7 @@ export async function fetchEventRegistrations(): Promise<EventRegistration[]> {
 export async function updateEventRegistrationStatus(
   id: string,
   status: EventRegistrationStatus,
-): Promise<{ status: EventRegistrationStatus; emailStatus?: 'sent' | 'failed'; emailError?: string }> {
+): Promise<{ status: EventRegistrationStatus; emailStatus?: 'sent' | 'failed' | 'sending' | 'uncertain'; emailError?: string }> {
   return eventRequest({ action: 'review', registrationId: id, status });
 }
 

@@ -410,7 +410,7 @@ export default function Admin() {
     try {
       const result = await updateEventRegistrationStatus(entry.id, status);
       setEventRegistrations((prev) => prev.map((item) => item.id === entry.id ? { ...item, status } : item));
-      setEventFeedback(result.emailStatus === 'failed'
+      setEventFeedback(result.emailStatus && result.emailStatus !== 'sent'
         ? `تم قبول التسجيل، لكن تعذّر إرسال البريد: ${result.emailError}. استخدم زر إعادة إرسال التأكيد بعد تصحيح الإعدادات.`
         : status === 'approved' ? 'تم قبول التسجيل وإرسال بريد التأكيد.' : 'تم رفض التسجيل.');
     } catch (error) {
@@ -996,9 +996,14 @@ export default function Admin() {
           </section>
           <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
             <h2 className="text-white text-lg font-black mb-4">إعدادات بريد تأكيد الفعالية</h2>
-            <p className="text-sm text-amber-200 mb-4">استخدم عنوان إرسال من نطاق موثّق في Resend. قبول التسجيل يبقى محفوظًا إذا تعذّر البريد، ويمكن إعادة الإرسال دون تكرار الحجز.</p>
+            <p className="text-sm text-amber-200 mb-4">Gmail يرسل من الحساب المتصل، وResend يتطلب نطاقًا موثّقًا. قبول التسجيل يبقى محفوظًا إذا تعذّر البريد، ويمكن إعادة الإرسال دون تكرار الحجز.</p>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm text-white">بريد المرسل الموثّق
+              <label className="text-sm text-white">مزود البريد
+                <select className="adm-input" value={eventSettings.confirmationEmailProvider} onChange={(e) => setEventSettings((s) => ({ ...s, confirmationEmailProvider: e.target.value as 'gmail' | 'resend' }))}>
+                  <option value="gmail">Gmail — الحساب المتصل</option><option value="resend">Resend — نطاق موثّق</option>
+                </select>
+              </label>
+              <label className="text-sm text-white">بريد المرسل
                 <input type="email" dir="ltr" className="adm-input" value={eventSettings.confirmationEmailFrom} onChange={(e) => setEventSettings((s) => ({ ...s, confirmationEmailFrom: e.target.value }))} data-testid="input-event-sender" />
               </label>
               <label className="text-sm text-white">الوقت في رسالة التأكيد
@@ -1033,7 +1038,7 @@ export default function Admin() {
                         <p className="text-xs mt-1 text-[rgba(255,255,255,0.55)]">
                           {entry.status === 'pending' ? 'قيد المراجعة' : entry.status === 'approved' ? 'مقبول' : 'مرفوض'}
                         </p>
-                        <p className="text-xs mt-2 text-amber-200">بريد التأكيد: {entry.confirmationEmailStatus === 'sent' ? 'تم الإرسال' : entry.confirmationEmailStatus === 'failed' ? 'تعذّر الإرسال' : 'لم يُرسل'}</p>
+                        <p className="text-xs mt-2 text-amber-200">بريد التأكيد: {entry.confirmationEmailStatus === 'sent' ? 'تم الإرسال' : entry.confirmationEmailStatus === 'failed' ? 'تعذّر الإرسال' : entry.confirmationEmailStatus === 'sending' ? 'جارٍ الإرسال' : entry.confirmationEmailStatus === 'uncertain' ? 'يحتاج التحقق من بريد Gmail المرسل قبل الإعادة' : 'لم يُرسل'}</p>
                         {entry.confirmationEmailError && <p className="mt-1 text-xs text-red-200" role="alert">{entry.confirmationEmailError}</p>}
                       </div>
                       {entry.receiptDataUrl && <a href={entry.receiptDataUrl} target="_blank" rel="noreferrer" className="text-sm text-[hsl(var(--g300))] underline"><img src={entry.receiptDataUrl} alt={`إيصال CliQ — ${entry.name}`} className="mb-2 h-32 w-32 rounded-lg object-contain bg-white" loading="lazy" />عرض إيصال CliQ</a>}

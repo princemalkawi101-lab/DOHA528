@@ -274,6 +274,7 @@ export async function createPayPalOrder(input: {
 
 export async function capturePayPalOrder(orderId: string): Promise<{
   captureStatus: string;
+  paymentStatus: string;
   orderId: string;
   captureId: string;
   amount: string;
@@ -331,6 +332,7 @@ export async function capturePayPalOrder(orderId: string): Promise<{
 
   return {
     captureStatus: typeof body.status === "string" ? body.status : "",
+    paymentStatus: typeof capture?.status === "string" ? capture.status : "",
     orderId,
     captureId: typeof capture?.id === "string" ? capture.id : "",
     amount: typeof captureAmount === "string" ? captureAmount : "",
@@ -340,6 +342,7 @@ export async function capturePayPalOrder(orderId: string): Promise<{
 
 export async function getPayPalOrder(orderId: string): Promise<{
   captureStatus: string;
+  paymentStatus: string;
   orderId: string;
   captureId: string;
   amount: string;
@@ -366,6 +369,7 @@ export async function getPayPalOrder(orderId: string): Promise<{
     ? (capture.amount as Record<string, unknown>).currency_code : "";
   return {
     captureStatus: typeof body.status === "string" ? body.status : "",
+    paymentStatus: typeof capture?.status === "string" ? capture.status : "",
     orderId,
     captureId: typeof capture?.id === "string" ? capture.id : "",
     amount: typeof amount === "string" ? amount : "",

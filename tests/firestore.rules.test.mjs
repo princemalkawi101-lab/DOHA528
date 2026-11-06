@@ -149,7 +149,7 @@ try {
     createdAt: serverTimestamp(),
   };
   await assertFails(setDoc(doc(publicDb, 'eventRegistrations', 'cliq-anonymous'), cliqRegistration));
-  await assertSucceeds(setDoc(doc(regularDb, 'eventRegistrations', 'cliq-valid'), cliqRegistration));
+  await assertFails(setDoc(doc(regularDb, 'eventRegistrations', 'cliq-valid'), cliqRegistration));
   await assertFails(setDoc(doc(regularDb, 'eventRegistrations', 'cliq-forged'), {
     ...cliqRegistration,
     status: 'approved',
@@ -158,7 +158,7 @@ try {
     ...cliqRegistration,
     amountJod: 1,
   }));
-  await assertSucceeds(setDoc(doc(regularDb, 'eventRegistrations', 'paypal-valid'), {
+  await assertFails(setDoc(doc(regularDb, 'eventRegistrations', 'paypal-valid'), {
     userId: 'regular-user',
     eventId: 'success-workshop-amman-2026',
     attendance: 'online',
@@ -195,6 +195,15 @@ try {
   }));
   await assertFails(getDoc(doc(publicDb, 'eventRegistrations', 'cliq-valid')));
   await assertSucceeds(getDoc(doc(adminDb, 'eventRegistrations', 'cliq-valid')));
+  await assertFails(setDoc(doc(regularDb, 'eventRegistrations', 'vip-forged'), {
+    ...cliqRegistration, membershipStatus: 'VIP Member', vipAmountUsd: 49,
+  }));
+  await assertFails(setDoc(doc(adminDb, 'eventRegistrations', 'vip-forged-admin-client'), {
+    ...cliqRegistration, membershipStatus: 'VIP Member',
+  }));
+  await assertFails(setDoc(doc(regularDb, 'eventPaymentOrders', 'PAYPAL-FORGED'), { status: 'captured', amount: 49 }));
+  await assertFails(getDoc(doc(adminDb, 'eventPaymentOrders', 'PAYPAL-FORGED')));
+  await assertFails(setDoc(doc(regularDb, 'eventCheckoutSessions', 'fake'), { orderId: 'FAKE' }));
 
   console.log('Firestore rules tests passed');
 } finally {
