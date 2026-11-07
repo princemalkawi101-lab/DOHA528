@@ -1,6 +1,7 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { parseEventCredentials } from "./event-credentials.js";
 
 export function eventFirebase() {
   let app = getApps().find((entry) => entry.name === "event-workflow");
@@ -12,13 +13,16 @@ export function eventFirebase() {
     }
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
     if (!raw) throw new Error("Firebase server credentials are not configured.");
-    let credentials;
-    try { credentials = JSON.parse(raw); } catch { throw new Error("Firebase server credentials must be valid JSON."); }
+    const credentials = parseEventCredentials(raw);
     const projectId = process.env.VITE_FIREBASE_PROJECT_ID;
     if (projectId && credentials.project_id !== projectId) {
       throw new Error("Firebase server credentials belong to a different project.");
     }
-    app = initializeApp({ credential: cert(credentials) }, "event-workflow");
+    app = initializeApp({ credential: cert({
+      projectId: credentials.project_id,
+      clientEmail: credentials.client_email,
+      privateKey: credentials.private_key,
+    }) }, "event-workflow");
   }
   return { db: getFirestore(app), auth: getAuth(app) };
 }

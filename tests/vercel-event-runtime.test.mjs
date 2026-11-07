@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 // Exercise the actual emitted adapters across the CommonJS -> ESM package
 // boundary, with require(ESM) disabled to reproduce the deployed Node runtime.
@@ -18,6 +19,24 @@ await writeFile(path.join(output, 'package.json'), '{"type":"commonjs"}');
 const backend = path.join(output, 'artifacts/api-server');
 await writeFile(path.join(backend, 'package.json'), '{"type":"module"}');
 await symlink(path.join(root, 'artifacts/api-server/node_modules'), path.join(backend, 'node_modules'), 'dir');
+
+const { parseEventCredentials } = await import(pathToFileURL(path.join(backend, 'src/lib/event-credentials.js')));
+const fixture = {
+  type: 'service_account', project_id: 'demo-parser-test',
+  client_email: 'fixture@example.invalid',
+  private_key: 'NOT-A-REAL-KEY\nparser fixture only\n',
+};
+const json = JSON.stringify(fixture, null, 2);
+for (const formatted of [json, `\uFEFF  ${json}\n`, JSON.stringify(json), JSON.stringify(`\uFEFF${json}`)]) {
+  assert.deepEqual(parseEventCredentials(formatted), fixture, 'Preserve key bytes across supported formatting');
+}
+for (const invalid of ['{broken PRIVATE_TEST_VALUE', '{"private_key":"literal\nnewline"}']) {
+  assert.throws(() => parseEventCredentials(invalid), { message: 'Firebase server credentials must be valid JSON.' });
+}
+for (const invalid of ['null', '[]', '{}', 'true', '{"apiKey":"not-a-service-account"}', JSON.stringify(JSON.stringify(json))]) {
+  assert.throws(() => parseEventCredentials(invalid), { message: 'Firebase server credentials must be a service account object.' });
+}
+console.log('PASS: service account parser accepts BOM/whitespace and JSON-string wrapping without altering key content; rejects malformed JSON and wrong file types safely.');
 
 for (const entry of ['event', 'event-webhook']) {
   const emitted = await readFile(path.join(output, `api/${entry}.js`), 'utf8');

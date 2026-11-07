@@ -8,6 +8,7 @@ export function eventFailure(error: unknown, endpoint: "event" | "event-webhook"
   const configCodes: Record<string, string> = {
     "Firebase server credentials are not configured.": "FIREBASE_CREDENTIALS_MISSING",
     "Firebase server credentials must be valid JSON.": "FIREBASE_CREDENTIALS_JSON",
+    "Firebase server credentials must be a service account object.": "FIREBASE_CREDENTIALS_FORMAT",
     "Firebase server credentials belong to a different project.": "FIREBASE_PROJECT_MISMATCH",
     "Firestore emulator is forbidden in production.": "FIREBASE_EMULATOR_FORBIDDEN",
   };
