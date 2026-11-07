@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { assertFails } from '@firebase/rules-unit-testing';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { environment, identity, password, patch, registrations, rules, seed } from './fixtures.mjs';
@@ -33,6 +33,71 @@ test.afterEach(async () => {
   await env.clearFirestore();
   await env.cleanup();
 });
+
+for (const attendance of ['in-person', 'online']) {
+  test(`additional booking preserves and restores existing ${attendance} booking`, async ({ page }) => {
+    await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'siteSettings/config'), {
+      event: { enabled: true, cliqAlias: 'SYNTHETIC', cliqAccountName: 'Synthetic test' },
+    }));
+    const oldToken = 'a'.repeat(64);
+    await page.addInitScript(token => {
+      if (!localStorage.getItem('power-healing-event-guest')) localStorage.setItem('power-healing-event-guest', token);
+    }, oldToken);
+    const oldBooking = {
+      id: 'synthetic-existing', name: 'حجز سابق', phone: '0790000000', email: 'old@example.test',
+      attendance, status: attendance === 'online' ? 'approved' : 'pending', membershipStatus: 'Standard',
+    };
+    const bookings = new Map([[`Guest ${oldToken}`, oldBooking]]);
+    const writes = [];
+    await page.route('**/api/event', async route => {
+      const body = route.request().postDataJSON();
+      const authorization = route.request().headers().authorization;
+      if (body.action === 'mine') return route.fulfill({ json: { registration: bookings.get(authorization) || null } });
+      if (body.action === 'register-cliq') {
+        writes.push(authorization);
+        const next = { ...oldBooking, ...body, id: 'synthetic-new', attendance: 'in-person', status: 'pending' };
+        bookings.set(authorization, next);
+        return route.fulfill({ json: { registration: next } });
+      }
+      throw new Error(`Unexpected payment operation ${body.action}`);
+    });
+    await page.goto('/event');
+    await expect(page.getByTestId('button-new-event-booking')).toBeVisible();
+    // Switching attendance alone must never charge the existing guest again.
+    await page.getByTestId('tab-online').click();
+    await expect(page.locator('#ev-name-online')).toHaveCount(0);
+    await page.getByTestId('tab-in-person').click();
+    await expect(page.getByTestId('input-name')).toHaveCount(0);
+    page.once('dialog', dialog => dialog.accept());
+    await page.getByTestId('button-new-event-booking').click();
+    await expect(page.getByTestId('input-name')).toHaveValue('');
+    const newToken = await page.evaluate(() => localStorage.getItem('power-healing-event-guest'));
+    expect(newToken).not.toBe(oldToken);
+    // Both payment forms are available for the new booking.
+    await page.getByTestId('tab-online').click();
+    await expect(page.locator('#ev-name-online')).toHaveValue('');
+    await page.reload();
+    await expect(page.getByTestId('input-name')).toHaveValue('');
+    await page.getByTestId('input-name').fill('حجز جديد');
+    await page.getByTestId('input-phone').fill('0790000001');
+    await page.locator('#ev-email').fill('new@example.test');
+    await page.locator('input[type=file]').setInputFiles({
+      name: 'synthetic.png', mimeType: 'image/png',
+      buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64'),
+    });
+    await page.getByTestId('button-submit').click();
+    await expect(page.getByTestId('modal-post-registration')).toBeVisible();
+    await page.getByTestId('button-close-post').click();
+    await page.reload();
+    await expect(page.getByTestId('status-submitted')).toContainText('حجز جديد');
+    await page.getByTestId('select-previous-booking').selectOption(oldToken);
+    await expect(page.getByTestId(attendance === 'online' ? 'status-paypal-done' : 'status-submitted')).toContainText('حجز سابق');
+    await page.reload();
+    await expect(page.getByTestId(attendance === 'online' ? 'status-paypal-done' : 'status-submitted')).toContainText('حجز سابق');
+    expect(writes).toEqual([`Guest ${newToken}`]);
+    expect(bookings.get(`Guest ${oldToken}`)).toEqual(oldBooking);
+  });
+}
 
 async function login(page, user) {
   await page.goto('/login');

@@ -21,6 +21,8 @@ export interface EventPageProps {
   email: string;
   onEmailChange: (v: string) => void;
   onVipOffer?: () => void;
+  bookingControls?: ReactNode;
+  existingBooking?: ReactNode;
   registrationLoading?: boolean;
   registrationError?: string;
   onRetryRegistration?: () => void;
@@ -307,7 +309,8 @@ export default function Event(p: EventPageProps) {
                   <div><span className="ev-eyebrow">{mode === 'in-person' ? 'حضور في عمّان' : 'حضور أونلاين'}</span><h3>أكمل بيانات التسجيل</h3></div>
                   <span className="ev-panel-price">{mode === 'in-person' ? '25 دينار' : '30 دولار'}</span>
                 </div>
-                {mode === 'in-person' ? (
+                {p.bookingControls}
+                {p.existingBooking || (mode === 'in-person' ? (
                   p.submitted ? (
                     <div className="ev-success" data-testid="status-submitted">
                       <span className="ev-success-icon"><CheckCircle2 aria-hidden="true" /></span>
@@ -388,7 +391,7 @@ export default function Event(p: EventPageProps) {
                     {!p.paypalSlot && !p.onPayPal && <p className="ev-paypal-unavailable" data-testid="status-paypal-unavailable">الدفع الإلكتروني غير متاح حاليًا.</p>}
                     {p.paypalError && <p role="alert" className="ev-error" data-testid="text-paypal-error"><AlertCircle aria-hidden="true" />{p.paypalError}</p>}
                   </div>
-                )}
+                ))}
               </div>
             </div>
           )}

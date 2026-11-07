@@ -5,6 +5,7 @@ import { DEFAULT_EVENT_SETTINGS, subscribeSiteSettings, type EventSettings } fro
 import { compressReceiptToDataUrl, createCliqRegistration, guestEventRequest as eventRequest, type MyEventRegistration } from '@/lib/eventRegistrations';
 import EventPage from './Event';
 import EventPostRegistration from './EventPostRegistration';
+import { guestAuthorization, savedBookingSessions, selectBookingSession } from '@/lib/eventGuest';
 
 const CLIENT_ID = (import.meta.env.VITE_PAYPAL_CLIENT_ID as string | undefined)?.trim() || '';
 type Stage = 'offer' | 'standard' | 'vip';
@@ -29,6 +30,8 @@ export default function EventRoute() {
   const [showVipPaypal, setShowVipPaypal] = useState(false);
   const [vipError, setVipError] = useState('');
   const [recoverOrder, setRecoverOrder] = useState('');
+  const [bookingSession, setBookingSession] = useState(0);
+  const [previousSessions, setPreviousSessions] = useState<string[]>([]);
   const paymentBusy = useRef(false);
   const paymentFailure = useRef({ online: '', vip: '' });
   const registrationRevision = useRef(0);
@@ -58,6 +61,10 @@ export default function EventRoute() {
     setName(''); setPhone(''); setEmail(''); setReceipt(null);
     setSubmitError(''); setPaypalError(''); setVipError(''); setRegistrationError('');
     try { setRecoverOrder(localStorage.getItem(recoveryKey) || ''); } catch { /* guest session reports blocked storage */ }
+    try {
+      const current = guestAuthorization().slice(6);
+      setPreviousSessions(savedBookingSessions().filter(token => token !== current));
+    } catch { setPreviousSessions([]); }
     retryRegistration.current = () => {};
     setRegistrationLoading(true);
     const load = async (background = false) => {
@@ -88,7 +95,23 @@ export default function EventRoute() {
     retryRegistration.current = refresh;
     window.addEventListener('focus', refresh);
     return () => { cancelled = true; controller.abort(); window.removeEventListener('focus', refresh); };
-  }, []);
+  }, [bookingSession]);
+
+  const switchBooking = (token?: string) => {
+    if (busy || paymentBusy.current || registrationLoading) return;
+    if (recoverOrder) {
+      setSubmitError('يرجى استعادة نتيجة الدفع السابق أولاً قبل بدء حجز آخر، لتجنب تكرار الدفع.');
+      return;
+    }
+    if (!token && !window.confirm('سيبدأ حجز جديد بمبلغ منفصل. حجزك السابق محفوظ ويمكن الرجوع إليه من هذه الصفحة. هل تريد المتابعة؟')) return;
+    try {
+      selectBookingSession(token);
+      registrationRevision.current += 1;
+      setRegistration(null); setStage(null); setShowVipPaypal(false);
+      setRegistrationLoading(true);
+      setBookingSession(value => value + 1);
+    } catch { setSubmitError('تعذّر تغيير الحجز. يرجى السماح بتخزين بيانات الموقع في المتصفح.'); }
+  };
 
   const paypalOptions = useMemo<ReactPayPalScriptOptions | null>(() => CLIENT_ID ? ({
     clientId: CLIENT_ID, currency: 'USD', intent: 'capture', components: 'buttons',
@@ -208,6 +231,22 @@ export default function EventRoute() {
       registrationError={registrationError}
       onRetryRegistration={() => retryRegistration.current()}
       onVipOffer={onVipOffer}
+      bookingControls={previousSessions.length > 0 && <label className="ev-field mb-5">
+        <span>الرجوع إلى حجز سابق من هذا المتصفح</span>
+        <select className="ev-in" value="" disabled={busy || !!recoverOrder || registrationLoading} onChange={event => { if (event.target.value) switchBooking(event.target.value); }} data-testid="select-previous-booking">
+          <option value="">اختر الحجز السابق</option>
+          {previousSessions.map((token, index) => <option key={token} value={token}>الحجز المحفوظ {index + 1}</option>)}
+        </select>
+      </label>}
+      existingBooking={registration && registration.status !== 'rejected' ? <div className="ev-success" data-testid={registration.attendance === 'in-person' ? 'status-submitted' : 'status-paypal-done'}>
+        <p className="ev-success-title">{registration.status === 'pending' ? 'وصل طلبك' : 'تم تأكيد حجزك'}</p>
+        <p>{registration.attendance === 'in-person' ? 'حجز حضوري في عمّان' : 'حجز أونلاين'} · {registration.name}</p>
+        <p>{registration.status === 'pending' ? 'طلب CliQ قيد مراجعة الإيصال؛ لا تحوّل المبلغ مرة أخرى لهذا الحجز.' : 'هذا الحجز محفوظ؛ لا تحتاج إلى الدفع عليه مرة أخرى.'}</p>
+        <button type="button" className="ev-submit mt-5" onClick={() => openRegistration(registration)} data-testid="button-view-current-booking">عرض الحجز وخيارات VIP</button>
+        <button type="button" className="ev-submit mt-3" disabled={busy || !!recoverOrder} onClick={() => switchBooking()} data-testid="button-new-event-booking">حجز مقعد إضافي / لشخص آخر</button>
+        {recoverOrder && <p>استعد تأكيد الدفع السابق أدناه قبل بدء حجز جديد.</p>}
+        {submitError && <p role="alert">{submitError}</p>}
+      </div> : undefined}
     />
     {(registrationError || recoverOrder || registration) && <aside dir="rtl" className="mx-auto max-w-3xl border border-amber-600/30 bg-[#fff8e7] p-5 text-[#174c3c]" data-testid="event-registration-status">
       {registration && <><p>{registration.membershipStatus === 'VIP Member' ? 'VIP Member' : 'التذكرة العادية'} · {registration.status === 'pending' ? 'قيد المراجعة' : registration.status === 'approved' ? 'تم تأكيد التسجيل' : 'تم رفض الطلب؛ يرجى التواصل معنا.'}</p>
