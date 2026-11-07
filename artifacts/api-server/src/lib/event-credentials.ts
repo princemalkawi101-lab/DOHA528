@@ -19,15 +19,59 @@ function invalidJson(error: unknown): Error {
   });
 }
 
+function escapePrivateKeyLineBreaks(text: string): string {
+  // Find the top-level private_key string lexically, not with a global newline
+  // replacement (which could corrupt JSON layout or other credential fields).
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "{" || text[i] === "[") depth++;
+    else if (text[i] === "}" || text[i] === "]") depth--;
+    else if (text[i] === '"') {
+      const start = i++;
+      while (i < text.length && text[i] !== '"') {
+        if (text[i] === "\\") i++;
+        i++;
+      }
+      if (depth !== 1 || text.slice(start, i + 1) !== '"private_key"') continue;
+      let valueStart = i + 1;
+      while (/\s/.test(text[valueStart] ?? "") && valueStart < text.length) valueStart++;
+      if (text[valueStart++] !== ":") continue;
+      while (/\s/.test(text[valueStart] ?? "") && valueStart < text.length) valueStart++;
+      if (text[valueStart] !== '"') continue;
+      const contentStart = ++valueStart;
+      while (valueStart < text.length && text[valueStart] !== '"') {
+        if (text[valueStart] === "\\") valueStart++;
+        valueStart++;
+      }
+      if (valueStart === text.length) return text;
+      const content = text.slice(contentStart, valueStart);
+      return text.slice(0, contentStart) + content.replace(/\r/g, "\\r").replace(/\n/g, "\\n") + text.slice(valueStart);
+    }
+  }
+  return text;
+}
+
+function parseCredentialJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    if (!(error instanceof SyntaxError) || !error.message.includes("control character")) throw error;
+    const normalized = escapePrivateKeyLineBreaks(text);
+    if (normalized === text) throw error;
+    // Strict parsing and service-account validation still run afterward.
+    return JSON.parse(normalized);
+  }
+}
+
 // Do not log the input or propagate JSON.parse's error: its message can include
 // part of the private key. Accept only lossless formatting normalization.
 export function parseEventCredentials(raw: string): ServiceAccountJson {
   let value: unknown;
   try {
-    value = JSON.parse(raw.trim());
+    value = parseCredentialJson(raw.trim());
     // Some environment-variable editors store JSON as a JSON-encoded string.
     // Decode at most once; never guess missing punctuation or key contents.
-    if (typeof value === "string") value = JSON.parse(value.trim());
+    if (typeof value === "string") value = parseCredentialJson(value.trim());
   } catch (error) {
     throw invalidJson(error);
   }

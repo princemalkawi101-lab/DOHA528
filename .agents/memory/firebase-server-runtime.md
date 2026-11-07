@@ -13,4 +13,4 @@ Credential parsing may normalize only lossless formatting, never reconstruct pri
 
 **Why:** Production reported invalid JSON even though the user said they copied the original Firebase file. Formatting variants are plausible, but the secret must not be inspected or guessed to diagnose them.
 
-**How to apply:** Test parsing with synthetic fixtures, preserve private-key bytes, distinguish malformed JSON from the wrong Firebase file type, and confirm production separately; support for formatting variants does not prove which variant the user supplied.
+**How to apply:** Test parsing with synthetic fixtures, preserve private-key bytes, distinguish malformed JSON from the wrong Firebase file type, and confirm production separately; support for formatting variants does not prove which variant the user supplied. Production later specifically reported unescaped control characters. Literal CR/LF may be escaped only inside the top-level private_key string, then strictly parsed and validated; never globally replace newlines or repair unrelated fields.

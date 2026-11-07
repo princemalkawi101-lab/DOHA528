@@ -30,11 +30,11 @@ const json = JSON.stringify(fixture, null, 2);
 for (const formatted of [json, `\uFEFF  ${json}\n`, JSON.stringify(json), JSON.stringify(`\uFEFF${json}`)]) {
   assert.deepEqual(parseEventCredentials(formatted), fixture, 'Preserve key bytes across supported formatting');
 }
-for (const invalid of ['{broken PRIVATE_TEST_VALUE', '{"private_key":"literal\nnewline"}']) {
+for (const invalid of ['{broken PRIVATE_TEST_VALUE', '{"client_email":"literal\nnewline"}']) {
   assert.throws(() => parseEventCredentials(invalid), { message: 'Firebase server credentials must be valid JSON.' });
 }
 const invalidFixtures = [
-  ['{"private_key":"literal\nnewline"}', 'CONTROL_CHARACTER'],
+  ['{"client_email":"literal\nnewline"}', 'CONTROL_CHARACTER'],
   ['{"private_key":"bad\\qescape"}', 'ESCAPE'],
   ['{"private_key":', 'INCOMPLETE'],
   ['{} trailing', 'TRAILING_DATA'],
@@ -47,6 +47,22 @@ for (const [input, reason] of invalidFixtures) {
     assert.doesNotMatch(error.message, /PRIVATE_TEST_VALUE|private_key|literal|newline/);
     return true;
   });
+}
+for (const ending of ['\n', '\r\n', '\r']) {
+  const expected = { ...fixture, private_key: ['NOT-A-REAL-KEY', 'line with "quotes" and \\backslash', ''].join(ending) };
+  const valid = JSON.stringify(expected, null, 2);
+  const multiline = valid.replace(/\\r/g, '\r').replace(/\\n/g, '\n');
+  for (const input of [valid, multiline, JSON.stringify(multiline)]) {
+    assert.deepEqual(parseEventCredentials(input), expected, 'Literal PEM line breaks preserve every key character');
+  }
+}
+// Do not repair unrelated fields, literal tabs, or unfinished documents.
+for (const input of [
+  json.replace('fixture@example.invalid', 'fixture\n@example.invalid'),
+  json.replace('parser fixture only', 'parser\tfixture only').replace(/\\n/g, '\n'),
+  json.replace(/\\n/g, '\n').slice(0, -1),
+]) {
+  assert.throws(() => parseEventCredentials(input), { message: 'Firebase server credentials must be valid JSON.' });
 }
 for (const invalid of ['null', '[]', '{}', 'true', '{"apiKey":"not-a-service-account"}', JSON.stringify(JSON.stringify(json))]) {
   assert.throws(() => parseEventCredentials(invalid), { message: 'Firebase server credentials must be a service account object.' });
