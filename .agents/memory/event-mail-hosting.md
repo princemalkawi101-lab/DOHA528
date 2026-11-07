@@ -20,3 +20,9 @@ Keep ordinary online workshop access and VIP Telegram access separate.
 **Why:** The user supplied different Telegram invitations for the online ticket and the VIP upgrade. Paying for the ordinary online ticket must not grant VIP access.
 
 **How to apply:** Unlock the online invitation only after a verified online base-ticket payment, and unlock the separate VIP invitation only after a verified VIP upgrade. An online attendee who upgrades retains access to both. Keep invitation values out of memory and public configuration.
+
+Scope mail idempotency to the booking generation, not just its document ID.
+
+**Why:** Deleting and recreating a guest booking can reuse its document ID while Resend still remembers emails for the former booking. Provider history confirmed delivery for a reused reference before the replacement booking existed.
+
+**How to apply:** Persist a stable delivery key per notification and booking creation timestamp; keep that key for retries. Preserve legacy delivery keys for uncertain old sends rather than issuing a new key that might duplicate them.

@@ -42,6 +42,16 @@ assert.equal(requests[0].body.attachments[0].filename, 'cliq-receipt.jpg');
 assert.equal(Buffer.from(requests[0].body.attachments[0].content, 'base64').toString(), 'synthetic-image');
 globalThis.fetch = async () => Response.json({ message: 'secret provider detail' }, { status: 403 });
 await assert.rejects(deliverEventMail(mail, {}, false), e => !e.uncertain && !e.message.includes('secret'));
+for (const [status, name, expected, uncertain] of [
+  [401, 'validation_error', 'مفتاح Resend غير صالح', false],
+  [409, 'invalid_idempotent_request', 'تعارض مع رسالة سابقة', true],
+  [429, 'daily_quota_exceeded', 'اليومي', false],
+  [429, 'monthly_quota_exceeded', 'الشهري', false],
+  [503, 'application_error', 'تعطّل مؤقت', true],
+]) {
+  globalThis.fetch = async () => Response.json({ name, message: 'secret provider detail' }, { status });
+  await assert.rejects(deliverEventMail(mail, {}, false), e => e.uncertain === uncertain && e.message.includes(expected) && !e.message.includes('secret'));
+}
 globalThis.fetch = async () => { throw new Error('secret network detail'); };
 await assert.rejects(deliverEventMail(mail, {}, false), e => e.uncertain && !e.message.includes('secret'));
 await assert.rejects(deliverEventMail(mail, {}, true), e => e.uncertain);

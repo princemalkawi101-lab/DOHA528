@@ -363,6 +363,26 @@ for (const url of [
   assert.equal(sharedSettings.url, url.replace(/[\u200E\u200F]/g, '').trim());
   assert.equal((await eventAction(admin, { action: 'get-private-email-settings' })).whatsapp.url, sharedSettings.url);
 }
+// Deleting/recreating a guest booking reuses the document ID, but it must not
+// collide with the previous booking's provider idempotency key.
+const repeatedUser = { uid: `repeat-mail-${run}`, email: attendee.email };
+recoveryUsers.push(repeatedUser);
+const beforeRepeated = globalThis.__eventTestEmail.attempts;
+const firstBooking = await eventAction(repeatedUser, { action: 'register-cliq', ...attendee, receiptDataUrl });
+await eventAction(admin, { action: 'review', registrationId: firstBooking.registration.id, status: 'approved' });
+const repeatedRef = db.doc(`eventRegistrations/${firstBooking.registration.id}`);
+const firstMailKeys = (await repeatedRef.get()).data();
+await repeatedRef.delete();
+const secondBooking = await eventAction(repeatedUser, { action: 'register-cliq', ...attendee, name: 'New attendee', receiptDataUrl });
+await eventAction(admin, { action: 'review', registrationId: secondBooking.registration.id, status: 'approved' });
+const secondMailKeys = (await repeatedRef.get()).data();
+assert.equal(firstBooking.registration.id, secondBooking.registration.id);
+assert.notEqual(firstMailKeys.confirmationEmailKey, secondMailKeys.confirmationEmailKey);
+assert.notEqual(firstMailKeys.adminNotificationEmailKey, secondMailKeys.adminNotificationEmailKey);
+assert.equal(globalThis.__eventTestEmail.attempts - beforeRepeated, 4, 'Both booking generations deliver their own organizer and attendee messages');
+await eventAction(admin, { action: 'retry-email', registrationId: secondBooking.registration.id });
+await eventAction(admin, { action: 'retry-admin-email', registrationId: secondBooking.registration.id });
+assert.equal(globalThis.__eventTestEmail.attempts - beforeRepeated, 4, 'Retries never duplicate an already sent message');
 await db.doc(privatePath).delete();
 for (const collection of ['eventRegistrations', 'eventPaymentOrders', 'eventCheckoutSessions']) {
   for (const u of [user, onlineUser, ...recoveryUsers]) {

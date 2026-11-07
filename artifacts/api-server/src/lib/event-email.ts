@@ -3,13 +3,14 @@ import { eventFirebase } from "./event-firebase.js";
 import { deliverEventMail, EventMailError, type EventMail, type EventAttachment } from "./event-mail-transport.js";
 import { readPrivateWhatsAppSettings } from "./event-private-email-settings.js";
 import { ONLINE_TELEGRAM_URL, hasConfirmedOnlineAccess } from "./event-access.js";
+import { createHash } from "node:crypto";
 
 type Kind = "confirmation" | "admin-booking" | "admin-vip";
 const ADMIN_EMAIL = "Dohamlk74@gmail.com";
 const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (s) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[s]!);
 const prefixFor = (kind: Kind) => kind === "confirmation" ? "confirmationEmail" : kind === "admin-vip" ? "adminVipEmail" : "adminNotificationEmail";
 
-function buildMail(id: string, data: DocumentData, settings: DocumentData, kind: Kind, whatsapp?: Awaited<ReturnType<typeof readPrivateWhatsAppSettings>>): EventMail {
+function buildMail(id: string, data: DocumentData, settings: DocumentData, kind: Kind, whatsapp?: Awaited<ReturnType<typeof readPrivateWhatsAppSettings>>, deliveryKey?: string): EventMail {
   const time = String(settings.confirmationTime || "من 1:00 مساءً إلى 4:00 مساءً بتوقيت الأردن");
   let text: string;
   let subject: string;
@@ -41,7 +42,7 @@ function buildMail(id: string, data: DocumentData, settings: DocumentData, kind:
     }
   }
   return {
-    key: `event-${kind}-${id}`, to: kind === "confirmation" ? String(data.email || "") : ADMIN_EMAIL,
+    key: deliveryKey || `event-${kind}-${id}`, to: kind === "confirmation" ? String(data.email || "") : ADMIN_EMAIL,
     subject, text: text + invitationText, attachments,
     html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:2;color:#174c3c">${escapeHtml(text).replace(/\n/g, "<br>")}${invitationHtml}</div>`,
   };
@@ -60,8 +61,17 @@ async function sendNotification(id: string, kind: Kind) {
     if (data[`${prefix}Status`] === "sent") return { alreadySent: true };
     if (data[leaseField] > Date.now()) return { busy: true };
     const uncertain = data[`${prefix}Status`] === "uncertain" || data[`${prefix}Status`] === "sending";
-    tx.update(ref, { [leaseField]: Date.now() + 60000, [`${prefix}Status`]: "sending" });
-    return { data, uncertain };
+    // Registration document IDs can be reused after admin deletion/rebooking.
+    // Provider idempotency must distinguish those new booking generations,
+    // while retries of the same generation always keep the exact same key.
+    const createdAt = data.createdAt;
+    const generation = Number.isFinite(createdAt?.seconds) && Number.isFinite(createdAt?.nanoseconds)
+      ? `${createdAt.seconds}:${createdAt.nanoseconds}` : null;
+    const deliveryKey = data[`${prefix}Key`] || (uncertain || !generation
+      ? `event-${kind}-${id}`
+      : `event-${kind}-${createHash("sha256").update(`${id}:${generation}`).digest("hex")}`);
+    tx.update(ref, { [leaseField]: Date.now() + 60000, [`${prefix}Status`]: "sending", [`${prefix}Key`]: deliveryKey });
+    return { data, uncertain, deliveryKey };
   });
   if (lock.skipped) return { emailStatus: "not_sent", emailError: "" };
   if (lock.alreadySent) return { emailStatus: "sent", emailError: "" };
@@ -69,7 +79,7 @@ async function sendNotification(id: string, kind: Kind) {
   let accepted = false;
   try {
     const whatsapp = kind === "confirmation" && lock.data!.attendance === "in-person" ? await readPrivateWhatsAppSettings() : undefined;
-    const mail = buildMail(id, lock.data!, settings, kind, whatsapp);
+    const mail = buildMail(id, lock.data!, settings, kind, whatsapp, lock.deliveryKey);
     const emailId = await deliverEventMail(mail, settings, !!lock.uncertain);
     accepted = true;
     await ref.update({

@@ -12,7 +12,23 @@ export type MailSettings = { confirmationEmailProvider?: string; confirmationEma
 export class EventMailError extends Error {
   constructor(message: string, public uncertain = false) { super(message); }
 }
-type EmailResponse = { ok: boolean; json(): Promise<unknown> };
+type EmailResponse = { ok: boolean; status?: number; json(): Promise<unknown> };
+
+function resendRejection(status: number | undefined, name: unknown, message: unknown): EventMailError {
+  // Classify provider diagnostics without persisting raw payloads, addresses,
+  // credentials, or SDK errors in Firestore or the browser.
+  const code = typeof name === "string" ? name : "";
+  const detail = typeof message === "string" ? message.toLowerCase() : "";
+  if (status === 409 || code === "invalid_idempotent_request") return new EventMailError("تعارض مع رسالة سابقة لدى Resend. لا تكرر الإرسال قبل التحقق من الرسالة السابقة.", true);
+  if (status === 401) return new EventMailError("مفتاح Resend غير صالح أو ملغى. حدّث RESEND_API_KEY في بيئة التشغيل ثم أعد النشر.");
+  if (code === "daily_quota_exceeded" || (status === 429 && detail.includes("daily"))) return new EventMailError("وصل حساب Resend إلى حد الإرسال اليومي. أعد المحاولة بعد تجدد الحد.");
+  if (code === "monthly_quota_exceeded" || (status === 429 && detail.includes("monthly"))) return new EventMailError("وصل حساب Resend إلى حد الإرسال الشهري. راجع حدود الحساب.");
+  if (status === 429) return new EventMailError("Resend يحدّ الإرسال مؤقتًا. انتظر قليلًا ثم أعد المحاولة.");
+  if (status === 403 && (detail.includes("domain") || detail.includes("testing"))) return new EventMailError("Resend لا يسمح بنطاق المرسل لهذا المفتاح. تأكد أن RESEND_FROM_EMAIL من الدومين الموثّق وأن المفتاح يملك صلاحية الإرسال منه.");
+  if (status === 403) return new EventMailError("مفتاح Resend لا يملك صلاحية الإرسال المطلوبة. تحقق من صلاحياته في حساب Resend.");
+  if (status && status >= 500) return new EventMailError("تعطّل مؤقت لدى Resend؛ تحقق من سجل الرسائل قبل إعادة الإرسال.", true);
+  return new EventMailError(`رفض Resend بيانات الرسالة${status ? ` (${status})` : ""}. راجع عنوان المرسل والمستلم والمرفقات.`);
+}
 
 export async function deliverEventMail(mail: EventMail, settings: MailSettings, uncertain: boolean): Promise<string> {
   if (!validEmailAddress(mail.to)) throw new EventMailError("عنوان البريد الإلكتروني غير صالح.");
@@ -65,8 +81,8 @@ export async function deliverEventMail(mail: EventMail, settings: MailSettings, 
     const response = (process.env.RESEND_API_KEY
       ? await fetch("https://api.resend.com/emails", { method: "POST", headers: { ...headers, Authorization: `Bearer ${process.env.RESEND_API_KEY}` }, body: payload, signal: AbortSignal.timeout(15000) })
       : await new ReplitConnectors().proxy("resend", "/emails", { method: "POST", headers, body: payload })) as unknown as EmailResponse;
-    const result = await response.json() as { id?: string };
-    if (!response.ok) throw new EventMailError("رفض Resend الرسالة. تحقق من المفتاح وتوثيق دومين المرسل.");
+    const result = await response.json() as { id?: string; name?: string; message?: string };
+    if (!response.ok) throw resendRejection(response.status, result.name, result.message);
     if (!result.id) throw new EventMailError("رد Resend غير مكتمل؛ يحتاج الإرسال للتحقق.", true);
     return result.id;
   } catch (error) {
