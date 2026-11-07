@@ -37,12 +37,12 @@ export function EventWhatsAppSettings() {
     } finally { setBusy(false); }
   };
   return <section className="mt-6 min-w-0 break-words border-t border-white/15 pt-5" data-testid="event-whatsapp-settings" aria-labelledby="event-whatsapp-title">
-    <h3 id="event-whatsapp-title" className="font-bold text-white">دعوة واتساب الخاصة في إيميل التأكيد</h3>
-    <p className="mt-2 text-sm text-white/70">هذه الإعدادات خاصة ولا تظهر لزوار الموقع. تصل الدعوة للحضوري بعد قبول الوصل، وللأونلاين بعد تأكيد الدفع. حفظ التعديل لا يعيد إرسال الرسائل السابقة.</p>
+    <h3 id="event-whatsapp-title" className="font-bold text-white">دعوة واتساب الخاصة للحضور الحضوري</h3>
+    <p className="mt-2 text-sm text-white/70">هذه الإعدادات خاصة ولا تظهر لزوار الموقع. تصل الدعوة في إيميل الحضوري فقط بعد قبول الوصل، ولا تُرسل للأونلاين. حفظ التعديل لا يعيد إرسال الرسائل السابقة.</p>
     {loading ? <p role="status" className="mt-3 text-white">جارٍ تحميل إعدادات واتساب…</p> : draft && <fieldset disabled={busy} className="mt-4 grid min-w-0 gap-4">
       <label className="flex items-center gap-2 text-sm text-white">
         <input type="checkbox" checked={draft.enabled} onChange={event => patch({ enabled: event.target.checked })} data-testid="checkbox-event-whatsapp-enabled" />
-        إضافة دعوة واتساب إلى رسائل التأكيد القادمة
+        إضافة دعوة واتساب إلى رسائل تأكيد الحضور الحضوري
       </label>
       <label className="text-sm text-white">رابط قناة أو دعوة مجموعة واتساب
         <input type="url" dir="ltr" className="adm-input" value={draft.url} maxLength={2048} placeholder="https://whatsapp.com/channel/…" onChange={event => patch({ url: event.target.value })} data-testid="input-event-whatsapp-url" />
@@ -55,7 +55,7 @@ export function EventWhatsAppSettings() {
       </label>
       <button type="button" onClick={save} className="rounded-lg bg-emerald-700 px-4 py-2 font-bold text-white disabled:opacity-50" data-testid="button-save-event-whatsapp">{busy ? 'جارٍ الحفظ…' : 'حفظ دعوة واتساب الخاصة'}</button>
     </fieldset>}
-    {saved && <p role="status" className="mt-3 text-emerald-200" data-testid="event-whatsapp-saved">تم حفظ دعوة واتساب الخاصة. ستُستخدم في رسائل التأكيد القادمة فقط.</p>}
+    {saved && <p role="status" className="mt-3 text-emerald-200" data-testid="event-whatsapp-saved">تم حفظ دعوة واتساب الخاصة. ستُستخدم في رسائل تأكيد الحضور الحضوري القادمة فقط.</p>}
     {error && <p role="alert" className="mt-3 text-red-200">{error}</p>}
     <button type="button" disabled={loading || busy} onClick={() => {
       if (!draft || window.confirm('إعادة التحميل ستستبدل التعديلات غير المحفوظة. هل تريد المتابعة؟')) void load();

@@ -14,13 +14,14 @@ function buildMail(id: string, data: DocumentData, settings: DocumentData, kind:
   let subject: string;
   const attachments: EventAttachment[] = [];
   let invitationHtml = "";
+  const includeWhatsApp = kind === "confirmation" && data.attendance === "in-person" && whatsapp?.enabled;
   if (kind === "confirmation") {
     const access = data.attendance === "online"
       ? String(settings.onlineAccessInfo || "تم تأكيد حضورك أونلاين. ستصلك تفاصيل الدخول قبل موعد الورشة.")
       : String(settings.inPersonAccessInfo || "الحضور حضوري في الأردن، عمّان. يرجى الاحتفاظ برسالة التأكيد وإبراز الاسم المسجل عند الوصول.");
     subject = "تأكيد الحجز — ورشة تجسيد النجاح";
     text = `مرحبًا ${data.name || ""}،\nتم تأكيد تسجيلك في ورشة تجسيد النجاح مع Master Doha Malkawi.\nالتاريخ: السبت 21 نوفمبر 2026\nالوقت: ${time}\n${access}\nنتطلع للقائك.`;
-    if (whatsapp?.enabled) {
+    if (includeWhatsApp) {
       invitationHtml = `<p>${escapeHtml(whatsapp.invitation).replace(/\n/g, "<br>")}</p><p><a href="${escapeHtml(whatsapp.url)}" style="display:inline-block;background:#174c3c;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">${escapeHtml(whatsapp.buttonLabel)}</a></p>`;
     }
   } else {
@@ -34,7 +35,7 @@ function buildMail(id: string, data: DocumentData, settings: DocumentData, kind:
   }
   return {
     key: `event-${kind}-${id}`, to: kind === "confirmation" ? String(data.email || "") : ADMIN_EMAIL,
-    subject, text: text + (kind === "confirmation" && whatsapp?.enabled ? `\n\n${whatsapp.invitation}\n${whatsapp.buttonLabel}: ${whatsapp.url}` : ""), attachments,
+    subject, text: text + (includeWhatsApp ? `\n\n${whatsapp.invitation}\n${whatsapp.buttonLabel}: ${whatsapp.url}` : ""), attachments,
     html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:2;color:#174c3c">${escapeHtml(text).replace(/\n/g, "<br>")}${invitationHtml}</div>`,
   };
 }
@@ -60,7 +61,7 @@ async function sendNotification(id: string, kind: Kind) {
   if (lock.busy) return { emailStatus: "sending", emailError: "جارٍ إرسال الرسالة بالفعل." };
   let accepted = false;
   try {
-    const whatsapp = kind === "confirmation" ? await readPrivateWhatsAppSettings() : undefined;
+    const whatsapp = kind === "confirmation" && lock.data!.attendance === "in-person" ? await readPrivateWhatsAppSettings() : undefined;
     const mail = buildMail(id, lock.data!, settings, kind, whatsapp);
     const emailId = await deliverEventMail(mail, settings, !!lock.uncertain);
     accepted = true;

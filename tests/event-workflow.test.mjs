@@ -156,7 +156,7 @@ globalThis.__eventTestPayments.stateOverride = null;
 const vip = await eventAction(user, { action: 'capture-order', orderId: vipOrder.id });
 assert.equal(vip.registration.membershipStatus, 'VIP Member');
 assert.equal(vip.registration.status, 'pending', 'VIP payment must not approve an unreviewed CliQ receipt');
-assert.ok(vip.registration.telegramUrl.startsWith('https://t.me/'));
+assert.equal(vip.registration.telegramUrl, 'https://t.me/+dl3H-ZKTnqg2N2Y0', 'Verified VIP payment reveals the exact configured Telegram invitation');
 const arrival = (u, id, arrived = true, expectedRevision = 0) =>
   eventAction(u, { action: 'arrival', registrationId: id, arrived, expectedRevision });
 const failsWithStatus = (promise, status) => assert.rejects(promise, (error) => error.status === status);
@@ -322,14 +322,15 @@ assert.equal((await eventAction(tampered.u, { action: 'mine' })).registration.st
 assert.equal((await tamperedRef.get()).data().status, 'created', 'Conflict leaves payment available for manual recovery');
 assert.equal((await eventPayPalWebhook({}, { id: 'WH-IGNORED', event_type: 'PAYMENT.CAPTURE.PENDING' })).ignored, true);
 assert.equal((await eventPayPalWebhook({}, webhook({ id: 'UNKNOWN-ORDER' }))).ignored, true);
-// Verified online payments get the same private invitation without admin approval.
+// Regular online payments must never receive the in-person WhatsApp invite.
 globalThis.__eventTestEmail.fail = false;
 globalThis.__eventTestEmail.ambiguous = false;
 const onlineInvite = await checkout();
 const beforeOnlineInvite = globalThis.__eventTestEmail.messages.length;
-await eventAction(onlineInvite.u, { action: 'capture-order', orderId: onlineInvite.order.id });
+const confirmedOnline = await eventAction(onlineInvite.u, { action: 'capture-order', orderId: onlineInvite.order.id });
 const onlineMails = globalThis.__eventTestEmail.messages.slice(beforeOnlineInvite).map(readableMime);
-assert.equal(onlineMails.filter(m => m.includes(`href="${whatsapp.url}"`)).length, 1, 'Only confirmed online attendee mail gets the private button, not organizer mail');
+assert.ok(!onlineMails.some(m => m.includes(whatsapp.url)), 'Online confirmation omits WhatsApp in both HTML and plain text');
+assert.equal(confirmedOnline.registration.telegramUrl, undefined, 'Existing VIP-only Telegram access is not silently expanded to regular tickets');
 const currentPrivate = await eventAction(admin, { action: 'get-private-email-settings' });
 await eventAction(admin, { action: 'save-private-email-settings', whatsapp: { ...currentPrivate.whatsapp, enabled: false } });
 const withoutInvite = await checkout();
