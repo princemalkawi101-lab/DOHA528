@@ -33,6 +33,21 @@ for (const formatted of [json, `\uFEFF  ${json}\n`, JSON.stringify(json), JSON.s
 for (const invalid of ['{broken PRIVATE_TEST_VALUE', '{"private_key":"literal\nnewline"}']) {
   assert.throws(() => parseEventCredentials(invalid), { message: 'Firebase server credentials must be valid JSON.' });
 }
+const invalidFixtures = [
+  ['{"private_key":"literal\nnewline"}', 'CONTROL_CHARACTER'],
+  ['{"private_key":"bad\\qescape"}', 'ESCAPE'],
+  ['{"private_key":', 'INCOMPLETE'],
+  ['{} trailing', 'TRAILING_DATA'],
+  ['{broken PRIVATE_TEST_VALUE', 'SYNTAX'],
+];
+for (const [input, reason] of invalidFixtures) {
+  assert.throws(() => parseEventCredentials(input), (error) => {
+    assert.equal(error.code, `FIREBASE_CREDENTIALS_JSON_${reason}`);
+    assert.equal(error.cause, undefined);
+    assert.doesNotMatch(error.message, /PRIVATE_TEST_VALUE|private_key|literal|newline/);
+    return true;
+  });
+}
 for (const invalid of ['null', '[]', '{}', 'true', '{"apiKey":"not-a-service-account"}', JSON.stringify(JSON.stringify(json))]) {
   assert.throws(() => parseEventCredentials(invalid), { message: 'Firebase server credentials must be a service account object.' });
 }
@@ -94,6 +109,7 @@ const child = `
       assert.equal(sensitive.code, 'FIRESTORE_PERMISSION_DENIED');
       assert.doesNotMatch(JSON.stringify([logs, sensitive]), /private-key|attendee@example|Bearer secret/);
       assert.equal(eventFailure({ code: 'UNTRUSTED_SECRET', message: 'secret' }, 'event').code, 'EVENT_SERVER_ERROR');
+      assert.equal(eventFailure({ code: 'FIREBASE_CREDENTIALS_JSON_CONTROL_CHARACTER', message: 'Firebase server credentials must be valid JSON.' }, 'event').code, 'FIREBASE_CREDENTIALS_JSON_CONTROL_CHARACTER');
       // No inherited server credentials: actual adapter must classify the
       // startup failure, log it and return a safe diagnostic, not fake success.
       res = response();

@@ -208,6 +208,11 @@
 .ev-closed{display:flex;align-items:center;gap:13px;margin-top:20px;padding:27px;border:1px solid hsl(var(--wine)/.15);background:hsl(var(--sand))}
 .ev-closed svg{width:24px;height:24px;color:hsl(var(--terracotta))}
 .ev-closed p{margin:0;font-weight:800}
+.ev-registration-warning{align-items:flex-start}
+.ev-registration-warning>svg{flex-shrink:0}
+.ev-registration-warning>div{min-width:0;flex:1}
+.ev-registration-warning [data-testid="event-registration-diagnostic"]{margin-top:12px;font-size:13px;line-height:1.8;overflow-wrap:anywhere;font-weight:600}
+.ev-registration-warning button{margin-top:14px}
 .ev-footer{display:flex;justify-content:space-between;gap:20px;padding:25px max(7%,calc((100% - 1160px)/2));border-top:1px solid hsl(var(--wine)/.13);background:hsl(var(--paper));color:hsl(var(--muted));font-size:10px}
 .ev-footer-brand{color:hsl(var(--wine))!important;font-size:11px;font-weight:900}
 .ev-footer-brand span{color:hsl(var(--terracotta))}

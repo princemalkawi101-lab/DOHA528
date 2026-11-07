@@ -23,10 +23,15 @@ export function eventFailure(error: unknown, endpoint: "event" | "event-webhook"
     "ERR_MODULE_NOT_FOUND": "SERVER_MODULE_MISSING",
     "MODULE_NOT_FOUND": "SERVER_MODULE_MISSING",
     "ERR_REQUIRE_ESM": "SERVER_MODULE_FORMAT",
+    "FIREBASE_CREDENTIALS_JSON_CONTROL_CHARACTER": "FIREBASE_CREDENTIALS_JSON_CONTROL_CHARACTER",
+    "FIREBASE_CREDENTIALS_JSON_ESCAPE": "FIREBASE_CREDENTIALS_JSON_ESCAPE",
+    "FIREBASE_CREDENTIALS_JSON_INCOMPLETE": "FIREBASE_CREDENTIALS_JSON_INCOMPLETE",
+    "FIREBASE_CREDENTIALS_JSON_TRAILING_DATA": "FIREBASE_CREDENTIALS_JSON_TRAILING_DATA",
+    "FIREBASE_CREDENTIALS_JSON_SYNTAX": "FIREBASE_CREDENTIALS_JSON_SYNTAX",
   };
   const providerCode = typeof record.code === "string" || typeof record.code === "number" ? String(record.code) : "";
-  const code = Object.hasOwn(configCodes, message) ? configCodes[message]
-    : Object.hasOwn(providerCodes, providerCode) ? providerCodes[providerCode] : "EVENT_SERVER_ERROR";
+  const code = Object.hasOwn(providerCodes, providerCode) ? providerCodes[providerCode]
+    : Object.hasOwn(configCodes, message) ? configCodes[message] : "EVENT_SERVER_ERROR";
   const reference = randomUUID();
   console.error(JSON.stringify({ source: "event-workflow", endpoint, code, reference }));
   return {
