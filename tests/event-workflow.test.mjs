@@ -11,7 +11,7 @@ const requireApi = createRequire(resolve('artifacts/api-server/package.json'));
 const { build } = requireApi('esbuild');
 const outfile = resolve('artifacts/api-server/node_modules/.cache/event-workflow-test.mjs');
 globalThis.__eventTestPayments = { orders: new Map(), captures: 0, amountOverride: null, stateOverride: null, signatureValid: true, reads: 0 };
-globalThis.__eventTestEmail = { sent: new Map(), attempts: 0, fail: false, ambiguous: false };
+globalThis.__eventTestEmail = { sent: new Map(), attempts: 0, fail: false, ambiguous: false, messages: [] };
 await build({
   stdin: {
     contents: `export {eventAction,eventPayPalWebhook,EVENT_ID} from './lib/event-workflow'; export {eventFirebase} from './lib/event-firebase'; export {eventIdentity} from './lib/event-identity';`,
@@ -57,7 +57,8 @@ await build({
               state.attempts++;
               if(state.fail) return Response.json({error:'rejected'},{status:429});
               const mime=Buffer.from(JSON.parse(init.body).raw,'base64url').toString();
-              const id=mime.match(/Message-ID: <([^>]+)>/)[1];
+              state.messages.push(mime);
+              const id=mime.match(/Message-ID:\\s*<([^>]+)>/i)[1];
               state.sent.set(id,'MESSAGE-'+state.attempts);
               if(state.ambiguous) throw new Error('Simulated lost response after send');
               return Response.json({id:'MESSAGE-'+state.attempts});
@@ -94,6 +95,16 @@ await assert.rejects(eventAction(user, { action: 'register-cliq', ...attendee, e
 const core = await eventAction(user, { action: 'register-cliq', ...attendee, receiptDataUrl });
 assert.equal(core.registration.status, 'pending');
 assert.equal(core.registration.email, attendee.email);
+const pendingData = (await db.collection('eventRegistrations').doc(core.registration.id).get()).data();
+assert.equal(pendingData.adminNotificationEmailStatus, 'sent', 'Admin receives a new pending CliQ booking');
+assert.equal(pendingData.confirmationEmailStatus, 'not_sent', 'Pending receipt is not an approved ticket');
+const receiptMail = globalThis.__eventTestEmail.messages.find(m => /To: Dohamlk74@gmail.com/i.test(m) && /cliq-receipt.jpg/.test(m));
+assert.ok(receiptMail, 'CliQ admin mail has a real receipt attachment');
+assert.match(receiptMail, /Content-Type: image\/jpeg/i);
+await assert.rejects(eventAction(user, { action: 'retry-admin-email', registrationId: core.registration.id }), e => e.status === 403);
+const notificationsBeforeRetry = globalThis.__eventTestEmail.attempts;
+await eventAction(admin, { action: 'retry-admin-email', registrationId: core.registration.id });
+assert.equal(globalThis.__eventTestEmail.attempts, notificationsBeforeRetry, 'Admin mail retry is idempotent');
 assert.equal(core.registration.telegramUrl, undefined);
 const persisted = (await db.doc(`eventRegistrations/${core.registration.id}`).get()).data();
 assert.equal(persisted.receiptDataUrl, receiptDataUrl);
@@ -186,11 +197,12 @@ await arrivalRef.update({ eventId: EVENT_ID });
 
 const onlineOrder = await eventAction(onlineUser, { action: 'create-order', tier: 'online', ...attendee, amount: 1 });
 assert.equal(globalThis.__eventTestPayments.orders.get(onlineOrder.id).amount, 30);
+globalThis.__eventTestEmail.fail = true;
 const online = await eventAction(onlineUser, { action: 'capture-order', orderId: onlineOrder.id });
 assert.equal(online.registration.status, 'approved');
 assert.equal(online.registration.telegramUrl, undefined);
 await failsWithStatus(arrival(admin, online.registration.id), 409);
-globalThis.__eventTestEmail.fail = true;
+assert.equal((await db.collection('eventRegistrations').doc(online.registration.id).get()).data().adminNotificationEmailStatus, 'failed', 'Email failure does not roll back successful payment');
 const failed = await eventAction(admin, { action: 'review', registrationId: online.registration.id, status: 'approved' });
 assert.equal(failed.emailStatus, 'failed');
 assert.equal((await eventAction(onlineUser, { action: 'mine' })).registration.status, 'approved');

@@ -31,9 +31,14 @@ export const EventWorkflowBody = zod.object({
     "capture-order",
     "review",
     "retry-email",
+    "retry-admin-email",
     "email-readiness",
     "arrival",
   ]),
+  kind: zod
+    .enum(["booking", "vip"])
+    .optional()
+    .describe("Administrator-only retry-admin-email notification kind."),
   arrived: zod
     .boolean()
     .optional()

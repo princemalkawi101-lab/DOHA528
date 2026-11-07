@@ -139,7 +139,7 @@ test('each selection downloads only matching rows, independently of the search',
   expect(vip.every((row) => row[6] === 'VIP Member')).toBe(true);
   await downloadedRows(page, 'pending-cliq', ['pending', 'vip-pending', 'not-verified']);
   await page.getByTestId('input-event-search').fill('no-such-synthetic-person');
-  await expect(page.locator('article')).toHaveCount(0);
+  await expect(page.locator('[data-testid^="event-registration-card-"]')).toHaveCount(0);
   await downloadedRows(page, 'approved-standard', ['standard', 'legacy']);
   await page.screenshot({ path: 'generated-artifacts/event-registration-browser/admin-exports.png', fullPage: true });
 });
@@ -259,6 +259,7 @@ test('review and retry-email controls retain authenticated requests and busy pro
     throw new Error(`Unexpected operation: ${JSON.stringify(body)}`);
   });
   await select(page).selectOption('pending-cliq');
+  await page.getByTestId('event-registration-card-pending').locator('summary').click();
   await page.getByTestId('approve-event-pending').click();
   try {
     await expect.poll(() => requests.length).toBe(1);
@@ -273,7 +274,7 @@ test('review and retry-email controls retain authenticated requests and busy pro
   await page.getByTestId('retry-event-email-pending').click();
   await expect(page.getByTestId('event-registration-feedback')).toHaveText('تم إرسال بريد التأكيد.');
   await expect(page.getByTestId('retry-event-email-pending')).toHaveCount(0);
-  const card = page.locator('article').filter({ has: page.getByTestId('arrival-status-pending') });
+  const card = page.getByTestId('event-registration-card-pending');
   await card.getByRole('button', { name: 'رفض', exact: true }).click();
   await expect(page.getByTestId('approve-event-pending')).toBeVisible();
   await expect(page.getByTestId('event-registration-feedback')).toHaveText('تم رفض التسجيل.');
@@ -282,4 +283,34 @@ test('review and retry-email controls retain authenticated requests and busy pro
     { action: 'retry-email', registrationId: 'pending' },
     { action: 'review', registrationId: 'pending', status: 'rejected' },
   ]);
+});
+
+test('mobile event panels collapse and receipts open inside an accessible dialog', async ({ page }) => {
+  await seed(env);
+  await page.setViewportSize({ width: 402, height: 874 });
+  await admin(page);
+  const settings = page.getByTestId('event-settings-panel');
+  await expect(settings).not.toHaveAttribute('open', '');
+  await settings.locator('summary').click();
+  await expect(settings).toHaveAttribute('open', '');
+  await settings.locator('summary').click();
+  const panel = page.getByTestId('event-registrations-panel');
+  await panel.locator('summary').first().click();
+  await expect(select(page)).toBeHidden();
+  await panel.locator('summary').first().click();
+  const card = page.getByTestId('event-registration-card-pending');
+  await card.locator('summary').click();
+  const url = page.url();
+  await card.getByRole('button', { name: /عرض إيصال CliQ/ }).click();
+  const image = page.getByTestId('event-receipt-full');
+  await expect(image).toBeVisible();
+  await expect.poll(() => image.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
+  await expect(page).toHaveURL(url);
+  await expect(page.getByRole('link', { name: 'تنزيل صورة الوصل' })).toHaveAttribute('download', 'cliq-receipt.jpg');
+  await page.screenshot({ path: 'generated-artifacts/event-registration-browser/mobile-receipt-dialog.jpg' });
+  await page.keyboard.press('Escape');
+  await expect(image).toBeHidden();
+  await card.locator('summary').click();
+  await expect(card.getByTestId('approve-event-pending')).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

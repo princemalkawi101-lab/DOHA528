@@ -109,7 +109,11 @@ components:
       properties:
         action:
           type: string
-          enum: [mine, register-cliq, create-order, capture-order, review, retry-email, email-readiness, arrival]
+          enum: [mine, register-cliq, create-order, capture-order, review, retry-email, retry-admin-email, email-readiness, arrival]
+        kind:
+          type: string
+          enum: [booking, vip]
+          description: Administrator-only retry-admin-email notification kind.
         arrived:
           type: boolean
           description: Administrator-only arrival action; requires an approved in-person base ticket when true.

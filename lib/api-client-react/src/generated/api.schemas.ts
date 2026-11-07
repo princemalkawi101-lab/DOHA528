@@ -24,8 +24,20 @@ export const EventActionRequestAction = {
   "capture-order": "capture-order",
   review: "review",
   "retry-email": "retry-email",
+  "retry-admin-email": "retry-admin-email",
   "email-readiness": "email-readiness",
   arrival: "arrival",
+} as const;
+
+/**
+ * Administrator-only retry-admin-email notification kind.
+ */
+export type EventActionRequestKind =
+  (typeof EventActionRequestKind)[keyof typeof EventActionRequestKind];
+
+export const EventActionRequestKind = {
+  booking: "booking",
+  vip: "vip",
 } as const;
 
 export type EventActionRequestTier =
@@ -46,6 +58,8 @@ export const EventActionRequestStatus = {
 
 export interface EventActionRequest {
   action: EventActionRequestAction;
+  /** Administrator-only retry-admin-email notification kind. */
+  kind?: EventActionRequestKind;
   /** Administrator-only arrival action; requires an approved in-person base ticket when true. */
   arrived?: boolean;
   /**

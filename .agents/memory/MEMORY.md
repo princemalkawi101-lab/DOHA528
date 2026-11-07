@@ -9,3 +9,4 @@
 - [Firebase server runtime](firebase-server-runtime.md) — check SDK Node-engine compatibility and explicitly include Firestore rather than relying on optional installation.
 - [Local browser-test tooling](browser-test-tooling.md) — Firebase rules paths cannot escape the config directory; Replit Chromium needs its Nix-compatible wrapper.
 - [Mobile file-picker focus](mobile-file-picker-focus.md) — focus refresh must not unmount receipt inputs when returning from the phone picker or a payment popup.
+- [Event email hosting](event-mail-hosting.md) — user chose direct Resend on Vercel; organizer notifications and attendee confirmations have separate delivery states.

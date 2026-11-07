@@ -31,6 +31,8 @@ import {
   EventExportSelection,
 } from '@/lib/eventRegistrationExport';
 import { arrivalDate, searchEventRegistrations } from '@/lib/eventArrival';
+import { EventAdminSection } from '@/components/admin/EventAdminSection';
+import { EventReceiptViewer } from '@/components/admin/EventReceiptViewer';
 import {
   normalizeSocialDestination,
   newSocialLinkTemplate,
@@ -463,6 +465,18 @@ export default function Admin() {
       const result = await eventRequest<{ emailStatus: string; emailError?: string }>({ action: 'retry-email', registrationId: entry.id });
       setEventFeedback(result.emailStatus === 'sent' ? 'تم إرسال بريد التأكيد.' : `تعذّر إرسال البريد: ${result.emailError}`);
     } catch (error) { setEventFeedback(error instanceof Error ? error.message : 'تعذّر إرسال البريد.'); }
+    finally { setEventReviewBusy(null); }
+  };
+
+  const handleRetryAdminNotification = async (entry: EventRegistration, vip = false) => {
+    if (eventReviewBusy) return;
+    setEventReviewBusy(entry.id);
+    try {
+      const result = await eventRequest<{ emailStatus: string; emailError?: string }>({
+        action: 'retry-admin-email', registrationId: entry.id, kind: vip ? 'vip' : 'booking',
+      });
+      setEventFeedback(result.emailStatus === 'sent' ? 'تم إرسال إشعار الإدارة.' : `تعذّر إرسال إشعار الإدارة: ${result.emailError || ''}`);
+    } catch (error) { setEventFeedback(error instanceof Error ? error.message : 'تعذّر إرسال إشعار الإدارة.'); }
     finally { setEventReviewBusy(null); }
   };
 
@@ -1001,8 +1015,7 @@ export default function Admin() {
         </div>
 
         {adminTab === 'event' && <>
-          <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
-            <h2 className="text-white text-lg font-black mb-2">{lang === 'ar' ? 'إعدادات ورشة النجاح' : 'Success Workshop Settings'}</h2>
+          <EventAdminSection id="event-settings-panel" title={lang === 'ar' ? 'إعدادات الفعالية والإعلان' : 'Event and announcement settings'}>
             <p className="text-[rgba(255,255,255,0.55)] text-sm mb-5">
               {lang === 'ar' ? 'أضيفي بيانات CliQ وروابط الصور قبل نشر التسجيل. الأسعار والتاريخ ثابتة حسب تفاصيل الفعالية.' : 'Set the CliQ details and image URLs before publishing. Price and event date are fixed.'}
             </p>
@@ -1040,10 +1053,10 @@ export default function Admin() {
               {settingsSaving === 'about' ? (lang === 'ar' ? 'جاري الحفظ…' : 'Saving…') : (lang === 'ar' ? 'حفظ إعدادات الفعالية' : 'Save Event Settings')}
             </button>
             {eventFeedback && <p className="mt-3 text-sm text-[hsl(var(--g300))]">{eventFeedback}</p>}
-          </section>
-          <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
-            <h2 className="text-white text-lg font-black mb-4">إعدادات بريد تأكيد الفعالية</h2>
-            <p className="text-sm text-amber-200 mb-4">Gmail يرسل من الحساب المتصل، وResend يتطلب نطاقًا موثّقًا. قبول التسجيل يبقى محفوظًا إذا تعذّر البريد، ويمكن إعادة الإرسال دون تكرار الحجز.</p>
+          </EventAdminSection>
+          <EventAdminSection id="event-mail-settings-panel" title="إعدادات البريد والإشعارات">
+            <p className="text-sm text-amber-200 mb-4">على Vercel: اضبط RESEND_API_KEY وRESEND_FROM_EMAIL لمرسل من دومين موثّق. اتصال Gmail الخاص بـ Replit لا يعمل خارج Replit. المفتاح المباشر لـ Resend يأخذ الأولوية على الاختيار المحفوظ هنا. قبول التسجيل يبقى محفوظًا إذا تعذّر البريد.</p>
+            <p className="mb-4 break-words text-sm text-white/80">إشعارات الحجوزات الجديدة وترقيات VIP تصل إلى <span dir="ltr">Dohamlk74@gmail.com</span>. حجوزات CliQ تتضمن صورة الوصل كمرفق. تأكيد المشترك يُرسل بعد قبول CliQ أو اكتمال الدفع أونلاين.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-sm text-white">مزود البريد
                 <select className="adm-input" value={eventSettings.confirmationEmailProvider} onChange={(e) => setEventSettings((s) => ({ ...s, confirmationEmailProvider: e.target.value as 'gmail' | 'resend' }))}>
@@ -1065,9 +1078,8 @@ export default function Admin() {
             </div>
             <p className="mt-3 text-xs text-white/60">تُحفظ هذه المعلومات ضمن إعدادات الموقع العامة. لا تضع رابط Telegram الخاص أو أسرارًا هنا.</p>
             <button onClick={handleSaveEventSettings} disabled={settingsSaving === 'about'} className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 font-bold text-white">حفظ إعدادات البريد</button>
-          </section>
-          <section className="bg-[rgba(30,14,56,0.75)] border border-[rgba(212,160,23,0.25)] rounded-2xl p-6 mb-6">
-            <h2 className="text-white text-lg font-black mb-4">{lang === 'ar' ? `تسجيلات الفعالية (${eventRegistrations.length})` : `Event registrations (${eventRegistrations.length})`}</h2>
+          </EventAdminSection>
+          <EventAdminSection id="event-registrations-panel" open title={lang === 'ar' ? `تسجيلات الفعالية (${eventRegistrations.length})` : `Event registrations (${eventRegistrations.length})`}>
             {eventFeedback && <p className="mb-4 text-sm text-amber-200" role="status" aria-live="polite" data-testid="event-registration-feedback">{eventFeedback}</p>}
             <label className="block text-sm text-white mb-4" htmlFor="event-registration-search">
               {lang === 'ar' ? 'البحث بالاسم أو الهاتف أو البريد أو مرجع التسجيل' : 'Search by name, phone, email or registration reference'}
@@ -1108,10 +1120,14 @@ export default function Admin() {
             {!visibleEventRegistrations.length ? <p className="text-[rgba(255,255,255,0.55)] text-sm">{lang === 'ar' ? 'لا توجد تسجيلات مطابقة.' : 'No matching registrations.'}</p> : (
               <div className="grid gap-4">
                 {visibleEventRegistrations.map((entry) => (
-                  <article key={entry.id} className="rounded-xl border border-[rgba(255,255,255,0.12)] bg-black/20 p-4">
+                  <details key={entry.id} className="rounded-xl border border-[rgba(255,255,255,0.12)] bg-black/20 p-4" data-testid={`event-registration-card-${entry.id}`}>
+                    <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 text-white [&::-webkit-details-marker]:hidden">
+                      <span className="min-w-0 break-words font-bold">{entry.name}</span>
+                      <span className="text-xs text-amber-200">{entry.attendance === 'online' ? 'أونلاين' : 'حضوري'} · {entry.status === 'pending' ? 'قيد المراجعة' : entry.status === 'approved' ? 'مقبول' : 'مرفوض'}{entry.membershipStatus === 'VIP Member' ? ' · VIP' : ''} <span aria-hidden="true">⌄</span></span>
+                    </summary>
+                    <div className="mt-4 border-t border-white/10 pt-4">
                     <div className="flex flex-wrap justify-between gap-3">
-                      <div>
-                        <p className="font-bold text-white">{entry.name}</p>
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-white/70 break-all" dir="ltr">{lang === 'ar' ? 'مرجع التسجيل' : 'Registration reference'}: {entry.id}</p>
                         <p className="mt-2 text-sm font-bold text-emerald-200" data-testid={`arrival-status-${entry.id}`}>
                           {entry.arrivedAt
@@ -1132,8 +1148,12 @@ export default function Admin() {
                         </p>
                         <p className="text-xs mt-2 text-amber-200">بريد التأكيد: {entry.confirmationEmailStatus === 'sent' ? 'تم الإرسال' : entry.confirmationEmailStatus === 'failed' ? 'تعذّر الإرسال' : entry.confirmationEmailStatus === 'sending' ? 'جارٍ الإرسال' : entry.confirmationEmailStatus === 'uncertain' ? 'يحتاج التحقق من بريد Gmail المرسل قبل الإعادة' : 'لم يُرسل'}</p>
                         {entry.confirmationEmailError && <p className="mt-1 text-xs text-red-200" role="alert">{entry.confirmationEmailError}</p>}
+                        <p className="mt-2 text-xs text-amber-200">إشعار الإدارة: {entry.adminNotificationEmailStatus === 'sent' ? 'تم الإرسال' : entry.adminNotificationEmailStatus === 'failed' ? 'تعذّر الإرسال' : entry.adminNotificationEmailStatus === 'sending' ? 'جارٍ الإرسال' : entry.adminNotificationEmailStatus === 'uncertain' ? 'يحتاج التحقق من البريد المرسل' : 'لم يُرسل'}</p>
+                        {entry.adminNotificationEmailError && <p className="mt-1 text-xs text-red-200" role="alert">{entry.adminNotificationEmailError}</p>}
+                        {entry.membershipStatus === 'VIP Member' && <p className="mt-2 text-xs text-amber-200">إشعار ترقية VIP: {entry.adminVipEmailStatus === 'sent' ? 'تم الإرسال' : entry.adminVipEmailStatus === 'failed' ? 'تعذّر الإرسال' : entry.adminVipEmailStatus === 'uncertain' ? 'يحتاج التحقق' : 'لم يُرسل'}</p>}
+                        {entry.adminVipEmailError && <p className="mt-1 text-xs text-red-200" role="alert">{entry.adminVipEmailError}</p>}
                       </div>
-                      {entry.receiptDataUrl && <a href={entry.receiptDataUrl} target="_blank" rel="noreferrer" className="text-sm text-[hsl(var(--g300))] underline"><img src={entry.receiptDataUrl} alt={`إيصال CliQ — ${entry.name}`} className="mb-2 h-32 w-32 rounded-lg object-contain bg-white" loading="lazy" />عرض إيصال CliQ</a>}
+                      {entry.receiptDataUrl && <EventReceiptViewer receipt={entry.receiptDataUrl} name={entry.name} />}
                     </div>
                     <div className="flex flex-wrap gap-2 mt-4">
                       <button type="button" disabled={!eventRegistrationsReady || !!eventReviewBusy || entry.status !== 'approved' || entry.attendance !== 'in-person'} onClick={() => handleEventArrival(entry, true)} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" data-testid={`check-in-event-${entry.id}`}>
@@ -1142,14 +1162,17 @@ export default function Admin() {
                       {!!entry.arrivedAt && <button type="button" disabled={!eventRegistrationsReady || !!eventReviewBusy} onClick={() => handleEventArrival(entry, false)} className="rounded-lg border border-teal-300/40 px-4 py-2 text-sm font-bold text-teal-100 disabled:opacity-50" data-testid={`undo-arrival-${entry.id}`}>{lang === 'ar' ? 'إلغاء الوصول' : 'Undo arrival'}</button>}
                       {entry.status !== 'approved' && <button disabled={!!eventReviewBusy} onClick={() => handleEventRegistrationStatus(entry, 'approved')} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" data-testid={`approve-event-${entry.id}`}>{eventReviewBusy === entry.id ? 'جارٍ التأكيد…' : 'Approve · تأكيد التسجيل'}</button>}
                       {entry.status === 'approved' && entry.confirmationEmailStatus !== 'sent' && <button disabled={!!eventReviewBusy} onClick={() => handleRetryEventEmail(entry)} className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" data-testid={`retry-event-email-${entry.id}`}>إرسال / إعادة إرسال التأكيد</button>}
+                      {entry.adminNotificationEmailStatus !== 'sent' && <button disabled={!!eventReviewBusy} onClick={() => handleRetryAdminNotification(entry)} className="rounded-lg border border-amber-300/40 px-4 py-2 text-sm font-bold text-amber-100 disabled:opacity-50" data-testid={`retry-admin-email-${entry.id}`}>إرسال إشعار الإدارة</button>}
+                      {entry.membershipStatus === 'VIP Member' && entry.adminVipEmailStatus !== 'sent' && <button disabled={!!eventReviewBusy} onClick={() => handleRetryAdminNotification(entry, true)} className="rounded-lg border border-amber-300/40 px-4 py-2 text-sm font-bold text-amber-100 disabled:opacity-50">إرسال إشعار VIP للإدارة</button>}
                       <button disabled={!!eventReviewBusy} onClick={() => handleEventRegistrationStatus(entry, 'rejected')} className="rounded-lg bg-red-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">رفض</button>
                       <button onClick={() => handleEventRegistrationDelete(entry)} className="rounded-lg border border-red-400/40 px-4 py-2 text-sm font-bold text-red-200">حذف</button>
                     </div>
-                  </article>
+                    </div>
+                  </details>
                 ))}
               </div>
             )}
-          </section>
+          </EventAdminSection>
         </>}
 
         {/* ── Bookings Tab ── */}

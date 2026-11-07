@@ -8,6 +8,7 @@
 
 export * from "./eventActionRequest";
 export * from "./eventActionRequestAction";
+export * from "./eventActionRequestKind";
 export * from "./eventActionRequestStatus";
 export * from "./eventActionRequestTier";
 export * from "./eventWorkflow200";

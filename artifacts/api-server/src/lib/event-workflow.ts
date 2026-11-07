@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { FieldValue, Timestamp, type DocumentData, type QueryDocumentSnapshot, type Transaction } from "firebase-admin/firestore";
 import { z } from "zod";
 import { eventFirebase } from "./event-firebase.js";
-import { sendEventConfirmation } from "./event-email.js";
+import { sendEventConfirmation, sendEventAdminNotification, deliverEventNotifications } from "./event-email.js";
 import { capturePayPalOrder, createPayPalOrder, getPayPalOrder, isPayPalApiError, verifyPayPalWebhook, type PayPalWebhookHeaders, type PayPalErrorDetail } from "./paypal.js";
 
 export const EVENT_ID = "success-workshop-amman-2026";
@@ -118,7 +118,8 @@ export async function eventPayPalWebhook(headers: PayPalWebhookHeaders, raw: unk
     || payment.currency !== event.resource.amount.currency_code) {
     throw new EventError(409, "Webhook does not match the provider capture.");
   }
-  await reconcilePayment(orderId, payment);
+  const registrationRef = await reconcilePayment(orderId, payment);
+  await deliverEventNotifications(registrationRef.id, order.data()?.tier === "vip");
   return { received: true };
 }
 
@@ -151,6 +152,7 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
         confirmationEmailStatus: "not_sent", createdAt: FieldValue.serverTimestamp(),
       });
     });
+    await deliverEventNotifications(ref.id);
     return { registration: publicRegistration(ref.id, (await ref.get()).data()!) };
   }
   if (body.action === "create-order") {
@@ -211,6 +213,7 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
     if (order.status === "captured") {
       const data = (await registrationRef.get()).data();
       if (!data) throw new EventError(409, "يرجى التواصل معنا لاستعادة تسجيلك.");
+      await deliverEventNotifications(registrationRef.id, order.tier === "vip");
       return { captureStatus: "COMPLETED", registration: publicRegistration(registrationRef.id, data) };
     }
     let payment: Awaited<ReturnType<typeof capturePayPalOrder>>;
@@ -222,6 +225,7 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
       payment = await getPayPalOrder(orderId);
     }
     await reconcilePayment(orderId, payment);
+    await deliverEventNotifications(registrationRef.id, order.tier === "vip");
     return { captureStatus: "COMPLETED", registration: publicRegistration(registrationRef.id, (await registrationRef.get()).data()!) };
   }
   if (body.action === "arrival") {
@@ -264,6 +268,16 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
         duplicateCheckIns: current.duplicateCheckIns ?? 0,
       };
     });
+  }
+  if (body.action === "retry-admin-email") {
+    if (!isEventAdmin(user)) throw new EventError(403, "Administrator access required.");
+    const ref = registrations.doc(idSchema.parse(body.registrationId));
+    const data = (await ref.get()).data();
+    if (!data || data.eventId !== EVENT_ID) throw new EventError(404, "Registration not found.");
+    const vip = body.kind === "vip";
+    if (vip && data.membershipStatus !== "VIP Member") throw new EventError(409, "VIP payment is not confirmed.");
+    if (!vip && data.paymentMethod === "paypal" && !data.paypalCaptureId) throw new EventError(409, "Payment is not confirmed.");
+    return sendEventAdminNotification(ref.id, vip);
   }
   if (body.action === "review" || body.action === "retry-email") {
     if (!isEventAdmin(user)) throw new EventError(403, "Administrator access required.");

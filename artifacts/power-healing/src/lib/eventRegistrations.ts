@@ -32,6 +32,10 @@ export interface EventRegistration {
   vipPaypalOrderId?: string;
   confirmationEmailStatus?: 'not_sent' | 'sent' | 'failed' | 'sending' | 'uncertain';
   confirmationEmailError?: string;
+  adminNotificationEmailStatus?: 'not_sent' | 'sent' | 'failed' | 'sending' | 'uncertain';
+  adminNotificationEmailError?: string;
+  adminVipEmailStatus?: 'not_sent' | 'sent' | 'failed' | 'sending' | 'uncertain';
+  adminVipEmailError?: string;
   arrivedAt?: { toDate?: () => Date } | string | null;
   arrivalRevision?: number;
   duplicateCheckIns?: number;
