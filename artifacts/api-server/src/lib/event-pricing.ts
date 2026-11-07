@@ -1,5 +1,5 @@
-// TEMPORARY: restore CURRENT_EVENT_PRICING_VERSION to "standard" after testing.
-export const CURRENT_EVENT_PRICING_VERSION = "temporary-test-070";
+// Standard prices restored; keep the test version for already-issued orders.
+export const CURRENT_EVENT_PRICING_VERSION = "standard";
 const PRICES = {
   standard: { online: 30, vip: 49 },
   "temporary-test-070": { online: 0.70, vip: 0.70 },

@@ -129,7 +129,7 @@ export default function Event(p: EventPageProps) {
               <span>مع <bdi dir="ltr">Master Doha Malkawi</bdi></span>
             </div>
             <section className="ev-content-block" aria-labelledby="ev-waiting-title">
-              <h2 id="ev-waiting-title">هل تشعر انك هناك شيء اكبر ينتظرك</h2>
+              <h2 id="ev-waiting-title">هل تشعر أن هناك شيء أكبر ينتظرك</h2>
               <div className="ev-content-body">
                 <p>ربما تعرف أنك تحمل إمكانيات عظيمة، لكن واقعك الحالي لا يعكس بالكامل ما تشعر به في أعماقك.</p>
                 <p>ربما لديك أحلام، طموحات، ورغبة في التوسع، لكنك ما زلت تتساءل:</p>
