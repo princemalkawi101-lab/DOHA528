@@ -11,6 +11,7 @@ interface Props {
   error: string;
   paypalSlot: ReactNode;
   telegramUrl?: string;
+  onlineTelegramUrl?: string;
   onStartVip: () => void;
   onDecline: () => void;
   onClose: () => void;
@@ -29,7 +30,7 @@ const features = [
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select,textarea,iframe,[tabindex]:not([tabindex="-1"])';
 
 export default function EventPostRegistration({
-  stage, corePending, purchasing, error, paypalSlot, telegramUrl, onStartVip, onDecline, onClose,
+  stage, corePending, purchasing, error, paypalSlot, telegramUrl, onlineTelegramUrl, onStartVip, onDecline, onClose,
 }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -98,6 +99,14 @@ export default function EventPostRegistration({
         </button>
 
         <div className="ev-post-body">
+          {!corePending && onlineTelegramUrl && <div className="ev-post-confirmed" data-testid="online-access-confirmed">
+            <div>
+              <p>تم تأكيد دفعك وحضورك أونلاين.</p>
+              <a className="ev-post-tg" href={onlineTelegramUrl} target="_blank" rel="noopener noreferrer" data-testid="link-online-telegram">
+                <Send aria-hidden="true" />انضم إلى قناة الورشة للأونلاين على Telegram
+              </a>
+            </div>
+          </div>}
           {stage === 'offer' && (
             <>
               {corePending ? pendingNote : (
@@ -170,7 +179,7 @@ export default function EventPostRegistration({
               <p className="ev-post-lead">أهلاً بك في التجربة الأعمق مع ضحى.</p>
               {telegramUrl && (
                 <a className="ev-post-tg" href={telegramUrl} target="_blank" rel="noopener noreferrer" data-testid="link-telegram">
-                  <Send aria-hidden="true" />انضم إلى الجروب الخاص على Telegram
+                  <Send aria-hidden="true" />انضم إلى جروب VIP الخاص على Telegram
                 </a>
               )}
               {corePending && pendingNote}

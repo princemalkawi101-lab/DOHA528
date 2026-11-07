@@ -4,10 +4,10 @@ import { z } from "zod";
 import { eventFirebase } from "./event-firebase.js";
 import { sendEventConfirmation, sendEventAdminNotification, deliverEventNotifications } from "./event-email.js";
 import { DEFAULT_WHATSAPP, PRIVATE_EVENT_MAIL_PATH, readPrivateWhatsAppSettings, whatsAppSettingsSchema } from "./event-private-email-settings.js";
+import { VIP_TELEGRAM_URL, ONLINE_TELEGRAM_URL, hasConfirmedOnlineAccess } from "./event-access.js";
 import { capturePayPalOrder, createPayPalOrder, getPayPalOrder, isPayPalApiError, verifyPayPalWebhook, type PayPalWebhookHeaders, type PayPalErrorDetail } from "./paypal.js";
 
 export const EVENT_ID = "success-workshop-amman-2026";
-const TELEGRAM_URL = "https://t.me/+dl3H-ZKTnqg2N2Y0";
 const attendee = z.object({
   name: z.string().trim().min(2).max(120),
   phone: z.string().trim().min(7).max(30),
@@ -30,7 +30,8 @@ function publicRegistration(id: string, data: DocumentData) {
     attendance: data.attendance, status: data.status,
     membershipStatus: data.membershipStatus || "Standard",
     confirmationEmailStatus: data.confirmationEmailStatus || "not_sent",
-    ...(isVip(data) ? { telegramUrl: TELEGRAM_URL } : {}),
+    ...(isVip(data) ? { telegramUrl: VIP_TELEGRAM_URL } : {}),
+    ...(hasConfirmedOnlineAccess(data) ? { onlineTelegramUrl: ONLINE_TELEGRAM_URL } : {}),
   };
 }
 async function requireEnabled() {

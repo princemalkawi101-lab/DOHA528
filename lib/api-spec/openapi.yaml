@@ -49,7 +49,7 @@ paths:
               $ref: "#/components/schemas/EventActionRequest"
       responses:
         "200":
-          description: Action result; private Telegram access is returned only to verified VIP owners
+          description: Action result; onlineTelegramUrl is returned only for an owned approved online ticket with a verified payment capture. telegramUrl is the separate VIP invitation and is returned only to VIP owners.
           content:
             application/json:
               schema:

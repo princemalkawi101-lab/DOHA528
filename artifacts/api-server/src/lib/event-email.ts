@@ -2,6 +2,7 @@ import { FieldValue, type DocumentData, type Transaction } from "firebase-admin/
 import { eventFirebase } from "./event-firebase.js";
 import { deliverEventMail, EventMailError, type EventMail, type EventAttachment } from "./event-mail-transport.js";
 import { readPrivateWhatsAppSettings } from "./event-private-email-settings.js";
+import { ONLINE_TELEGRAM_URL, hasConfirmedOnlineAccess } from "./event-access.js";
 
 type Kind = "confirmation" | "admin-booking" | "admin-vip";
 const ADMIN_EMAIL = "Dohamlk74@gmail.com";
@@ -14,6 +15,7 @@ function buildMail(id: string, data: DocumentData, settings: DocumentData, kind:
   let subject: string;
   const attachments: EventAttachment[] = [];
   let invitationHtml = "";
+  let invitationText = "";
   const includeWhatsApp = kind === "confirmation" && data.attendance === "in-person" && whatsapp?.enabled;
   if (kind === "confirmation") {
     const access = data.attendance === "online"
@@ -23,6 +25,11 @@ function buildMail(id: string, data: DocumentData, settings: DocumentData, kind:
     text = `مرحبًا ${data.name || ""}،\nتم تأكيد تسجيلك في ورشة تجسيد النجاح مع Master Doha Malkawi.\nالتاريخ: السبت 21 نوفمبر 2026\nالوقت: ${time}\n${access}\nنتطلع للقائك.`;
     if (includeWhatsApp) {
       invitationHtml = `<p>${escapeHtml(whatsapp.invitation).replace(/\n/g, "<br>")}</p><p><a href="${escapeHtml(whatsapp.url)}" style="display:inline-block;background:#174c3c;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">${escapeHtml(whatsapp.buttonLabel)}</a></p>`;
+      invitationText = `\n\n${whatsapp.invitation}\n${whatsapp.buttonLabel}: ${whatsapp.url}`;
+    } else if (hasConfirmedOnlineAccess(data)) {
+      const label = "الانضمام إلى قناة الورشة للأونلاين على Telegram";
+      invitationText = `\n\nتم تأكيد دفعك وحضورك أونلاين. انضم إلى قناة الورشة لمتابعة التفاصيل:\n${ONLINE_TELEGRAM_URL}`;
+      invitationHtml = `<p>انضم إلى قناة الورشة الخاصة بالحضور أونلاين لمتابعة التفاصيل.</p><p><a href="${escapeHtml(ONLINE_TELEGRAM_URL)}" style="display:inline-block;background:#174c3c;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">${label}</a></p>`;
     }
   } else {
     subject = kind === "admin-vip" ? "ترقية VIP مدفوعة — ورشة تجسيد النجاح" : "حجز جديد — ورشة تجسيد النجاح";
@@ -35,7 +42,7 @@ function buildMail(id: string, data: DocumentData, settings: DocumentData, kind:
   }
   return {
     key: `event-${kind}-${id}`, to: kind === "confirmation" ? String(data.email || "") : ADMIN_EMAIL,
-    subject, text: text + (includeWhatsApp ? `\n\n${whatsapp.invitation}\n${whatsapp.buttonLabel}: ${whatsapp.url}` : ""), attachments,
+    subject, text: text + invitationText, attachments,
     html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:2;color:#174c3c">${escapeHtml(text).replace(/\n/g, "<br>")}${invitationHtml}</div>`,
   };
 }

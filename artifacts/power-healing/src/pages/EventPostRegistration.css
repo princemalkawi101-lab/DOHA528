@@ -41,6 +41,7 @@
 .ev-post-member{padding:5px 14px;border:1px solid hsl(var(--sun));color:hsl(var(--wine-deep));background:hsl(var(--sun-pale)/.5);font-size:13px;font-weight:900;letter-spacing:.12em}
 .ev-post-lead{margin:0;color:hsl(var(--ink)/.85);font-size:15.5px;font-weight:700;line-height:1.9}
 .ev-post-tg{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;padding:14px 18px;background:hsl(var(--wine));color:hsl(var(--paper));font-weight:900;text-decoration:none;transition:transform .2s}
+.ev a.ev-post-tg{color:hsl(var(--paper))}
 .ev-post-tg:hover{transform:translateY(-2px)}
 .ev-post-tg svg{width:18px;height:18px}
 @keyframes evPostFade{from{opacity:0}to{opacity:1}}

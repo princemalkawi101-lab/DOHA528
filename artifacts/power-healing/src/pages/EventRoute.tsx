@@ -260,6 +260,7 @@ export default function EventRoute() {
       stage={stage} corePending={registration.status === 'pending'} purchasing={showVipPaypal}
       error={vipError} paypalSlot={showVipPaypal ? paymentButtons('vip') : null}
       telegramUrl={registration.telegramUrl}
+      onlineTelegramUrl={registration.onlineTelegramUrl}
       onStartVip={() => { setVipError(''); setShowVipPaypal(true); }}
       onDecline={() => { if (!paymentBusy.current) { setShowVipPaypal(false); setStage('standard'); } }}
       onClose={closeModal}

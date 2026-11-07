@@ -62,6 +62,7 @@ export interface MyEventRegistration {
   status: EventRegistrationStatus;
   membershipStatus: 'Standard' | 'VIP Member';
   telegramUrl?: string;
+  onlineTelegramUrl?: string;
 }
 
 export async function eventRequest<T>(

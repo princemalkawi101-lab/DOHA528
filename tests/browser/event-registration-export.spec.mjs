@@ -108,6 +108,47 @@ async function login(page, user) {
   await expect(page).toHaveURL(/\/admin$/);
 }
 
+test('online and VIP Telegram buttons remain distinct after reopening the confirmation', async ({ page }) => {
+  await page.setViewportSize({ width: 402, height: 874 });
+  await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'siteSettings/config'), {
+    event: { enabled: true, cliqAlias: 'SYNTHETIC' },
+  }));
+  let registration = {
+    id: 'synthetic-online', name: 'مشترك أونلاين', phone: '0790000000', email: 'online@example.test',
+    attendance: 'online', status: 'approved', membershipStatus: 'Standard',
+    onlineTelegramUrl: 'https://t.me/+_5Dhdrs3Iq8zNzRk',
+  };
+  await page.route('**/api/event', route => route.fulfill({ json: { registration } }));
+  await page.goto('/event');
+  await page.getByTestId('button-view-current-booking').click();
+  await expect(page.getByTestId('link-online-telegram')).toHaveAttribute('href', registration.onlineTelegramUrl);
+  await expect(page.getByTestId('link-telegram')).toHaveCount(0);
+  await page.getByTestId('button-decline-vip').click();
+  await expect(page.getByTestId('link-online-telegram')).toBeVisible();
+  await page.getByTestId('button-close-post').click();
+  await page.reload();
+  await page.getByTestId('button-view-current-booking').click();
+  await expect(page.getByTestId('link-online-telegram')).toHaveAttribute('href', registration.onlineTelegramUrl);
+  await page.getByTestId('button-close-post').click();
+  registration = { ...registration, membershipStatus: 'VIP Member', telegramUrl: 'https://t.me/+dl3H-ZKTnqg2N2Y0' };
+  await page.reload();
+  await page.getByTestId('button-view-current-booking').click();
+  await expect(page.getByTestId('link-online-telegram')).toHaveAttribute('href', registration.onlineTelegramUrl);
+  await expect(page.getByTestId('link-telegram')).toHaveAttribute('href', registration.telegramUrl);
+  for (const id of ['link-online-telegram', 'link-telegram']) {
+    const colors = await page.getByTestId(id).evaluate(link => {
+      const style = getComputedStyle(link);
+      return { foreground: style.color, background: style.backgroundColor };
+    });
+    const luminance = value => value.match(/[\d.]+/g).slice(0, 3).map(Number)
+      .map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+      .reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
+    const light = luminance(colors.foreground), dark = luminance(colors.background);
+    expect((Math.max(light, dark) + .05) / (Math.min(light, dark) + .05)).toBeGreaterThan(4.5);
+  }
+  await page.getByTestId('modal-post-registration').screenshot({ path: 'generated-artifacts/event-registration-browser/online-vip-access.jpg' });
+});
+
 async function openEvent(page) {
   await page.getByRole('button', { name: 'الفعالية', exact: true }).click();
   await expect(select(page)).toBeVisible();

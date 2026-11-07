@@ -134,6 +134,7 @@ const notificationsBeforeRetry = globalThis.__eventTestEmail.attempts;
 await eventAction(admin, { action: 'retry-admin-email', registrationId: core.registration.id });
 assert.equal(globalThis.__eventTestEmail.attempts, notificationsBeforeRetry, 'Admin mail retry is idempotent');
 assert.equal(core.registration.telegramUrl, undefined);
+assert.equal(core.registration.onlineTelegramUrl, undefined, 'Pending in-person ticket has no online channel');
 const persisted = (await db.doc(`eventRegistrations/${core.registration.id}`).get()).data();
 assert.equal(persisted.receiptDataUrl, receiptDataUrl);
 const duplicate = await eventAction(user, { action: 'register-cliq', ...attendee, receiptDataUrl });
@@ -157,6 +158,7 @@ const vip = await eventAction(user, { action: 'capture-order', orderId: vipOrder
 assert.equal(vip.registration.membershipStatus, 'VIP Member');
 assert.equal(vip.registration.status, 'pending', 'VIP payment must not approve an unreviewed CliQ receipt');
 assert.equal(vip.registration.telegramUrl, 'https://t.me/+dl3H-ZKTnqg2N2Y0', 'Verified VIP payment reveals the exact configured Telegram invitation');
+assert.equal(vip.registration.onlineTelegramUrl, undefined, 'In-person VIP does not grant online base-ticket access');
 const arrival = (u, id, arrived = true, expectedRevision = 0) =>
   eventAction(u, { action: 'arrival', registrationId: id, arrived, expectedRevision });
 const failsWithStatus = (promise, status) => assert.rejects(promise, (error) => error.status === status);
@@ -233,10 +235,12 @@ await arrivalRef.update({ eventId: EVENT_ID });
 
 const onlineOrder = await eventAction(onlineUser, { action: 'create-order', tier: 'online', ...attendee, amount: 1 });
 assert.equal(globalThis.__eventTestPayments.orders.get(onlineOrder.id).amount, 30);
+assert.equal((await eventAction(onlineUser, { action: 'mine' })).registration, null, 'Creating an order alone grants no access');
 globalThis.__eventTestEmail.fail = true;
 const online = await eventAction(onlineUser, { action: 'capture-order', orderId: onlineOrder.id });
 assert.equal(online.registration.status, 'approved');
 assert.equal(online.registration.telegramUrl, undefined);
+assert.equal(online.registration.onlineTelegramUrl, 'https://t.me/+_5Dhdrs3Iq8zNzRk');
 await failsWithStatus(arrival(admin, online.registration.id), 409);
 assert.equal((await db.collection('eventRegistrations').doc(online.registration.id).get()).data().adminNotificationEmailStatus, 'failed', 'Email failure does not roll back successful payment');
 const failed = await eventAction(admin, { action: 'review', registrationId: online.registration.id, status: 'approved' });
@@ -331,6 +335,14 @@ const confirmedOnline = await eventAction(onlineInvite.u, { action: 'capture-ord
 const onlineMails = globalThis.__eventTestEmail.messages.slice(beforeOnlineInvite).map(readableMime);
 assert.ok(!onlineMails.some(m => m.includes(whatsapp.url)), 'Online confirmation omits WhatsApp in both HTML and plain text');
 assert.equal(confirmedOnline.registration.telegramUrl, undefined, 'Existing VIP-only Telegram access is not silently expanded to regular tickets');
+assert.equal(confirmedOnline.registration.onlineTelegramUrl, 'https://t.me/+_5Dhdrs3Iq8zNzRk');
+assert.equal(onlineMails.filter(m => m.includes('href="https://t.me/+_5Dhdrs3Iq8zNzRk"')).length, 1, 'Only the confirmed online attendee email gets the online channel button');
+assert.ok(!onlineMails.some(m => m.includes('https://t.me/+dl3H-ZKTnqg2N2Y0')), 'Standard online email never contains VIP invitation');
+assert.equal((await eventAction(onlineInvite.u, { action: 'mine' })).registration.onlineTelegramUrl, confirmedOnline.registration.onlineTelegramUrl, 'Reload restores owned online access');
+const onlineVipOrder = await eventAction(onlineInvite.u, { action: 'create-order', tier: 'vip', registrationId: confirmedOnline.registration.id });
+const onlineVip = await eventAction(onlineInvite.u, { action: 'capture-order', orderId: onlineVipOrder.id });
+assert.equal(onlineVip.registration.telegramUrl, 'https://t.me/+dl3H-ZKTnqg2N2Y0');
+assert.equal(onlineVip.registration.onlineTelegramUrl, 'https://t.me/+_5Dhdrs3Iq8zNzRk', 'Online VIP retains both distinct entitlements');
 const currentPrivate = await eventAction(admin, { action: 'get-private-email-settings' });
 await eventAction(admin, { action: 'save-private-email-settings', whatsapp: { ...currentPrivate.whatsapp, enabled: false } });
 const withoutInvite = await checkout();
