@@ -132,7 +132,16 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
   if (body.action === "get-private-email-settings" || body.action === "save-private-email-settings") {
     if (!isEventAdmin(user)) throw new EventError(403, "Administrator access required.");
     if (body.action === "get-private-email-settings") return { whatsapp: await readPrivateWhatsAppSettings() };
-    const input = whatsAppSettingsSchema.parse(body.whatsapp);
+    const parsed = whatsAppSettingsSchema.safeParse(body.whatsapp);
+    if (!parsed.success) {
+      const field = parsed.error.issues[0]?.path[0];
+      const message = field === "url" ? "لم يُحفظ الرابط. الصق رابط دعوة مجموعة أو قناة واتساب كاملًا، ويجب أن يبدأ بـ https://chat.whatsapp.com/ أو https://whatsapp.com/channel/."
+        : field === "buttonLabel" ? "اكتب نص زر الانضمام، بحد أقصى 80 حرفًا."
+        : field === "invitation" ? "نص الدعوة أطول من المسموح. الحد الأقصى 1200 حرف."
+        : "تعذّر حفظ إعدادات واتساب. أعد تحميل الإعدادات وتحقق من الحقول.";
+      throw new EventError(400, message);
+    }
+    const input = parsed.data;
     const ref = db.doc(PRIVATE_EVENT_MAIL_PATH);
     const whatsapp = await db.runTransaction(async (tx: Transaction) => {
       const current = (await tx.get(ref)).data()?.whatsapp;

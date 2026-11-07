@@ -104,7 +104,8 @@ await assert.rejects(eventAction(user, { action: 'get-private-email-settings' })
 await assert.rejects(eventAction(user, { action: 'save-private-email-settings', whatsapp }), e => e.status === 403);
 await assert.rejects(eventAction({ uid: 'non-admin' }, { action: 'get-private-email-settings' }), e => e.status === 403);
 for (const url of ['javascript:alert(1)', 'https://whatsapp.com.evil.test/channel/x', 'https://evil.test', 'https://chat.whatsapp.com@evil.test/x']) {
-  await assert.rejects(eventAction(admin, { action: 'save-private-email-settings', whatsapp: { ...whatsapp, url } }));
+  await assert.rejects(eventAction(admin, { action: 'save-private-email-settings', whatsapp: { ...whatsapp, url } }),
+    e => e.status === 400 && e.message.includes('لم يُحفظ الرابط') && !e.message.includes('"code"'));
 }
 const privateSaved = await eventAction(admin, { action: 'save-private-email-settings', whatsapp });
 assert.equal(privateSaved.whatsapp.revision, 1);
@@ -349,6 +350,19 @@ const withoutInvite = await checkout();
 const beforeDisabled = globalThis.__eventTestEmail.messages.length;
 await eventAction(withoutInvite.u, { action: 'capture-order', orderId: withoutInvite.order.id });
 assert.ok(!globalThis.__eventTestEmail.messages.slice(beforeDisabled).some(m => readableMime(m).includes(whatsapp.url)), 'Disabled invitation is omitted');
+// Real mobile shares append query parameters and may carry RTL copy markers.
+let sharedSettings = (await eventAction(admin, { action: 'get-private-email-settings' })).whatsapp;
+for (const url of [
+  'https://chat.whatsapp.com/SyntheticInvite123?mode=gi_t',
+  'https://chat.whatsapp.com/SyntheticInvite123?mode=ac_t',
+  'https://www.whatsapp.com/channel/SyntheticChannel?source=share',
+  '\u200F https://chat.whatsapp.com/SyntheticInvite123?mode=gi_t \u200E',
+]) {
+  const result = await eventAction(admin, { action: 'save-private-email-settings', whatsapp: { ...sharedSettings, enabled: true, url } });
+  sharedSettings = result.whatsapp;
+  assert.equal(sharedSettings.url, url.replace(/[\u200E\u200F]/g, '').trim());
+  assert.equal((await eventAction(admin, { action: 'get-private-email-settings' })).whatsapp.url, sharedSettings.url);
+}
 await db.doc(privatePath).delete();
 for (const collection of ['eventRegistrations', 'eventPaymentOrders', 'eventCheckoutSessions']) {
   for (const u of [user, onlineUser, ...recoveryUsers]) {
