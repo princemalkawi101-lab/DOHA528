@@ -120,6 +120,59 @@ async function admin(page) {
   return user;
 }
 
+test('private WhatsApp email settings save and reload only through authenticated admin API', async ({ page }) => {
+  await page.setViewportSize({ width: 402, height: 874 });
+  await seed(env);
+  let saved = {
+    enabled: false, url: '', invitation: 'Synthetic invitation',
+    buttonLabel: 'الانضمام إلى قناة الورشة', revision: 0,
+  };
+  const writes = [];
+  await page.route('**/api/event', async route => {
+    const request = route.request();
+    const body = request.postDataJSON();
+    const token = request.headers().authorization?.replace(/^Bearer /, '');
+    const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+    expect(claims.admin).toBe(true);
+    if (body.action === 'get-private-email-settings') return route.fulfill({ json: { whatsapp: saved } });
+    if (body.action === 'save-private-email-settings') {
+      writes.push(body);
+      saved = { ...body.whatsapp, revision: body.whatsapp.revision + 1 };
+      return route.fulfill({ json: { whatsapp: saved } });
+    }
+    throw new Error(`Unexpected API action: ${body.action}`);
+  });
+  await admin(page);
+  await page.getByTestId('event-mail-settings-panel').locator('summary').click();
+  await expect(page.getByTestId('checkbox-event-whatsapp-enabled')).toBeEnabled();
+  await page.getByTestId('checkbox-event-whatsapp-enabled').check();
+  await page.getByTestId('input-event-whatsapp-url').fill('https://whatsapp.com/channel/SYNTHETIC_ONLY');
+  await page.getByTestId('input-event-whatsapp-invitation').fill('انضم لمتابعة تفاصيل الورشة');
+  await page.getByTestId('input-event-whatsapp-label').fill('انضم لقناة الورشة');
+  await page.getByTestId('button-save-event-whatsapp').click();
+  await expect(page.getByTestId('event-whatsapp-saved')).toBeVisible();
+  expect(writes).toHaveLength(1);
+  expect(writes[0].whatsapp.url).toBe('https://whatsapp.com/channel/SYNTHETIC_ONLY');
+  const widths = await page.getByTestId('event-whatsapp-settings').evaluate(section => ({ width: section.clientWidth, content: section.scrollWidth }));
+  expect(widths.content).toBeLessThanOrEqual(widths.width + 1);
+  await page.getByTestId('event-whatsapp-settings').screenshot({ path: 'generated-artifacts/event-registration-browser/private-whatsapp-settings.jpg' });
+  await page.reload();
+  await openEvent(page);
+  await page.getByTestId('event-mail-settings-panel').locator('summary').click();
+  await expect(page.getByTestId('input-event-whatsapp-url')).toHaveValue(saved.url);
+  await expect(page.getByTestId('checkbox-event-whatsapp-enabled')).toBeChecked();
+  await page.getByTestId('checkbox-event-whatsapp-enabled').uncheck();
+  await page.getByTestId('button-save-event-whatsapp').click();
+  await expect(page.getByTestId('event-whatsapp-saved')).toBeVisible();
+  expect(saved.enabled).toBe(false);
+  expect(saved.revision).toBe(2);
+  let publicData;
+  await env.withSecurityRulesDisabled(async context => {
+    publicData = (await getDocs(collection(context.firestore(), 'siteSettings'))).docs.map(doc => doc.data());
+  });
+  expect(JSON.stringify(publicData)).not.toContain('SYNTHETIC_ONLY');
+});
+
 // Independent RFC-4180 reader so browser tests assert rows rather than calling
 // the production exporter to manufacture their own expected result.
 function parseCsv(text) {

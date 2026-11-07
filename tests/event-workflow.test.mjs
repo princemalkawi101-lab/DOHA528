@@ -90,6 +90,32 @@ await db.doc('siteSettings/config').set({ event: {
   enabled: true, cliqAlias: 'TEST-ONLY', confirmationEmailProvider: 'gmail',
   confirmationEmailFrom: 'sender@example.test', confirmationTime: '1:00 PM–4:00 PM Jordan time',
 } }, { merge: true });
+const privatePath = 'eventPrivateSettings/success-workshop-amman-2026';
+await db.doc(privatePath).delete();
+const defaults = await eventAction(admin, { action: 'get-private-email-settings' });
+assert.equal(defaults.whatsapp.enabled, false);
+const whatsapp = {
+  ...defaults.whatsapp, enabled: true,
+  url: 'https://whatsapp.com/channel/SYNTHETIC_ONLY',
+  invitation: 'Join the workshop <script>test</script>',
+  buttonLabel: 'Join <workshop>',
+};
+await assert.rejects(eventAction(user, { action: 'get-private-email-settings' }), e => e.status === 403);
+await assert.rejects(eventAction(user, { action: 'save-private-email-settings', whatsapp }), e => e.status === 403);
+await assert.rejects(eventAction({ uid: 'non-admin' }, { action: 'get-private-email-settings' }), e => e.status === 403);
+for (const url of ['javascript:alert(1)', 'https://whatsapp.com.evil.test/channel/x', 'https://evil.test', 'https://chat.whatsapp.com@evil.test/x']) {
+  await assert.rejects(eventAction(admin, { action: 'save-private-email-settings', whatsapp: { ...whatsapp, url } }));
+}
+const privateSaved = await eventAction(admin, { action: 'save-private-email-settings', whatsapp });
+assert.equal(privateSaved.whatsapp.revision, 1);
+assert.equal((await eventAction(admin, { action: 'get-private-email-settings' })).whatsapp.url, whatsapp.url);
+await assert.rejects(eventAction(admin, { action: 'save-private-email-settings', whatsapp }), e => e.status === 409);
+assert.ok(!JSON.stringify((await db.doc('siteSettings/config').get()).data()).includes(whatsapp.url));
+function readableMime(message) {
+  return message + '\n' + [...message.matchAll(/Content-Transfer-Encoding: base64\r?\n\r?\n([A-Za-z0-9+/=\r\n]+)/gi)]
+    .map(match => Buffer.from(match[1].replace(/\s/g, ''), 'base64').toString()).join('\n')
+    + '\n' + message.replace(/=\r?\n/g, '').replace(/=([A-F0-9]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
 
 await assert.rejects(eventAction(user, { action: 'register-cliq', ...attendee, email: 'bad', receiptDataUrl }));
 const core = await eventAction(user, { action: 'register-cliq', ...attendee, receiptDataUrl });
@@ -98,6 +124,8 @@ assert.equal(core.registration.email, attendee.email);
 const pendingData = (await db.collection('eventRegistrations').doc(core.registration.id).get()).data();
 assert.equal(pendingData.adminNotificationEmailStatus, 'sent', 'Admin receives a new pending CliQ booking');
 assert.equal(pendingData.confirmationEmailStatus, 'not_sent', 'Pending receipt is not an approved ticket');
+assert.ok(!globalThis.__eventTestEmail.messages.some(m => readableMime(m).includes(whatsapp.url)), 'No WhatsApp invite in pending/admin notifications');
+assert.ok(!JSON.stringify(await eventAction(user, { action: 'mine' })).includes(whatsapp.url), 'Guest status never includes private WhatsApp');
 const receiptMail = globalThis.__eventTestEmail.messages.find(m => /To: Dohamlk74@gmail.com/i.test(m) && /cliq-receipt.jpg/.test(m));
 assert.ok(receiptMail, 'CliQ admin mail has a real receipt attachment');
 assert.match(receiptMail, /Content-Type: image\/jpeg/i);
@@ -144,10 +172,18 @@ assert.equal(globalThis.__eventTestPayments.captures, calls, 'Retry must not rec
 await assert.rejects(eventAction(user, { action: 'create-order', tier: 'vip', registrationId: core.registration.id }));
 const approved = await eventAction(admin, { action: 'review', registrationId: core.registration.id, status: 'approved' });
 assert.equal(approved.emailStatus, 'sent');
+const confirmedMail = globalThis.__eventTestEmail.messages.map(readableMime).find(m => m.includes(`href="${whatsapp.url}"`));
+assert.ok(confirmedMail, 'Approved CliQ attendee receives clickable WhatsApp button');
+assert.ok(confirmedMail.includes('Join &lt;workshop&gt;'));
+assert.ok(!confirmedMail.includes('<script>test</script></p>'), 'Invitation HTML is escaped');
 assert.equal((await eventAction(user, { action: 'mine' })).registration.membershipStatus, 'VIP Member');
 const emailAttempts = globalThis.__eventTestEmail.attempts;
 await eventAction(admin, { action: 'retry-email', registrationId: core.registration.id });
 assert.equal(globalThis.__eventTestEmail.attempts, emailAttempts);
+const disabledWhatsApp = await eventAction(admin, { action: 'save-private-email-settings', whatsapp: { ...privateSaved.whatsapp, enabled: false } });
+await eventAction(admin, { action: 'retry-email', registrationId: core.registration.id });
+assert.equal(globalThis.__eventTestEmail.attempts, emailAttempts, 'Editing settings never resends a previously sent confirmation');
+await eventAction(admin, { action: 'save-private-email-settings', whatsapp: { ...disabledWhatsApp.whatsapp, enabled: true } });
 
 // Atomic check-in retains the first arrival when two desks check in together.
 const concurrentArrivals = await Promise.all([
@@ -286,6 +322,21 @@ assert.equal((await eventAction(tampered.u, { action: 'mine' })).registration.st
 assert.equal((await tamperedRef.get()).data().status, 'created', 'Conflict leaves payment available for manual recovery');
 assert.equal((await eventPayPalWebhook({}, { id: 'WH-IGNORED', event_type: 'PAYMENT.CAPTURE.PENDING' })).ignored, true);
 assert.equal((await eventPayPalWebhook({}, webhook({ id: 'UNKNOWN-ORDER' }))).ignored, true);
+// Verified online payments get the same private invitation without admin approval.
+globalThis.__eventTestEmail.fail = false;
+globalThis.__eventTestEmail.ambiguous = false;
+const onlineInvite = await checkout();
+const beforeOnlineInvite = globalThis.__eventTestEmail.messages.length;
+await eventAction(onlineInvite.u, { action: 'capture-order', orderId: onlineInvite.order.id });
+const onlineMails = globalThis.__eventTestEmail.messages.slice(beforeOnlineInvite).map(readableMime);
+assert.equal(onlineMails.filter(m => m.includes(`href="${whatsapp.url}"`)).length, 1, 'Only confirmed online attendee mail gets the private button, not organizer mail');
+const currentPrivate = await eventAction(admin, { action: 'get-private-email-settings' });
+await eventAction(admin, { action: 'save-private-email-settings', whatsapp: { ...currentPrivate.whatsapp, enabled: false } });
+const withoutInvite = await checkout();
+const beforeDisabled = globalThis.__eventTestEmail.messages.length;
+await eventAction(withoutInvite.u, { action: 'capture-order', orderId: withoutInvite.order.id });
+assert.ok(!globalThis.__eventTestEmail.messages.slice(beforeDisabled).some(m => readableMime(m).includes(whatsapp.url)), 'Disabled invitation is omitted');
+await db.doc(privatePath).delete();
 for (const collection of ['eventRegistrations', 'eventPaymentOrders', 'eventCheckoutSessions']) {
   for (const u of [user, onlineUser, ...recoveryUsers]) {
     const rows = await db.collection(collection).where('userId', '==', u.uid).get();

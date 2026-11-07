@@ -8,3 +8,9 @@ Use direct Resend delivery for the externally hosted event application, with a v
 **Why:** The user selected Resend after the Replit-only Gmail connector failed on Vercel with a missing Replit identity error. Connecting a provider inside Replit does not provision credentials on Vercel.
 
 **How to apply:** Do not treat a connected Replit provider or a successful mocked transport test as proof of production mail delivery. Complete sender-domain DNS verification and deployment configuration, then verify delivery separately. Keep organizer notifications independent of attendee confirmations: pending CliQ requests notify the organizer with the receipt; attendee confirmations wait for approval, while verified online payments notify both. Mail failure must never reverse a successful booking or capture.
+
+The workshop WhatsApp invitation is restricted to confirmed attendees, and its invitation wording and button must be editable by administrators.
+
+**Why:** The user wants the channel invitation included after CliQ approval or successful online payment, not available from public landing-page settings.
+
+**How to apply:** Store invitation settings outside visitor-readable configuration; only admin-authenticated server actions may read or change them. Add the invitation to future attendee confirmation emails, never pending-request or organizer notices. Changing settings must not automatically resend past confirmations.

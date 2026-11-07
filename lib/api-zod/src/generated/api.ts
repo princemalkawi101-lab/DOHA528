@@ -20,6 +20,15 @@ export const EventPaymentWebhookBody = zod.object({
 /**
  * @summary Guest event bookings and payments, with Firebase-authenticated administrator review
  */
+export const eventWorkflowBodyWhatsappUrlMax = 2048;
+
+export const eventWorkflowBodyWhatsappInvitationMax = 1200;
+
+export const eventWorkflowBodyWhatsappButtonLabelMax = 80;
+
+export const eventWorkflowBodyWhatsappRevisionMin = 0;
+export const eventWorkflowBodyWhatsappRevisionMax = 9007199254740991;
+
 export const eventWorkflowBodyExpectedRevisionMin = 0;
 export const eventWorkflowBodyExpectedRevisionMax = 9007199254740991;
 
@@ -34,7 +43,29 @@ export const EventWorkflowBody = zod.object({
     "retry-admin-email",
     "email-readiness",
     "arrival",
+    "get-private-email-settings",
+    "save-private-email-settings",
   ]),
+  whatsapp: zod
+    .object({
+      enabled: zod.boolean(),
+      url: zod
+        .string()
+        .max(eventWorkflowBodyWhatsappUrlMax)
+        .describe(
+          "Private HTTPS WhatsApp channel or group invitation. Administrator-only; never returned by guest endpoints.",
+        ),
+      invitation: zod.string().max(eventWorkflowBodyWhatsappInvitationMax),
+      buttonLabel: zod
+        .string()
+        .min(1)
+        .max(eventWorkflowBodyWhatsappButtonLabelMax),
+      revision: zod
+        .number()
+        .min(eventWorkflowBodyWhatsappRevisionMin)
+        .max(eventWorkflowBodyWhatsappRevisionMax),
+    })
+    .optional(),
   kind: zod
     .enum(["booking", "vip"])
     .optional()

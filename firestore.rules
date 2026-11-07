@@ -123,6 +123,10 @@ service cloud.firestore {
     match /eventCheckoutSessions/{sessionId} {
       allow read, write: if false;
     }
+    match /eventPrivateSettings/{eventId} {
+      // Access is only through the admin-authenticated server API.
+      allow read, write: if false;
+    }
 
     match /purchases/{purchaseId} {
       allow create, update: if false;

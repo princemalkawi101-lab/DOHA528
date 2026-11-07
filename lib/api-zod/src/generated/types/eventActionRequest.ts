@@ -9,9 +9,11 @@ import type { EventActionRequestAction } from "./eventActionRequestAction";
 import type { EventActionRequestKind } from "./eventActionRequestKind";
 import type { EventActionRequestStatus } from "./eventActionRequestStatus";
 import type { EventActionRequestTier } from "./eventActionRequestTier";
+import type { EventWhatsAppSettings } from "./eventWhatsAppSettings";
 
 export interface EventActionRequest {
   action: EventActionRequestAction;
+  whatsapp?: EventWhatsAppSettings;
   /** Administrator-only retry-admin-email notification kind. */
   kind?: EventActionRequestKind;
   /** Administrator-only arrival action; requires an approved in-person base ticket when true. */

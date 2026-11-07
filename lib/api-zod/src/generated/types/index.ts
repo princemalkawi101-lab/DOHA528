@@ -11,6 +11,7 @@ export * from "./eventActionRequestAction";
 export * from "./eventActionRequestKind";
 export * from "./eventActionRequestStatus";
 export * from "./eventActionRequestTier";
+export * from "./eventWhatsAppSettings";
 export * from "./eventWorkflow200";
 export * from "./healthStatus";
 export * from "./payPalWebhookEvent";

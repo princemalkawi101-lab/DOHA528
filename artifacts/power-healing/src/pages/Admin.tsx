@@ -33,6 +33,7 @@ import {
 import { arrivalDate, searchEventRegistrations } from '@/lib/eventArrival';
 import { EventAdminSection } from '@/components/admin/EventAdminSection';
 import { EventReceiptViewer } from '@/components/admin/EventReceiptViewer';
+import { EventWhatsAppSettings } from '@/components/admin/EventWhatsAppSettings';
 import {
   normalizeSocialDestination,
   newSocialLinkTemplate,
@@ -1078,6 +1079,7 @@ export default function Admin() {
             </div>
             <p className="mt-3 text-xs text-white/60">تُحفظ هذه المعلومات ضمن إعدادات الموقع العامة. لا تضع رابط Telegram الخاص أو أسرارًا هنا.</p>
             <button onClick={handleSaveEventSettings} disabled={settingsSaving === 'about'} className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 font-bold text-white">حفظ إعدادات البريد</button>
+            <EventWhatsAppSettings />
           </EventAdminSection>
           <EventAdminSection id="event-registrations-panel" open title={lang === 'ar' ? `تسجيلات الفعالية (${eventRegistrations.length})` : `Event registrations (${eventRegistrations.length})`}>
             {eventFeedback && <p className="mb-4 text-sm text-amber-200" role="status" aria-live="polite" data-testid="event-registration-feedback">{eventFeedback}</p>}

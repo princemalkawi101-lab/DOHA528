@@ -3,6 +3,7 @@ import { FieldValue, Timestamp, type DocumentData, type QueryDocumentSnapshot, t
 import { z } from "zod";
 import { eventFirebase } from "./event-firebase.js";
 import { sendEventConfirmation, sendEventAdminNotification, deliverEventNotifications } from "./event-email.js";
+import { DEFAULT_WHATSAPP, PRIVATE_EVENT_MAIL_PATH, readPrivateWhatsAppSettings, whatsAppSettingsSchema } from "./event-private-email-settings.js";
 import { capturePayPalOrder, createPayPalOrder, getPayPalOrder, isPayPalApiError, verifyPayPalWebhook, type PayPalWebhookHeaders, type PayPalErrorDetail } from "./paypal.js";
 
 export const EVENT_ID = "success-workshop-amman-2026";
@@ -127,6 +128,22 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
   const body = z.object({ action: z.string() }).passthrough().parse(raw);
   const { db } = eventFirebase();
   const registrations = db.collection("eventRegistrations");
+  if (body.action === "get-private-email-settings" || body.action === "save-private-email-settings") {
+    if (!isEventAdmin(user)) throw new EventError(403, "Administrator access required.");
+    if (body.action === "get-private-email-settings") return { whatsapp: await readPrivateWhatsAppSettings() };
+    const input = whatsAppSettingsSchema.parse(body.whatsapp);
+    const ref = db.doc(PRIVATE_EVENT_MAIL_PATH);
+    const whatsapp = await db.runTransaction(async (tx: Transaction) => {
+      const current = (await tx.get(ref)).data()?.whatsapp;
+      if ((current?.revision ?? DEFAULT_WHATSAPP.revision) !== input.revision) {
+        throw new EventError(409, "عدّل مسؤول آخر هذه الإعدادات. أعد تحميل الإعدادات قبل الحفظ.");
+      }
+      const saved = { ...input, revision: input.revision + 1 };
+      tx.set(ref, { whatsapp: saved, updatedBy: user.uid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      return saved;
+    });
+    return { whatsapp };
+  }
   if (body.action === "mine") {
     // A single-field query avoids requiring a production composite index.
     const rows = await registrations.where("userId", "==", user.uid).get();

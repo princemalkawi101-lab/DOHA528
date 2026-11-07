@@ -1,23 +1,28 @@
 import { FieldValue, type DocumentData, type Transaction } from "firebase-admin/firestore";
 import { eventFirebase } from "./event-firebase.js";
 import { deliverEventMail, EventMailError, type EventMail, type EventAttachment } from "./event-mail-transport.js";
+import { readPrivateWhatsAppSettings } from "./event-private-email-settings.js";
 
 type Kind = "confirmation" | "admin-booking" | "admin-vip";
 const ADMIN_EMAIL = "Dohamlk74@gmail.com";
 const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (s) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[s]!);
 const prefixFor = (kind: Kind) => kind === "confirmation" ? "confirmationEmail" : kind === "admin-vip" ? "adminVipEmail" : "adminNotificationEmail";
 
-function buildMail(id: string, data: DocumentData, settings: DocumentData, kind: Kind): EventMail {
+function buildMail(id: string, data: DocumentData, settings: DocumentData, kind: Kind, whatsapp?: Awaited<ReturnType<typeof readPrivateWhatsAppSettings>>): EventMail {
   const time = String(settings.confirmationTime || "من 1:00 مساءً إلى 4:00 مساءً بتوقيت الأردن");
   let text: string;
   let subject: string;
   const attachments: EventAttachment[] = [];
+  let invitationHtml = "";
   if (kind === "confirmation") {
     const access = data.attendance === "online"
       ? String(settings.onlineAccessInfo || "تم تأكيد حضورك أونلاين. ستصلك تفاصيل الدخول قبل موعد الورشة.")
       : String(settings.inPersonAccessInfo || "الحضور حضوري في الأردن، عمّان. يرجى الاحتفاظ برسالة التأكيد وإبراز الاسم المسجل عند الوصول.");
     subject = "تأكيد الحجز — ورشة تجسيد النجاح";
     text = `مرحبًا ${data.name || ""}،\nتم تأكيد تسجيلك في ورشة تجسيد النجاح مع Master Doha Malkawi.\nالتاريخ: السبت 21 نوفمبر 2026\nالوقت: ${time}\n${access}\nنتطلع للقائك.`;
+    if (whatsapp?.enabled) {
+      invitationHtml = `<p>${escapeHtml(whatsapp.invitation).replace(/\n/g, "<br>")}</p><p><a href="${escapeHtml(whatsapp.url)}" style="display:inline-block;background:#174c3c;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">${escapeHtml(whatsapp.buttonLabel)}</a></p>`;
+    }
   } else {
     subject = kind === "admin-vip" ? "ترقية VIP مدفوعة — ورشة تجسيد النجاح" : "حجز جديد — ورشة تجسيد النجاح";
     text = `${subject}\nالاسم: ${data.name || ""}\nالهاتف: ${data.phone || ""}\nالبريد: ${data.email || ""}\nالحضور: ${data.attendance === "online" ? "أونلاين" : "حضوري — عمّان، الأردن"}\nطريقة الدفع: ${data.paymentMethod === "cliq" && kind !== "admin-vip" ? "CliQ" : "PayPal / بطاقة عبر PayPal"}\nالمبلغ: ${kind === "admin-vip" ? "49 USD (إضافية)" : data.paymentMethod === "cliq" ? "25 JOD" : "30 USD"}\nالحالة: ${data.status === "approved" ? "مقبول" : data.status === "rejected" ? "مرفوض" : "قيد مراجعة الوصل"}\nمرجع التسجيل: ${id}\nمرجع الدفع: ${kind === "admin-vip" ? data.vipPaypalOrderId || "" : data.paypalOrderId || ""}\nالتاريخ: 21 نوفمبر 2026\nالوقت: ${time}`;
@@ -29,8 +34,8 @@ function buildMail(id: string, data: DocumentData, settings: DocumentData, kind:
   }
   return {
     key: `event-${kind}-${id}`, to: kind === "confirmation" ? String(data.email || "") : ADMIN_EMAIL,
-    subject, text, attachments,
-    html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:2;color:#174c3c">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`,
+    subject, text: text + (kind === "confirmation" && whatsapp?.enabled ? `\n\n${whatsapp.invitation}\n${whatsapp.buttonLabel}: ${whatsapp.url}` : ""), attachments,
+    html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:2;color:#174c3c">${escapeHtml(text).replace(/\n/g, "<br>")}${invitationHtml}</div>`,
   };
 }
 
@@ -55,7 +60,8 @@ async function sendNotification(id: string, kind: Kind) {
   if (lock.busy) return { emailStatus: "sending", emailError: "جارٍ إرسال الرسالة بالفعل." };
   let accepted = false;
   try {
-    const mail = buildMail(id, lock.data!, settings, kind);
+    const whatsapp = kind === "confirmation" ? await readPrivateWhatsAppSettings() : undefined;
+    const mail = buildMail(id, lock.data!, settings, kind, whatsapp);
     const emailId = await deliverEventMail(mail, settings, !!lock.uncertain);
     accepted = true;
     await ref.update({

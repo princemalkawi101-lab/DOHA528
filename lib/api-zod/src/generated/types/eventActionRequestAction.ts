@@ -19,4 +19,6 @@ export const EventActionRequestAction = {
   "retry-admin-email": "retry-admin-email",
   "email-readiness": "email-readiness",
   arrival: "arrival",
+  "get-private-email-settings": "get-private-email-settings",
+  "save-private-email-settings": "save-private-email-settings",
 } as const;

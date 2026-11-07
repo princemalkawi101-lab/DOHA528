@@ -27,6 +27,8 @@ export const EventActionRequestAction = {
   "retry-admin-email": "retry-admin-email",
   "email-readiness": "email-readiness",
   arrival: "arrival",
+  "get-private-email-settings": "get-private-email-settings",
+  "save-private-email-settings": "save-private-email-settings",
 } as const;
 
 /**
@@ -56,8 +58,30 @@ export const EventActionRequestStatus = {
   rejected: "rejected",
 } as const;
 
+export interface EventWhatsAppSettings {
+  enabled: boolean;
+  /**
+   * Private HTTPS WhatsApp channel or group invitation. Administrator-only; never returned by guest endpoints.
+   * @maxLength 2048
+   */
+  url: string;
+  /** @maxLength 1200 */
+  invitation: string;
+  /**
+   * @minLength 1
+   * @maxLength 80
+   */
+  buttonLabel: string;
+  /**
+   * @minimum 0
+   * @maximum 9007199254740991
+   */
+  revision: number;
+}
+
 export interface EventActionRequest {
   action: EventActionRequestAction;
+  whatsapp?: EventWhatsAppSettings;
   /** Administrator-only retry-admin-email notification kind. */
   kind?: EventActionRequestKind;
   /** Administrator-only arrival action; requires an approved in-person base ticket when true. */

@@ -57,6 +57,13 @@ try {
   }));
 
   await assertSucceeds(getDoc(doc(publicDb, 'siteSettings', 'config')));
+  await testEnv.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'eventPrivateSettings', 'success-workshop-amman-2026'), {
+    whatsapp: { enabled: true, url: 'https://whatsapp.com/channel/SYNTHETIC_ONLY' },
+  }));
+  for (const client of [publicDb, regularDb, adminDb, legacyAdminDb]) {
+    await assertFails(getDoc(doc(client, 'eventPrivateSettings', 'success-workshop-amman-2026')));
+    await assertFails(setDoc(doc(client, 'eventPrivateSettings', 'success-workshop-amman-2026'), { whatsapp: { enabled: false } }));
+  }
   await assertSucceeds(setDoc(doc(legacyAdminDb, 'items', 'legacy-admin-check'), {
     titleAr: 'تحقق الأدمن',
     titleEn: 'Admin check',
