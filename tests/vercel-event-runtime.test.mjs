@@ -63,9 +63,29 @@ const child = `
     res = response();
     await webhook({ method: 'GET', headers: {} }, res);
     assert.equal(res.code, 405);
+    const { eventFailure } = require(path.join(root, 'api/_lib/event-diagnostics.js'));
+    const logs = [];
+    const originalError = console.error;
+    console.error = (line) => logs.push(JSON.parse(line));
+    try {
+      const diagnostic = eventFailure(new Error('Firebase server credentials are not configured.'), 'event');
+      assert.equal(diagnostic.code, 'FIREBASE_CREDENTIALS_MISSING');
+      assert.match(diagnostic.reference, /^[a-f0-9-]{36}$/);
+      const sensitive = eventFailure(Object.assign(new Error('private-key attendee@example.com Bearer secret'), { code: 7 }), 'event');
+      assert.equal(sensitive.code, 'FIRESTORE_PERMISSION_DENIED');
+      assert.doesNotMatch(JSON.stringify([logs, sensitive]), /private-key|attendee@example|Bearer secret/);
+      assert.equal(eventFailure({ code: 'UNTRUSTED_SECRET', message: 'secret' }, 'event').code, 'EVENT_SERVER_ERROR');
+      // No inherited server credentials: actual adapter must classify the
+      // startup failure, log it and return a safe diagnostic, not fake success.
+      res = response();
+      await registration({ method: 'POST', headers: { authorization: 'Guest ' + 'b'.repeat(64) }, body: { action: 'mine' } }, res);
+      assert.equal(res.code, 500);
+      assert.equal(res.body.code, 'FIREBASE_CREDENTIALS_MISSING');
+      assert.equal(logs.at(-1).reference, res.body.reference);
+    } finally { console.error = originalError; }
     console.log('PASS: real ESM dependency graph loads through native import; CommonJS adapters load without ERR_REQUIRE_ESM; registration auth and method guards return JSON401/405.');
   })().catch(error => { console.error(error); process.exitCode = 1; });
 `;
 execFileSync(process.execPath, ['--no-experimental-require-module', '-e', child], {
-  cwd: root, stdio: 'inherit',
+  cwd: root, stdio: 'inherit', env: { PATH: process.env.PATH, NODE_ENV: 'production' },
 });

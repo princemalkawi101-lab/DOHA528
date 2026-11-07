@@ -273,6 +273,7 @@ export default function Event(p: EventPageProps) {
             <div className="ev-closed" role="status" data-testid="event-registration-error">
               <AlertCircle aria-hidden="true" />
               <p>تعذّر التحقق من تسجيلك حاليًا. يمكنك استعراض التذاكر واختيار طريقة الحضور أدناه، لكن يجب التحقق قبل بدء الدفع أو تأكيد الحجز لتجنب تكرار الدفع.</p>
+              <p className="text-sm break-words" data-testid="event-registration-diagnostic">{p.registrationError}</p>
               <button type="button" className="font-bold underline" onClick={p.onRetryRegistration}>إعادة التحقق من التسجيل</button>
             </div>
           )}

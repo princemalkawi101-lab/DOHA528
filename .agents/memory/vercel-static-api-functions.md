@@ -26,3 +26,9 @@ Cross the root CommonJS serverless adapter to the API artifact's ESM package usi
 **Why:** The live Vercel log confirmed `ERR_REQUIRE_ESM`: compiled static imports became `require()` calls against the ESM artifact and crashed before authentication. Type checks alone did not expose it; newer local Node versions can also accept `require(ESM)` and conceal the incompatibility.
 
 **How to apply:** Preserve native `import()` in emitted CommonJS adapters and cover all event entry points, including webhooks. Verify the real emitted dependency graph with `--no-experimental-require-module` as well as TypeScript checks, without changing the entire workspace module format.
+
+Caught serverless errors must emit a sanitized diagnostic and a correlation reference, including import failures.
+
+**Why:** The live booking endpoint returned HTTP 500 while Vercel Runtime Logs were empty: returning a generic JSON error without logging concealed the failure. A passing local build cannot prove externally hosted credentials or runtime work.
+
+**How to apply:** Keep provider messages, request data and credentials out of diagnostics. Use allowlisted cause codes and matching references in the response and log; verify the actual live read-only booking request after the user redeploys before claiming payment connectivity is fixed.

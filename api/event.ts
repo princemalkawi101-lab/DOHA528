@@ -1,4 +1,5 @@
 // Vercel adapter: shares the same verified event implementation as the Replit API.
+import { eventFailure } from "./_lib/event-diagnostics.js";
 
 type Request = { method?: string; headers: Record<string, string | string[] | undefined>; body?: unknown };
 type Response = { setHeader(name: string, value: string): void; status(code: number): Response; json(body: unknown): void; end(): void };
@@ -11,12 +12,14 @@ export default async function handler(req: Request, res: Response) {
   }
   // This adapter is CommonJS on Vercel; the API artifact is an ESM package.
   // Native import() crosses that boundary without compiling to require(ESM).
-  const { eventIdentity } = await import("../artifacts/api-server/src/lib/event-identity.js");
-  const { eventAction, EventError } = await import("../artifacts/api-server/src/lib/event-workflow.js");
   try {
+    const { eventIdentity } = await import("../artifacts/api-server/src/lib/event-identity.js");
+    const { eventAction } = await import("../artifacts/api-server/src/lib/event-workflow.js");
     res.json(await eventAction(await eventIdentity(authorization), req.body));
   } catch (error) {
-    const status = error instanceof EventError ? error.status : error instanceof Error && error.name === "ZodError" ? 400 : 500;
-    res.status(status).json({ error: status < 500 && error instanceof Error ? error.message : "تعذّر إكمال العملية. يرجى المحاولة مجددًا؛ لا تدفع مرة أخرى إذا تم خصم المبلغ." });
+    // Imports can fail too; keep them inside the diagnostic boundary.
+    const { EventError } = await import("../artifacts/api-server/src/lib/event-workflow.js").catch(() => ({ EventError: undefined }));
+    const status = EventError && error instanceof EventError ? error.status : error instanceof Error && error.name === "ZodError" ? 400 : 500;
+    res.status(status).json(status < 500 && error instanceof Error ? { error: error.message } : eventFailure(error, "event"));
   }
 }
