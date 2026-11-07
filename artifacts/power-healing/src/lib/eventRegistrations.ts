@@ -26,9 +26,9 @@ export interface EventRegistration {
   amountJod?: 25;
   status: EventRegistrationStatus;
   paypalOrderId?: string;
-  amountUsd?: 30;
+  amountUsd?: number;
   membershipStatus?: 'Standard' | 'VIP Member';
-  vipAmountUsd?: 49;
+  vipAmountUsd?: number;
   vipPaypalOrderId?: string;
   confirmationEmailStatus?: 'not_sent' | 'sent' | 'failed' | 'sending' | 'uncertain';
   confirmationEmailError?: string;

@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { X, Crown, CheckCircle2, Clock, Send, AlertCircle } from 'lucide-react';
 import './EventPostRegistration.css';
+import { vipPrice } from '@/lib/eventPricing';
 
 type Stage = 'offer' | 'standard' | 'vip';
 
@@ -127,7 +128,7 @@ export default function EventPostRegistration({
                   {features.map((f, i) => <li key={i} data-testid={`text-vip-feature-${i}`}>{f}</li>)}
                 </ul>
                 <div className="ev-post-price" data-testid="text-vip-price">
-                  <span>السعر</span><bdi dir="ltr">$49 USD</bdi>
+                  <span>السعر</span><bdi dir="ltr">${vipPrice} USD</bdi>
                 </div>
 
                 {error && (
@@ -144,7 +145,7 @@ export default function EventPostRegistration({
                   </div>
                 ) : (
                   <button type="button" className="ev-post-cta" onClick={onStartVip} data-testid="button-start-vip">
-                    {error ? 'إعادة المحاولة - ' : 'احجز مقعد VIP الآن - '}<bdi dir="ltr">$49</bdi>
+                    {error ? 'إعادة المحاولة - ' : 'احجز مقعد VIP الآن - '}<bdi dir="ltr">${vipPrice}</bdi>
                   </button>
                 )}
               </section>

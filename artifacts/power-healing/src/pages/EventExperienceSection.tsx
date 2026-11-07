@@ -1,3 +1,4 @@
+import { onlinePrice, vipPrice } from '@/lib/eventPricing';
 import { MapPin, Video, Crown, ArrowLeft } from 'lucide-react';
 import './EventExperienceSection.css';
 
@@ -22,7 +23,7 @@ export default function EventExperienceSection({ onVipOffer }: { onVipOffer?: ()
         </a>
         <a href="#register" className="evx-card evx-card-online" data-testid="link-experience-online">
           <span className="evx-card-top"><Video aria-hidden="true" />الحضور أون لاين</span>
-          <strong className="evx-price" dir="ltr">30$</strong>
+          <strong className="evx-price" dir="ltr">{onlinePrice}$</strong>
           <p>عِش التجربة من أي مكان في العالم، وكن جزءًا من رحلة الانتقال من عالم الروح إلى عالم المادة.</p>
           <ArrowLeft className="evx-arrow" aria-hidden="true" />
         </a>
@@ -43,7 +44,7 @@ export default function EventExperienceSection({ onVipOffer }: { onVipOffer?: ()
             <button type="button" className="evx-vip-btn" disabled={!onVipOffer} onClick={onVipOffer} aria-describedby="evx-vip-note" data-testid="button-vip-book">احجز مقعد VIP الآن</button>
             <small id="evx-vip-note" className="evx-vip-note">ترقية اختيارية بعد تسجيل التذكرة الأساسية</small>
           </div>
-          <span className="evx-vip-price" data-testid="text-vip-price">السعر <bdi dir="ltr">49$</bdi></span>
+          <span className="evx-vip-price" data-testid="text-vip-price">السعر <bdi dir="ltr">{vipPrice}$</bdi></span>
         </div>
       </article>
     </section>

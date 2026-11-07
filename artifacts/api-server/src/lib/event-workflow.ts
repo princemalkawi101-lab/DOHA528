@@ -5,6 +5,7 @@ import { eventFirebase } from "./event-firebase.js";
 import { sendEventConfirmation, sendEventAdminNotification, deliverEventNotifications } from "./event-email.js";
 import { DEFAULT_WHATSAPP, PRIVATE_EVENT_MAIL_PATH, readPrivateWhatsAppSettings, whatsAppSettingsSchema } from "./event-private-email-settings.js";
 import { VIP_TELEGRAM_URL, ONLINE_TELEGRAM_URL, hasConfirmedOnlineAccess } from "./event-access.js";
+import { CURRENT_EVENT_PRICES, CURRENT_EVENT_PRICING_VERSION, expectedEventPrice } from "./event-pricing.js";
 import { capturePayPalOrder, createPayPalOrder, getPayPalOrder, isPayPalApiError, verifyPayPalWebhook, type PayPalWebhookHeaders, type PayPalErrorDetail } from "./paypal.js";
 
 export const EVENT_ID = "success-workshop-amman-2026";
@@ -56,7 +57,7 @@ async function reconcilePayment(orderId: string, payment: CompletedPayment) {
     const order = (await tx.get(ref)).data();
     if (!order) throw new EventError(404, "Payment order not found.");
     if (!["online", "vip"].includes(order.tier)
-      || order.amount !== (order.tier === "vip" ? 49 : 30) || order.currency !== "USD"
+      || order.amount !== expectedEventPrice(order.tier, order.pricingVersion) || order.currency !== "USD"
       || payment.orderId !== orderId || payment.captureStatus !== "COMPLETED"
       || payment.paymentStatus !== "COMPLETED" || !payment.captureId
       || payment.currency !== "USD" || payment.amount !== order.amount.toFixed(2)) {
@@ -78,7 +79,7 @@ async function reconcilePayment(orderId: string, payment: CompletedPayment) {
       }
       // Membership never changes the independently-reviewed CliQ status.
       tx.update(registrationRef, {
-        membershipStatus: "VIP Member", vipAmountUsd: 49, vipPaypalOrderId: orderId,
+        membershipStatus: "VIP Member", vipAmountUsd: order.amount, vipPaypalOrderId: orderId,
         vipCaptureId: payment.captureId, vipPaidAt: FieldValue.serverTimestamp(),
       });
     } else {
@@ -89,7 +90,7 @@ async function reconcilePayment(orderId: string, payment: CompletedPayment) {
       }
       tx.set(registrationRef, {
         ...attendee.parse(order.attendee), userId: order.userId, eventId: EVENT_ID, attendance: "online",
-        paymentMethod: "paypal", amountUsd: 30, paypalOrderId: orderId,
+        paymentMethod: "paypal", amountUsd: order.amount, paypalOrderId: orderId,
         paypalCaptureId: payment.captureId, status: "approved", membershipStatus: "Standard",
         confirmationEmailStatus: "not_sent", createdAt: FieldValue.serverTimestamp(),
       });
@@ -200,14 +201,15 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
       const previous = await registrations.doc(registrationId).get();
       if (previous.exists && previous.data()?.status !== "rejected") throw new EventError(409, "لديك تسجيل قائم بالفعل. يرجى تحديث الصفحة.");
     }
-    const amount = tier === "vip" ? 49 : 30;
+    const amount = CURRENT_EVENT_PRICES[tier];
     // Reserve one order per registration/tier before contacting PayPal.
     const session = db.collection("eventCheckoutSessions").doc(`${registrationId}_${tier}`);
     const reservation = randomUUID();
     const cached = await db.runTransaction(async (tx: Transaction) => {
       const snap = await tx.get(session);
       const data = snap.data();
-      if (data?.orderId && data.expiresAt > Date.now()) return data.orderId as string;
+      if (data?.orderId && data.expiresAt > Date.now() && data.amount === amount
+        && data.pricingVersion === CURRENT_EVENT_PRICING_VERSION) return data.orderId as string;
       if (data?.busyUntil > Date.now()) throw new EventError(409, "جارٍ تجهيز الدفع. يرجى المحاولة بعد لحظات.");
       tx.set(session, { reservation, busyUntil: Date.now() + 60000, userId: user.uid });
       return null;
@@ -218,10 +220,10 @@ export async function eventAction(user: EventUser, raw: unknown): Promise<Record
         currencyCode: "USD", cart: [{ titleEn: `Success Workshop — ${tier === "vip" ? "VIP Upgrade" : "Online"}`, jod: amount, amount, qty: 1 }],
       });
       await db.collection("eventPaymentOrders").doc(result.id).create({
-        userId: user.uid, registrationId, tier, amount, currency: "USD",
+        userId: user.uid, registrationId, tier, amount, currency: "USD", pricingVersion: CURRENT_EVENT_PRICING_VERSION,
         attendee: details, status: "created", createdAt: FieldValue.serverTimestamp(),
       });
-      await session.set({ reservation, orderId: result.id, userId: user.uid, expiresAt: Date.now() + 2 * 60 * 60 * 1000, busyUntil: 0 });
+      await session.set({ reservation, orderId: result.id, userId: user.uid, amount, pricingVersion: CURRENT_EVENT_PRICING_VERSION, expiresAt: Date.now() + 2 * 60 * 60 * 1000, busyUntil: 0 });
       return { id: result.id };
     } catch (error: unknown) {
       await db.runTransaction(async (tx: Transaction) => {

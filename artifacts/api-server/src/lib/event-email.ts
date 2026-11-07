@@ -33,8 +33,11 @@ function buildMail(id: string, data: DocumentData, settings: DocumentData, kind:
       invitationHtml = `<p>انضم إلى قناة الورشة الخاصة بالحضور أونلاين لمتابعة التفاصيل.</p><p><a href="${escapeHtml(ONLINE_TELEGRAM_URL)}" style="display:inline-block;background:#174c3c;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">${label}</a></p>`;
     }
   } else {
+    const reportedAmount = kind === "admin-vip"
+      ? `${Number(data.vipAmountUsd ?? 49).toFixed(2)} USD (إضافية)`
+      : data.paymentMethod === "cliq" ? "25 JOD" : `${Number(data.amountUsd ?? 30).toFixed(2)} USD`;
     subject = kind === "admin-vip" ? "ترقية VIP مدفوعة — ورشة تجسيد النجاح" : "حجز جديد — ورشة تجسيد النجاح";
-    text = `${subject}\nالاسم: ${data.name || ""}\nالهاتف: ${data.phone || ""}\nالبريد: ${data.email || ""}\nالحضور: ${data.attendance === "online" ? "أونلاين" : "حضوري — عمّان، الأردن"}\nطريقة الدفع: ${data.paymentMethod === "cliq" && kind !== "admin-vip" ? "CliQ" : "PayPal / بطاقة عبر PayPal"}\nالمبلغ: ${kind === "admin-vip" ? "49 USD (إضافية)" : data.paymentMethod === "cliq" ? "25 JOD" : "30 USD"}\nالحالة: ${data.status === "approved" ? "مقبول" : data.status === "rejected" ? "مرفوض" : "قيد مراجعة الوصل"}\nمرجع التسجيل: ${id}\nمرجع الدفع: ${kind === "admin-vip" ? data.vipPaypalOrderId || "" : data.paypalOrderId || ""}\nالتاريخ: 21 نوفمبر 2026\nالوقت: ${time}`;
+    text = `${subject}\nالاسم: ${data.name || ""}\nالهاتف: ${data.phone || ""}\nالبريد: ${data.email || ""}\nالحضور: ${data.attendance === "online" ? "أونلاين" : "حضوري — عمّان، الأردن"}\nطريقة الدفع: ${data.paymentMethod === "cliq" && kind !== "admin-vip" ? "CliQ" : "PayPal / بطاقة عبر PayPal"}\nالمبلغ: ${reportedAmount}\nالحالة: ${data.status === "approved" ? "مقبول" : data.status === "rejected" ? "مرفوض" : "قيد مراجعة الوصل"}\nمرجع التسجيل: ${id}\nمرجع الدفع: ${kind === "admin-vip" ? data.vipPaypalOrderId || "" : data.paypalOrderId || ""}\nالتاريخ: 21 نوفمبر 2026\nالوقت: ${time}`;
     if (kind === "admin-booking" && data.paymentMethod === "cliq") {
       const match = typeof data.receiptDataUrl === "string" && data.receiptDataUrl.match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/);
       if (!match) throw new EventMailError("إيصال CliQ غير متاح لإرفاقه. راجع التسجيل قبل إعادة إرسال إشعار الإدارة.");

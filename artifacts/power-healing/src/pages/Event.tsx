@@ -6,6 +6,7 @@ import dohaSeatedImage from '../assets/doha-mentor-seated.webp';
 import dohaDeskImage from '../assets/doha-mentor-desk.webp';
 import EventExperienceSection from './EventExperienceSection';
 import './Event.css';
+import { onlinePrice } from '@/lib/eventPricing';
 
 export type EventMode = 'in-person' | 'online';
 export interface EventAnnouncement { title?: string; body?: string; }
@@ -291,7 +292,7 @@ export default function Event(p: EventPageProps) {
               <div className="ev-package-list" role="tablist" aria-label="اختيار طريقة الحضور">
                 {([
                   { m: 'in-person', icon: MapPin, t: 'حضوري في عمّان', price: '25', currency: 'دينار', note: 'المقاعد محدودة' },
-                  { m: 'online', icon: Video, t: 'أونلاين', price: '30', currency: 'دولار', note: 'بث مباشر' },
+                  { m: 'online', icon: Video, t: 'أونلاين', price: onlinePrice, currency: 'دولار', note: 'بث مباشر' },
                 ] as const).map(o => (
                   <button key={o.m} type="button" role="tab" aria-selected={mode === o.m} aria-controls="ev-registration-panel" onClick={() => setMode(o.m)} data-testid={`tab-${o.m}`}
                     className={`ev-package ${o.m === 'online' ? 'ev-package-online' : ''} ${mode === o.m ? 'is-selected' : ''}`}>
@@ -307,7 +308,7 @@ export default function Event(p: EventPageProps) {
               <div id="ev-registration-panel" role="tabpanel" key={mode} className="ev-form-panel ev-rise">
                 <div className="ev-panel-heading">
                   <div><span className="ev-eyebrow">{mode === 'in-person' ? 'حضور في عمّان' : 'حضور أونلاين'}</span><h3>أكمل بيانات التسجيل</h3></div>
-                  <span className="ev-panel-price">{mode === 'in-person' ? '25 دينار' : '30 دولار'}</span>
+                  <span className="ev-panel-price">{mode === 'in-person' ? '25 دينار' : `${onlinePrice} دولار`}</span>
                 </div>
                 {p.bookingControls}
                 {p.existingBooking || (mode === 'in-person' ? (
@@ -382,7 +383,7 @@ export default function Event(p: EventPageProps) {
                     <label className="ev-field" htmlFor="ev-email-online"><span>البريد الإلكتروني للتأكيد</span>
                       <input id="ev-email-online" className="ev-in" dir="ltr" type="email" value={p.email} onChange={e => p.onEmailChange(e.target.value)} required autoComplete="email" data-testid="input-event-email-online" />
                     </label>
-                    <p className="ev-paypal-copy">ادفع 30 دولارًا بأمان عبر PayPal، وستصلك تفاصيل الدخول.</p>
+                    <p className="ev-paypal-copy">ادفع {onlinePrice} دولارًا بأمان عبر PayPal، وستصلك تفاصيل الدخول.</p>
                     {p.paypalSlot ?? (p.onPayPal && (
                       <button type="button" onClick={p.onPayPal} disabled={p.paypalPending} className="ev-submit" data-testid="button-paypal">
                         {p.paypalPending && <Loader2 className="ev-spinner" aria-hidden="true" />}الدفع عبر PayPal<ArrowLeft aria-hidden="true" />

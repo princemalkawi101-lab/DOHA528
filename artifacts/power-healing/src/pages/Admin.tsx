@@ -1139,9 +1139,9 @@ export default function Admin() {
                         {!!entry.duplicateCheckIns && <p className="text-sm text-amber-200" data-testid={`duplicate-checkins-${entry.id}`}>{lang === 'ar' ? 'محاولات وصول مكررة' : 'Duplicate check-in attempts'}: {entry.duplicateCheckIns}</p>}
                         <p className="text-sm text-[rgba(255,255,255,0.65)]" dir="ltr">{entry.phone}</p>
                         <p className="text-sm text-white/70" dir="ltr">{entry.email || 'لا يوجد بريد إلكتروني في التسجيل القديم'}</p>
-                        {entry.membershipStatus === 'VIP Member' && <p className="mt-2 font-bold text-amber-300" data-testid="admin-vip-member">VIP Member · $49 · {entry.vipPaypalOrderId}</p>}
+                        {entry.membershipStatus === 'VIP Member' && <p className="mt-2 font-bold text-amber-300" data-testid="admin-vip-member">VIP Member · ${entry.vipAmountUsd ?? 49} · {entry.vipPaypalOrderId}</p>}
                         <p className="text-xs text-[hsl(var(--g300))] mt-1">
-                          {entry.attendance === 'online' ? 'Online · PayPal · $30' : 'حضوري · CliQ · 25 JOD'}
+                          {entry.attendance === 'online' ? `Online · PayPal · $${entry.amountUsd ?? 30}` : 'حضوري · CliQ · 25 JOD'}
                           {entry.paypalOrderId ? ` · ${entry.paypalOrderId}` : ''}
                         </p>
                         <p className="text-xs mt-1 text-[rgba(255,255,255,0.55)]">

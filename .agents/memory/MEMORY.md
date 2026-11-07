@@ -11,3 +11,4 @@
 - [Mobile file-picker focus](mobile-file-picker-focus.md) — focus refresh must not unmount receipt inputs when returning from the phone picker or a payment popup.
 - [Event email hosting](event-mail-hosting.md) — user chose direct Resend on Vercel; organizer notifications and attendee confirmations have separate delivery states.
 - [Repeat event bookings](event-repeat-bookings.md) — allow another seat from the same browser without losing previous booking access or repeating a payment accidentally.
+- [Event price transitions](event-price-transitions.md) — temporary price changes must preserve existing orders and invalidate old-price checkout reuse.
