@@ -8,7 +8,7 @@ import EventPostRegistration from './EventPostRegistration';
 import { guestAuthorization, savedBookingSessions, selectBookingSession } from '@/lib/eventGuest';
 
 const CLIENT_ID = (import.meta.env.VITE_PAYPAL_CLIENT_ID as string | undefined)?.trim() || '';
-type Stage = 'offer' | 'standard' | 'vip';
+type Stage = 'offer' | 'vip-checkout' | 'standard' | 'vip';
 type Captured = { captureStatus: string; registration: MyEventRegistration };
 
 export default function EventRoute() {
@@ -27,7 +27,7 @@ export default function EventRoute() {
   const [registrationError, setRegistrationError] = useState('');
   const retryRegistration = useRef<() => void>(() => {});
   const [stage, setStage] = useState<Stage | null>(null);
-  const [showVipPaypal, setShowVipPaypal] = useState(false);
+  const showVipPaypal = stage === 'vip-checkout';
   const [vipError, setVipError] = useState('');
   const [recoverOrder, setRecoverOrder] = useState('');
   const [bookingSession, setBookingSession] = useState(0);
@@ -57,7 +57,7 @@ export default function EventRoute() {
     let inFlight = false;
     const controller = new AbortController();
     registrationRevision.current += 1;
-    setRegistration(null); setStage(null); setShowVipPaypal(false);
+    setRegistration(null); setStage(null);
     setName(''); setPhone(''); setEmail(''); setReceipt(null);
     setSubmitError(''); setPaypalError(''); setVipError(''); setRegistrationError('');
     try { setRecoverOrder(localStorage.getItem(recoveryKey) || ''); } catch { /* guest session reports blocked storage */ }
@@ -107,7 +107,7 @@ export default function EventRoute() {
     try {
       selectBookingSession(token);
       registrationRevision.current += 1;
-      setRegistration(null); setStage(null); setShowVipPaypal(false);
+      setRegistration(null); setStage(null);
       setRegistrationLoading(true);
       setBookingSession(value => value + 1);
     } catch { setSubmitError('تعذّر تغيير الحجز. يرجى السماح بتخزين بيانات الموقع في المتصفح.'); }
@@ -129,7 +129,7 @@ export default function EventRoute() {
       return;
     }
     setStage(entry.membershipStatus === 'VIP Member' ? 'vip' : 'offer');
-    setShowVipPaypal(false); setVipError('');
+    setVipError('');
   };
   const submitInPerson = async () => {
     if (busy) return;
@@ -159,8 +159,8 @@ export default function EventRoute() {
   };
   const paymentButtons = (tier: 'online' | 'vip') => {
     if (!paypalOptions) return <p role="alert">الدفع عبر PayPal غير متاح حاليًا. يرجى التواصل معنا.</p>;
-    return <PayPalScriptProvider options={paypalOptions}>
-      <PayPalButtons
+    return <PayPalButtons
+        key={`${tier}-${registration?.id || 'new'}`}
         style={{ layout: 'vertical', shape: 'pill', label: 'paypal' }}
         forceReRender={[tier, name, phone, email, registration?.id]}
         createOrder={async () => {
@@ -190,20 +190,19 @@ export default function EventRoute() {
           catch (error) {
             const message = error instanceof Error ? error.message : 'تعذّر تأكيد الدفع. استخدم استعادة التأكيد دون الدفع مجددًا.';
             paymentFailure.current[tier] = message;
-            if (tier === 'vip') { setVipError(message); setShowVipPaypal(false); }
+            if (tier === 'vip') setVipError(message);
             else setPaypalError(message);
           }
         }}
         onCancel={() => {
-          if (tier === 'vip') setShowVipPaypal(false);
+          if (tier === 'vip') { setVipError('تم إلغاء الدفع. حجزك العادي محفوظ ويمكنك إعادة محاولة ترقية VIP.'); }
         }}
         onError={() => {
           const message = paymentFailure.current[tier] || 'تعذّر الاتصال بـ PayPal. تحقق من اتصالك وحاول مجددًا. إذا وافقت على دفعة سابقة فاستخدم استعادة التأكيد ولا تدفع مرة أخرى.';
-          if (tier === 'vip') { setVipError(message); setShowVipPaypal(false); }
+          if (tier === 'vip') setVipError(message);
           else setPaypalError(message);
         }}
-      />
-    </PayPalScriptProvider>;
+      />;
   };
   const onVipOffer = () => {
     if (registration) { openRegistration(registration); return; }
@@ -211,12 +210,12 @@ export default function EventRoute() {
     document.getElementById('register')?.scrollIntoView({ behavior: 'smooth' });
   };
   const closeModal = useCallback(() => {
-    if (!paymentBusy.current) { setStage(null); setShowVipPaypal(false); }
+    if (!paymentBusy.current) setStage(null);
   }, []);
 
   if (settingsStatus === 'error') return <div dir="rtl" className="min-h-screen grid place-content-center p-6" role="alert">تعذّر تحميل إعدادات الورشة. <button type="button" className="underline" onClick={() => window.location.reload()}>إعادة المحاولة</button></div>;
   if (settingsStatus === 'loading' || !settings.enabled) return <div dir="rtl" role="status" className="min-h-screen grid place-content-center p-6">جارٍ تحميل الصفحة…</div>;
-  return <div className="ev">
+  const content = <div className="ev">
     <EventPage
       enabled={settings.enabled} portraitUrl={settings.portraitUrl || undefined}
       backgroundUrl={settings.ammanImageUrl || undefined}
@@ -261,9 +260,13 @@ export default function EventRoute() {
       error={vipError} paypalSlot={showVipPaypal ? paymentButtons('vip') : null}
       telegramUrl={registration.telegramUrl}
       onlineTelegramUrl={registration.onlineTelegramUrl}
-      onStartVip={() => { setVipError(''); setShowVipPaypal(true); }}
-      onDecline={() => { if (!paymentBusy.current) { setShowVipPaypal(false); setStage('standard'); } }}
+      onStartVip={() => { setVipError(''); setStage('vip-checkout'); }}
+      onBackToOffer={() => { if (!paymentBusy.current) setStage('offer'); }}
+      onDecline={() => { if (!paymentBusy.current) setStage('standard'); }}
       onClose={closeModal}
     />}
   </div>;
+  // One SDK lifecycle for both purchases; keyed buttons keep VIP callbacks
+  // separate from the ordinary ticket's already-completed checkout.
+  return paypalOptions ? <PayPalScriptProvider options={paypalOptions}>{content}</PayPalScriptProvider> : content;
 }

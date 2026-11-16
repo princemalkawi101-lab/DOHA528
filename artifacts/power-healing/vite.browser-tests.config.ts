@@ -11,6 +11,7 @@ export default defineConfig({
   root,
   // Ignore workspace .env files: no real Firebase or payment credentials in tests.
   envDir: false,
+  define: { 'import.meta.env.VITE_PAYPAL_CLIENT_ID': JSON.stringify('synthetic-browser-test-client') },
   base: '/',
   plugins: [
     {

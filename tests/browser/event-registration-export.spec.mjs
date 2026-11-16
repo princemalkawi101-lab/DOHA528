@@ -108,6 +108,96 @@ async function login(page, user) {
   await expect(page).toHaveURL(/\/admin$/);
 }
 
+for (const attendance of ['in-person', 'online']) {
+  test(`VIP checkout stays separate after ${attendance} registration`, async ({ page }) => {
+    await page.setViewportSize({ width: 402, height: 874 });
+    await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'siteSettings/config'), {
+      event: { enabled: true, cliqAlias: 'SYNTHETIC' },
+    }));
+    // Exercise the real React PayPal integration without contacting PayPal or charging.
+    await page.route('https://www.paypal.com/sdk/js*', route => route.fulfill({
+      contentType: 'application/javascript',
+      body: `window.paypal = { Buttons(options) {
+        let button;
+        return {
+          isEligible: () => true,
+          render(container) {
+            button = document.createElement('button');
+            button.type = 'button'; button.textContent = 'Synthetic PayPal';
+            button.dataset.testid = 'synthetic-paypal';
+            button.onclick = async () => {
+              try {
+                const orderID = await options.createOrder({}, {});
+                await options.onApprove({ orderID }, {});
+              } catch (error) { options.onError?.(error); }
+            };
+            (typeof container === 'string' ? document.querySelector(container) : container).append(button);
+            return Promise.resolve();
+          },
+          close() { button?.remove(); return Promise.resolve(); }
+        };
+      } };`,
+    }));
+    let registration = null;
+    const orders = [];
+    const captures = [];
+    const attendee = { name: 'مشترك تجريبي', phone: '0790000000', email: 'vip@example.test' };
+    await page.route('**/api/event', async route => {
+      const body = route.request().postDataJSON();
+      if (body.action === 'mine') return route.fulfill({ json: { registration } });
+      if (body.action === 'register-cliq') {
+        registration = { ...attendee, id: 'synthetic-core', attendance, status: 'pending', membershipStatus: 'Standard' };
+        return route.fulfill({ json: { registration } });
+      }
+      if (body.action === 'create-order') {
+        orders.push(body);
+        return route.fulfill({ json: { id: `SYNTHETIC-${body.tier}` } });
+      }
+      if (body.action === 'capture-order') {
+        captures.push(body.orderId);
+        registration = {
+          ...attendee, id: 'synthetic-core', attendance,
+          status: attendance === 'online' ? 'approved' : 'pending',
+          membershipStatus: body.orderId === 'SYNTHETIC-vip' ? 'VIP Member' : 'Standard',
+          ...(body.orderId === 'SYNTHETIC-vip' ? { telegramUrl: 'https://t.me/+dl3H-ZKTnqg2N2Y0' } : {}),
+        };
+        return route.fulfill({ json: { registration, captureStatus: 'COMPLETED' } });
+      }
+      throw new Error(`Unexpected action ${body.action}`);
+    });
+    await page.goto('/event');
+    await expect(page.getByTestId('input-name')).toBeVisible();
+    if (attendance === 'online') await page.getByTestId('tab-online').click();
+    await page.locator(attendance === 'online' ? '#ev-name-online' : '#ev-name').fill(attendee.name);
+    await page.locator(attendance === 'online' ? '#ev-phone-online' : '#ev-phone').fill(attendee.phone);
+    await page.locator(attendance === 'online' ? '#ev-email-online' : '#ev-email').fill(attendee.email);
+    if (attendance === 'in-person') {
+      await page.locator('input[type=file]').setInputFiles({
+        name: 'synthetic.png', mimeType: 'image/png',
+        buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64'),
+      });
+      await page.getByTestId('button-submit').click();
+    } else await page.getByTestId('synthetic-paypal').click();
+    await page.getByTestId('button-start-vip').click();
+    const checkout = page.getByTestId('vip-checkout');
+    await expect(checkout).toContainText('$49.00 USD');
+    await expect(checkout.getByTestId('synthetic-paypal')).toBeVisible();
+    await expect(page.getByTestId('button-start-vip')).toHaveCount(0);
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(checkout).toBeVisible();
+    // Returning to the offer must not start another ordinary booking.
+    await page.getByTestId('button-back-vip-offer').click();
+    await page.getByTestId('button-start-vip').click();
+    await checkout.getByTestId('synthetic-paypal').click();
+    await expect(page.getByTestId('status-vip-member')).toBeVisible();
+    expect(orders.map(order => order.tier)).toEqual(attendance === 'online' ? ['online', 'vip'] : ['vip']);
+    expect(orders.at(-1).registrationId).toBe('synthetic-core');
+    expect(captures).toEqual(attendance === 'online' ? ['SYNTHETIC-online', 'SYNTHETIC-vip'] : ['SYNTHETIC-vip']);
+    await expect(page.getByTestId('link-telegram')).toHaveAttribute('href', 'https://t.me/+dl3H-ZKTnqg2N2Y0');
+    await expect(page.getByTestId('modal-post-registration')).toContainText(attendance === 'in-person' ? 'قيد المراجعة' : 'VIP');
+  });
+}
+
 test('online and VIP Telegram buttons remain distinct after reopening the confirmation', async ({ page }) => {
   await page.setViewportSize({ width: 402, height: 874 });
   await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'siteSettings/config'), {

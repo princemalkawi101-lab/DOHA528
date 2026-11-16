@@ -3,7 +3,7 @@ import { X, Crown, CheckCircle2, Clock, Send, AlertCircle } from 'lucide-react';
 import './EventPostRegistration.css';
 import { vipPrice } from '@/lib/eventPricing';
 
-type Stage = 'offer' | 'standard' | 'vip';
+type Stage = 'offer' | 'vip-checkout' | 'standard' | 'vip';
 
 interface Props {
   stage: Stage;
@@ -14,6 +14,7 @@ interface Props {
   telegramUrl?: string;
   onlineTelegramUrl?: string;
   onStartVip: () => void;
+  onBackToOffer: () => void;
   onDecline: () => void;
   onClose: () => void;
 }
@@ -31,7 +32,7 @@ const features = [
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select,textarea,iframe,[tabindex]:not([tabindex="-1"])';
 
 export default function EventPostRegistration({
-  stage, corePending, purchasing, error, paypalSlot, telegramUrl, onlineTelegramUrl, onStartVip, onDecline, onClose,
+  stage, corePending, purchasing, error, paypalSlot, telegramUrl, onlineTelegramUrl, onStartVip, onBackToOffer, onDecline, onClose,
 }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -100,7 +101,7 @@ export default function EventPostRegistration({
         </button>
 
         <div className="ev-post-body">
-          {!corePending && onlineTelegramUrl && <div className="ev-post-confirmed" data-testid="online-access-confirmed">
+          {stage !== 'vip-checkout' && !corePending && onlineTelegramUrl && <div className="ev-post-confirmed" data-testid="online-access-confirmed">
             <div>
               <p>تم تأكيد دفعك وحضورك أونلاين.</p>
               <a className="ev-post-tg" href={onlineTelegramUrl} target="_blank" rel="noopener noreferrer" data-testid="link-online-telegram">
@@ -155,6 +156,19 @@ export default function EventPostRegistration({
             </>
           )}
 
+          {stage === 'vip-checkout' && (
+            <section className="ev-post-vip" data-testid="vip-checkout">
+              <h2 id="ev-post-title" ref={headingRef} tabIndex={-1} style={{ color: 'inherit' }}>إتمام ترقية VIP</h2>
+              <p className="ev-post-sub">حجزك الأساسي محفوظ. هذه دفعة منفصلة لترقية VIP فقط، وليست حجزًا عاديًا جديدًا.</p>
+              <div className="ev-post-price"><span>مبلغ الترقية</span><bdi dir="ltr">${vipPrice} USD</bdi></div>
+              {error && <div className="ev-post-error" role="alert" data-testid="status-payment-error"><AlertCircle aria-hidden="true" /><p>{error}</p></div>}
+              <div className="ev-post-pay" aria-live="polite" data-testid="container-paypal">
+                <p className="ev-post-pay-label">ادفع ترقية VIP عبر PayPal أو البطاقة</p>
+                {paypalSlot}
+              </div>
+              <button type="button" className="ev-post-cta" onClick={onBackToOffer} data-testid="button-back-vip-offer">العودة إلى تفاصيل VIP</button>
+            </section>
+          )}
           {stage === 'standard' && (
             <div className="ev-post-final">
               <span className="ev-post-seal" aria-hidden="true">{corePending ? <Clock /> : <CheckCircle2 />}</span>
