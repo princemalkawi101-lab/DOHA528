@@ -180,7 +180,7 @@ for (const attendance of ['in-person', 'online']) {
     } else await page.getByTestId('synthetic-paypal').click();
     await page.getByTestId('button-start-vip').click();
     const checkout = page.getByTestId('vip-checkout');
-    await expect(checkout).toContainText('$49.00 USD');
+    await expect(checkout).toContainText('$19.00 USD');
     await expect(checkout.getByTestId('synthetic-paypal')).toBeVisible();
     await expect(page.getByTestId('button-start-vip')).toHaveCount(0);
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));

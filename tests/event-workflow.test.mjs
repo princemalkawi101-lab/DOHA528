@@ -144,7 +144,7 @@ assert.equal((await eventAction(other, { action: 'mine' })).registration, null);
 await assert.rejects(eventAction(other, { action: 'create-order', tier: 'vip', registrationId: core.registration.id }));
 await assert.rejects(eventAction(user, { action: 'review', registrationId: core.registration.id, status: 'approved' }));
 const vipOrder = await eventAction(user, { action: 'create-order', tier: 'vip', registrationId: core.registration.id, amount: 1 });
-assert.equal(globalThis.__eventTestPayments.orders.get(vipOrder.id).amount, 49);
+assert.equal(globalThis.__eventTestPayments.orders.get(vipOrder.id).amount, 19);
 const reusedOrder = await eventAction(user, { action: 'create-order', tier: 'vip', registrationId: core.registration.id });
 assert.equal(reusedOrder.id, vipOrder.id);
 await assert.rejects(eventAction(other, { action: 'capture-order', orderId: vipOrder.id }));
@@ -304,7 +304,7 @@ assert.equal(globalThis.__eventTestPayments.captures, capturesBeforeWebhook, 'Br
 await db.doc('siteSettings/config').update({ 'event.enabled': true });
 const vipRecovery = await checkout('vip');
 await Promise.all([
-  eventPayPalWebhook({}, webhook(vipRecovery.order, '49.00')),
+  eventPayPalWebhook({}, webhook(vipRecovery.order, '19.00')),
   eventAction(vipRecovery.u, { action: 'capture-order', orderId: vipRecovery.order.id }),
 ]);
 const recoveredVip = (await eventAction(vipRecovery.u, { action: 'mine' })).registration;
@@ -345,7 +345,7 @@ const onlineVipOrder = await eventAction(onlineInvite.u, { action: 'create-order
 const onlineVip = await eventAction(onlineInvite.u, { action: 'capture-order', orderId: onlineVipOrder.id });
 assert.equal(onlineVip.registration.telegramUrl, 'https://t.me/+dl3H-ZKTnqg2N2Y0');
 assert.equal(onlineVip.registration.onlineTelegramUrl, 'https://t.me/+_5Dhdrs3Iq8zNzRk', 'Online VIP retains both distinct entitlements');
-assert.equal((await db.doc(`eventRegistrations/${onlineVip.registration.id}`).get()).data().vipAmountUsd, 49);
+assert.equal((await db.doc(`eventRegistrations/${onlineVip.registration.id}`).get()).data().vipAmountUsd, 19);
 const currentPrivate = await eventAction(admin, { action: 'get-private-email-settings' });
 await eventAction(admin, { action: 'save-private-email-settings', whatsapp: { ...currentPrivate.whatsapp, enabled: false } });
 const withoutInvite = await checkout();
@@ -380,6 +380,14 @@ await db.doc(`eventPaymentOrders/${historical.order.id}`).update({ amount: 0.70,
 globalThis.__eventTestPayments.orders.get(historical.order.id).amount = 0.70;
 await eventAction(historical.u, { action: 'capture-order', orderId: historical.order.id });
 assert.equal((await db.doc(`eventRegistrations/${EVENT_ID}_${historical.u.uid}`).get()).data().amountUsd, 0.70);
+// Old $49 VIP orders also remain valid after the current upgrade price changes.
+const historicalVip = await checkout('vip');
+await db.doc(`eventPaymentOrders/${historicalVip.order.id}`).update({ amount: 49, pricingVersion: 'standard' });
+globalThis.__eventTestPayments.orders.get(historicalVip.order.id).amount = 49;
+await eventAction(historicalVip.u, { action: 'capture-order', orderId: historicalVip.order.id });
+const historicalVipReg = (await db.doc(`eventRegistrations/${EVENT_ID}_${historicalVip.u.uid}`).get()).data();
+assert.equal(historicalVipReg.membershipStatus, 'VIP Member');
+assert.equal(historicalVipReg.vipAmountUsd, 49);
 
 // Deleting/recreating a guest booking reuses the document ID, but it must not
 // collide with the previous booking's provider idempotency key.
